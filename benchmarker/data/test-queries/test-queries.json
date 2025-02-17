@@ -1,0 +1,2522 @@
+[
+  {
+    "natural_language_command": "Find restaurants with a cozy ambiance and Italian cuisine, where the average rating is at least 4, count how many such restaurants there are, and group them by whether they are currently open or not.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find Italian cuisine restaurants with a cozy ambiance that have an average rating of at least 4, plus provide the count of such restaurants that are currently open.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants that match the description 'authentic Italian ambiance', have an averageRating greater than 4, list the top 5 most common restaurant names in this set, and partition the results based on whether the restaurant is currently open or not.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants with a family-friendly ambiance and Italian cuisine rated with at least 4.5 in averageRating, and identify the top 3 most common descriptions.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants offering Italian cuisine with a cozy atmosphere, with at least an average rating of 4.5. Also, calculate the percentage of these restaurants that are open and group results based on their open status.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find Italian cuisine restaurants with descriptions containing 'Italian cuisine', with averageRating greater than 4.0, and calculate the percentage of these that are currently open.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants that are similar to Italian family-friendly places, have an averageRating of at least 4, and group them by whether they are currently open (openNow).",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find Italian restaurants with a cozy ambiance, and the averageRating must be greater than 4.0.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants with an Italian ambiance and explicitly mentioned as family friendly in their description, calculate the average of each restaurant's averageRating, and group the results by restaurant name.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants that have a romantic ambiance using search query, filter the results to include only those where the name contains 'Ristorante', and count the number of these restaurants using the averageRating property.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants with a cozy and modern ambiance that mention 'casual dining' in their description. Count the number of unique restaurant names and group the results by whether they are currently open.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Search for restaurants similar in description and ambiance to those fitting the concept of cozy and modern cuisine, filter to only include restaurants named exactly 'Ocean View Grille', and count the occurrences of each restaurant name in the results.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants with a nature ambiance, having Italian cuisine in their description, calculate the percentage of restaurants currently open, and group them by their average rating to summarize.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants similar to a cozy Italian restaurant with a great wine selection, include only those whose name contains 'Grill', and count how many of them are currently open.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants offering authentic Italian cuisine while they are open now, and group these restaurants by their average rating.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Search for restaurants that are famous for Italian cuisine using semantic search for 'cuisine' and 'ambiance', and additionally filter to show only those whose description explicitly contains the word 'romantic'.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants that offer a romantic ambiance and Italian cuisine, ensure they are open now, calculate the average rating, and organize the results by each restaurant's name.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find cozy Italian restaurants with a great wine selection that are open now, and calculate the average rating of these open restaurants.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "What are the romantic Italian restaurants that are currently open now, and what is the most common description among them, grouped by their name?",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants offering Mediterranean cuisine with a cozy ambiance and are currently open, then list the top 5 most common restaurant names.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants that are known for their cozy ambiance and Italian cuisine, filter those that are currently open, aggregate to count how many are open versus closed, and organize results by the name of the restaurant.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants serving Italian cuisine with a romantic ambiance that are currently open, and calculate the percentage of restaurants that are open.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find cozy Italian restaurants that are currently open, and group them by their name.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find currently open restaurants that conceptually relate to 'Italian cuisine with a cozy ambiance.'",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "What are the total party sizes of reservations that mention 'birthday' in notes, grouped by whether the reservation is confirmed?",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "What is the average price of spicy vegetarian menu items?",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Identify romantic restaurants by analyzing descriptions for ambiance, count the number of unique restaurants, and group the results by whether they are currently open.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Identify how many unique restaurants offer a cozy Italian cuisine with a romantic ambiance by analyzing their descriptions and count the occurrences of different restaurant names.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "What percentage of restaurants that offer outdoor seating and live music are currently open, and how are they distributed by their average rating?",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "What percentage of confirmed reservations mention the word 'celebration' in the notes?",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants with a cozy ambiance and Italian cuisine in their description using search_query, and then group these restaurants by their averageRating.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants described as having a cozy ambiance in their detailed description.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find reservations where the partySize is greater than 4, group the results by reservationName, and calculate the average partySize for each reservationName group.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find how many reservations have a partySize of at least 4 people and provide the total count.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Show all reservations with a partySize of at least 5 people, count how many times each reservationName occurs, and group the results by whether the reservation is confirmed.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find all menu items with a price less than $20 and determine the top 3 most common menuItem names.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find reservations that have at least 5 people in partySize, aggregate them by counting the number of true values in the confirmed status, and group the results by reservationName.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find all reservations where there are more than 4 people in the partySize and count how many of these reservations are confirmed.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find reservations where the partySize is at least 4 and group the results by whether the reservation is confirmed.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find all reservations with a partySize that is at least 5",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find Italian restaurants by filtering descriptions that contain the word 'Italian', then calculate the average rating of these restaurants, and group results by whether they are currently open now.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants with the word 'vegan' in their description and count how many such restaurants exist.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Retrieve the count of restaurants containing 'Italian' in the description, group them by the openNow status, and provide the count of each restaurant name within those groups.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find menu items with descriptions containing the word 'spicy' and determine the top three most common item names.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find reservations that mention 'birthday' in their notes, count how many of these reservations are confirmed, and group the results by the name under which each reservation is made.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find all restaurants that mention 'vegan' in their description and count how many are currently open.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants where the description contains 'Italian cuisine' and group these results by their name.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants in the Restaurants collection where the description contains the keyword 'Italian'.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants that are currently open, group them by their averageRating, and calculate the mean averageRating for each group.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Determine the average rating of all restaurants that are open now, filtering by the openNow property, and calculate the mean on the averageRating property.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "What types of cuisines are available in restaurants that are currently open, grouped by their average rating?",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Identify the most common cuisine type among all restaurants that are currently open (using 'openNow' property for filtering and 'description' property for text aggregation).",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Calculate the percentage of restaurants that are currently open (openNow = true), and group these open restaurants by their averageRating to understand how many are open in each rating category.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Show me all confirmed reservations and count the total number of confirmed versus unconfirmed reservations.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Show all restaurants that are currently open (openNow = true), and group these by the type of cuisine mentioned in the description to see how many open restaurants exist for each cuisine type.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find restaurants where openNow is true.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find the total party size for reservations grouped by reservationName.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Count the number of reservations based on their partySize.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Find the types of cuisines mentioned most frequently in the restaurant descriptions, grouped by whether the restaurants are currently open or closed.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "What are the three most common phrases in the description of restaurants?",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Calculate the percentage of restaurants that are open now within each grouping by their average rating.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Calculate the percentage of menu items that are vegetarian based on the isVegetarian property.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Group restaurants by their averageRating to analyze patterns across different rating categories, helping to understand how many restaurants fall into each rating group.",
+    "collections": [
+      "Restaurants",
+      "Menus",
+      "Reservations"
+    ]
+  },
+  {
+    "natural_language_command": "Identify clinics that specialize in pediatric care using semantic search, filter out only those with an averagePatientSatisfaction of 4.5 or higher, calculate the mean averagePatientSatisfaction, and group these results based on whether they are acceptingNewPatients.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Retrieve clinics with descriptions including 'comprehensive healthcare', having averagePatientSatisfaction greater than 4.5, and count how many of these clinics are acceptingNewPatients.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics related to cardiology with average patient satisfaction higher than 4. Resulting clinics should be grouped based on whether they are accepting new patients or not, and within each group, identify the top 5 most common service descriptions.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find doctors with expertise related to dermatology and skin care, who have at least 10 years of experience, and retrieve the top 3 most common doctor names.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics specialized in cardiovascular healthcare by searching \"description\"; filter these to only show clinics with an \"averagePatientSatisfaction\" greater than 4.5; determine the percentage of these clinics \"acceptingNewPatients\"; and finally, organize the results by \"clinicName\".",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics offering pediatric services with an average patient satisfaction score greater than 4, and count the total number of clinics that are currently accepting new patients.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find doctors who specialize in neurology with more than 10 years of experience, and group the results by whether they are currently practicing or not.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics with a description similar to 'pediatric care' that have an averagePatientSatisfaction score of at least 4.5.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Identify clinics that offer dental services by performing a search for relevant specialties, filter specifically for a clinic named Sunny Clinic, determine the maximum average patient satisfaction score, and group the results based on whether they are accepting new patients or not.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics with a description similar to 'clinic with specialties in cardiology and pediatric care', where the clinicName is exactly 'City Health Center', and calculate the average of averagePatientSatisfaction for these clinics.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics that offer family healthcare services using semantic search, and are accepting new patients. Count the number of unique clinics and group them by average patient satisfaction score.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics that describe themselves as offering holistic healthcare services, filter those with 'Health' in their clinicName, and identify the top 3 most frequently occurring clinic names from those results.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find the best clinics known for pediatric services, where clinic names start with 'A', group them by average patient satisfaction, and count how many are accepting new patients.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find appointments related to annual health check-ups by searching in appointmentNotes for 'check-up', and count how many of these appointments are confirmed.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Search for clinics that have descriptions mentioning advanced medical technology, filter by the clinic name \"Healthcare Plus Clinic\", and group the results by whether they are accepting new patients, aggregating average patient satisfaction scores within each group.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Search for clinics whose description indicates a focus on comprehensive dermatology services and skin care treatments, and filter to include only those clinics with 'Dermatology' in their clinicName.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics based on a high patient satisfaction, filter to include only those currently accepting new patients, perform an average calculation of the averagePatientSatisfaction, and group the results by clinic name.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics that are conceptually related to pediatrics, are accepting new patients, and calculate the mean average patient satisfaction score across all such clinics.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find doctors with expertise in cardiology who are currently practicing, show how many doctors there are per expertise, and group them by their expertise category.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics that match specific healthcare needs and services, filter to show only those accepting new patients, and aggregate to find the top 5 most common descriptions of these clinics.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Identify clinics that provide cardiology services (using descriptions for search), determine which of them are currently accepting new patients, and count the number of clinics within each range of average patient satisfaction scores.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics that match the concept of 'family healthcare services', filter those that are accepting new patients, and calculate the percentage of clinics that are accepting new patients among the total results.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics that specialize in pediatric care and are accepting new patients, then group the results by their average patient satisfaction score.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics that specialize in cardiac care based on their description and are currently accepting new patients.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "List clinics that provide excellent healthcare services. Within these clinics, group them by their clinic names and count how many are currently accepting new patients.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find doctors in the Doctors collection specializing in 'cardiology' based on their expertise property, and calculate the mean yearsOfExperience for these doctors.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics that provide 'dental services', group them by whether they are accepting new patients, and count how many clinics are in each group.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics offering high-quality healthcare services based on their description, and count the number of unique clinic names.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Search for clinics where the description mentions specific healthcare services you need, determine what percentage of these clinics are accepting new patients, and group the results by clinicName.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "How many clinics that offer pediatrics and family healthcare are currently accepting new patients?",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics that specialize in pediatric services, offer state-of-the-art facilities, and have high ratings for patient care experience, and then group these clinics based on whether they are accepting new patients.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "What clinics are recognized for their exceptional orthopedic services and a high emphasis on patient care?",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find doctors with more than 10 yearsOfExperience, calculate the average yearsOfExperience for these doctors, and group the results by whether they are currentlyPracticing or not.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find the number of clinics where the averagePatientSatisfaction score is at least 4.5",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics where the averagePatientSatisfaction is at least 4.5, then group results by acceptingNewPatients status and determine the top 3 most common specialties within each group's description.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find appointments that have an appointmentDuration of at least 30 minutes and determine the most common patientName.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Group clinics by their clinicName, but only include those with an averagePatientSatisfaction of at least 4.5, and count how many of these clinics are currently accepting new patients.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics where the averagePatientSatisfaction is at least 4.5 and count how many of these clinics are currently acceptingNewPatients.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find doctors with at least 10 years of experience and group results by whether they are currently practicing.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find doctors who have more than 10 years in yearsOfExperience",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find all clinics where the description contains the keyword 'specialty', group them by their acceptingNewPatients status, and calculate the maximum averagePatientSatisfaction score for each group.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "How many appointments have the word 'consultation' in their appointmentNotes and what is their total count for appointmentDuration?",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Identify how many different averagePatientSatisfaction scores exist for clinics whose description includes the term 'multispecialty', grouped by the description property.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find the number of unique clinicName values from the Clinics collection where the description contains the word 'dental' by counting these occurrences.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Show the percentage of clinics accepting new patients, grouped by clinicName, where the clinic's description contains the word pediatrics.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics where the description includes 'cancer', and determine how many of these clinics are accepting new patients.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics that have 'pediatrics' in their description, and group them by whether they are accepting new patients.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Retrieve the clinic that has the exact clinicName 'Community HealthCare Center'.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "For clinics that are accepting new patients, calculate the mean averagePatientSatisfaction score for each category described by 'description'.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics that are accepting new patients and calculate the mean of averagePatientSatisfaction scores for those clinics.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics that are accepting new patients (using 'acceptingNewPatients' with true value), group the results by clinicName, and aggregate to count the occurrences of each clinic name.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find all clinics where acceptingNewPatients is true, and count how many different clinics share the same description.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find and display the percentage of clinics that are currently accepting new patients, grouped by each clinic's name.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find all appointments where appointmentConfirmed is false and also count the total number of appointments based on appointmentConfirmed status.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find all clinics that are accepting new patients and group them by clinicName.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Find clinics where acceptingNewPatients is equal to true.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Determine the mean years of experience for doctors, categorized by their expertise.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Using the int_property_aggregation operator, calculate the total number of years of experience across all doctors by summing the 'yearsOfExperience' property in the Doctors collection.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "What are the top 5 most common areas of expertise for doctors, grouped by whether they are currently practicing?",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "What are the top 5 most common clinicName entries in the Clinics collection?",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Calculate the percentage of clinics that are accepting new patients, grouped by their average patient satisfaction.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "How many clinics are currently accepting new patients compared to those that are not?",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Group clinics by their averagePatientSatisfaction scores to see the distribution of clinics based on patient satisfaction levels, organizing the results into different satisfaction categories.",
+    "collections": [
+      "Clinics",
+      "Doctors",
+      "Appointments"
+    ]
+  },
+  {
+    "natural_language_command": "Show me students interested in 'learning algorithms' who have completed more than 20 completedCredits, aggregate the count of completedCredits for these students, and group the results by their enrolledFullTime status.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find students whose researchInterests include machine learning, filter those who have completedCredits of at least 30, and calculate the average completedCredits of these students.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Identify courses related to machine learning that have a courseDuration of at least 5 hours, and determine the most frequently occurring courseTitle.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses that semantically relate to data science and machine learning in their courseDescription, filter for those which courseDuration is at least 40 hours, and show the top 5 most common courseTitle values for these courses.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "List all courses related to artificial intelligence and machine learning that require at least 20 hours to complete, show the percentage of those courses currently accepting enrollments, and categorize the results by whether they are currently enrolling or not.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses that are similar to 'data science', have a courseDuration of 40 hours or less, and calculate the percentage of these courses that are currentlyEnrolling.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find students interested in machine learning who have completed at least 30 credits, grouped by whether they are enrolled full-time.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses that relate to artificial intelligence which have a courseDuration of at least 20 hours.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "What is the average duration of courses related to artificial intelligence that are currently enrolling, and organize the results by course title?",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Search for courses whose descriptions are conceptually similar to 'machine learning and artificial intelligence', filter to find courses with the exact courseTitle 'Introduction to AI', and calculate the average courseDuration of these courses.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses related to data science and machine learning by courseDescription, filter these courses to only those that are currently open for enrollment, count the unique course titles, and then group the courses by their duration to analyze the number of courses segmented by different durations.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses that focus on machine learning that are currently enrolling, and display the top 5 most common course titles.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Search for courses that focus on 'machine learning' topics, filter to include only those that have 'Data Science' in their course title, calculate the percentage of these courses that are currently enrolling, and group the results by course duration.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find instructors who are described as experienced in teaching computer science in their biography, specifically look for instructors named Jane Doe, and calculate the percentage of instructors who hold a tenured position in the 'tenured' field.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses related to Python programming where the course title contains 'Introduction', and group the results by whether the courses are currently enrolling.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Show me courses that cover 'machine learning fundamentals' in their descriptions and have the word 'Advanced' in the course title.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Search for courses related to machine learning and deep learning that are currently open for enrollment, calculate the average duration of these courses, and categorize the results based on the enrollment status of the courses.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "What are the courses related to 'machine learning' that are currently enrolling, and what is the average course duration?",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses related to \"machine learning\" in courseDescription that are currently enrolling, count the number of unique courses titles, and group the results by courseDuration.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses that are related to data science in courseDescription, are currently enrolling as indicated by currentlyEnrolling being true, and return the top 5 most popular course titles using courseTitle.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "What are the currently enrolling courses related to 'machine learning applied techniques', and how is the enrollment status distributed across these courses by course title?",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses by topics related to artificial intelligence, filter to only include those that are currently open for enrollment, and calculate the percentage of total courses that are currently enrolling.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses related to data science that are currently enrolling, and group these courses by their courseDuration to see how they vary by length.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses with topics related to 'machine learning techniques' that are currently enrolling.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "What is the average course duration of courses related to 'machine learning fundamentals', and how does it vary between courses that are currently enrolling and those that are not?",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses that are conceptually similar to 'data science' and calculate the average course duration in courseDuration.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find students who have research interests similar to quantum computing and determine the count of unique research interests, while grouping the results by whether they are enrolled full-time.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses that are conceptually similar to 'machine learning', are currently enrolling, and identify the top 3 most common course titles.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find the most relevant students based on research interests around 'machine learning', calculate the percentage of those students enrolled full-time, and group the results by their research interests.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find the number of courses with courseTitle or courseDescription related to 'Data Science', and summarize how many of these courses are currently open for enrollment.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses whose courseDescription is similar to 'machine learning foundations' and group these courses by their currentlyEnrolling status.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses with a courseDescription that covers the entire data science lifecycle, including data collection, processing, analysis, and presentation.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Count the number of instructors grouped by tenured status who have at least 10 years in yearsOfTeaching.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find the total number of instructors who have been teaching for at least 10 years based on their yearsOfTeaching.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Identify instructors who have been teaching for at least 10 years. For these instructors, summarize how frequently different words appear in their biography, and categorize them based on whether they hold tenured positions.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find instructors who have at least 10 yearsOfTeaching and determine the top 5 most common attributes mentioned in their biography.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find all instructors with more than 5 years in yearsOfTeaching, show the count of tenured status and group the results by instructorName.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses with a courseDuration of at least 20 hours and determine how many of these are currently enrolling by counting the boolean currentlyEnrolling field.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Identify instructors who have more than 10 years of teaching experience and group them by whether they hold a tenured position.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses that have a courseDuration greater than 10 hours.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find all courses containing 'machine learning' in the courseDescription, then group them by currentlyEnrolling status and determine the maximum courseDuration in each group.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find the average courseDuration of all courses that have 'Python' in their courseDescription.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Identify whether courses that mention 'machine learning' in their courseDescription are currently enrolling, group these courses by their currentlyEnrolling status, and list the top 5 most common courseTitles for each group.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find and count courses with 'data science' in the courseDescription by using the courseDescription text_property_filter with LIKE, and count the total number of different course titles using courseTitle text_property_aggregation COUNT.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Identify all courses that include 'Data Science' in their courseTitle, count how many of these courses are currentlyEnrolling, and group the results by courseDuration to show how courses of different durations are distributed.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses where the courseTitle contains 'Advanced' and calculate the percentage of these that are currentlyEnrolling.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses containing 'Introduction to Data Science' in the courseTitle, and group the results by currentlyEnrolling status.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses where the courseDescription includes the phrase 'machine learning'.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses that are currently enrolling and group them by courseTitle, calculating the total sum of courseDuration for each courseTitle.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "What is the total number of hours required to complete all courses that are currently open for enrollment?",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Identify courses that are currently open for enrollment (using currentlyEnrolling = true), and group them by courseDuration while aggregating the top 5 most common courseTitle values.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Retrieve courses that are currentlyEnrolling and count the number of unique courseTitle entries to understand how many different courses are currently open for enrollment.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses where currentlyEnrolling is true, calculate the percentage of such courses, and group the results by courseTitle to see enrollment status per course.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find all courses that are currently open for enrollment and calculate the total number of courses where the currentlyEnrolling property is true.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find all course titles where courses are currently enrolling and group the results by course title.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Find courses where currentlyEnrolling is true",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "What is the average yearsOfTeaching of instructors, grouped by their tenured status?",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "What is the average and maximum number of years instructors have been teaching in the yearsOfTeaching property of the Instructors collection?",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "What is the count of each unique courseTitle for Courses, grouped by their currentlyEnrolling status?",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Count unique courseTitle values and find the top 5 most common course titles.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "What percentage of courses are currently open for enrollment and how are these courses grouped by course duration?",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "Calculate how many courses in the Courses collection are currently open for enrollment, and determine the percentage of courses that are currently enrolling.",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "What is the average years of teaching for instructors grouped by their tenured status using groupby on tenured?",
+    "collections": [
+      "Courses",
+      "Instructors",
+      "Students"
+    ]
+  },
+  {
+    "natural_language_command": "What is the average packagePrice of travel packages whose packageDetails correspond to 'tropical beach relaxation' and have a price less than $1500, grouped by whether a discount is available?",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations that are related to exotic beaches and vibrant nightlife but have an averageVisitCost of no more than $1500. Additionally, determine the maximum averageVisitCost among destinations that are popular.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find destinations where the description includes 'hot and sunny beaches with vibrant nightlife', the averageVisitCost is less than or equal to 1500, count how many destinations are popular, and group the results by destinationName.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel packages that include safaris and beaches with a packagePrice less than 1000. Also, count how many times each packageName appears in the results.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations that offer peaceful beach vacations, where the averageVisitCost is less than or equal to 1500, count how many of these are popular, and group the results by destinationName.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations with beautiful beaches and rich cultural experiences where the averageVisitCost is no more than 1500, and determine what percentage of these destinations are currently popular.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Search for a relaxing vacation package that includes beach activities and cultural tours, filter for packages with a packagePrice greater than 2000, and organize the results based on whether a discount is available, using discountAvailable as the grouping property.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel packages described as a 'relaxing beach holiday' with a packagePrice of at most $500.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations with descriptions similar to 'beach and cultural experiences', filter for destinations named Bali, calculate the average of averageVisitCost, and group by whether destinations are popular.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find destinations whose descriptions semantically emphasize beautiful landscapes, specifically retrieve destinations named \"Bora Bora\", and determine the maximum average visit cost among all destinations.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find the most frequently occurring travel destinations that are popular among tourists, and match the phrase 'tropical beaches with vibrant nightlife', grouping them by their names and aggregating the count of each destination name.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find destinations with tropical experiences as described in the destinationDescription, locate destinations that have 'Beach' included in the destinationName, and count how many destinations are currently marked as popular.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find destinations with a description similar to 'scenic views', filter those with 'island' in their destinationName, group results by destinationName, and calculate the percentage of popular destinations within each group.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations that are relevant to a charming winter holiday experience with various activities. Additionally, filter results to include only destinations named 'Swiss Alps', and count how many of these destinations are currently popular.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations that offer a cultural experience in their description, include 'Paris' in the destination name, and group the results by whether they are currently popular among tourists.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel packages that are conceptually similar to a relaxing beach vacation and have 'Caribbean' in the packageName.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Search for travel destinations with scenic beaches and vibrant local culture, filter for those that are currently popular, calculate the average cost to visit, and group by destination name.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Identify popular travel destinations described as tropical beaches and places with rich cultural history, and compute the average cost of visiting these popular locations.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations related to beach vacations that are popular, categorize them by destinationName, and identify the top 5 most common destination names.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find the most relevant travel destinations with scenic beaches and vibrant nightlife among those that are currently popular, and count how many travel destinations are there.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations that match 'tropical beaches with vibrant cultures' in their destinationDescription, filter them to show only those that are currently popular, calculate the percentage of destinations that are popular, and group the results by destinationName.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations with sunny beaches and vibrant nightlife, filter for where they are currently popular, and count these popular destinations.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find popular travel destinations with descriptions that include scenic vistas and vibrant cultures, and group these destinations by their destinationName.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations that are popular and include descriptions related to 'tropical beaches and adventure sports'.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Identify travel packages providing a relaxing beach holiday (using search_query on packageDetails). Within these, calculate the average packagePrice (using int_property_aggregation on packagePrice), and group the results by whether there is a discountAvailable (using groupby on discountAvailable).",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "What is the average cost of visiting tropical beach resorts described in detail?",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "List travel destinations matching a description of 'tropical beaches', count the different destination names, and group results by whether they are popular to see which group has more destinations.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find destinations that are conceptually similar to 'romantic getaway with beach access', and also list the top 5 most common destination names.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "What percentage of destinations, grouped by destination names, are popular among tourists, and which of these have similar descriptions to 'romantic beaches with vibrant nightlife'? Please find matching entries using semantic search, and analyze the proportion of those considered popular using boolean property aggregation for the 'popular' field.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "What percentage of travel destinations, that match snowy mountains and vibrant city life descriptions, are currently popular among tourists?",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations that match the theme 'tropical beach with vibrant nightlife', and group the results based on whether they are popular among tourists.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations that are conceptually similar to 'romantic nature getaways' based on the destinationDescription.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Count how many travel agents have more than 5 years of experience, and group them by their agentName.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel agents who have at least 10 years in yearsOfExperience and determine the average years of experience among all travel agents.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel agents who have at least 5 years in yearsOfExperience, count how many travel agents share the same agentName, and categorize the results based on whether they are availableNow.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Show all travel agents with at least 5 years of experience and count the number of unique agentName.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel packages that cost no more than 2000 in packagePrice, group these results by packageName, and count the total number of packages with discounts by evaluating discountAvailable.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel agents with at least 5 years of experience and count how many are available now.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Group travel agents by their yearsOfExperience and only include those that have more than 5 years in yearsOfExperience.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel agents with at least 5 years of experience in yearsOfExperience.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel packages where the packageDetails include the keyword 'luxury', then compute the average of packagePrice for packages where discountAvailable is true, and group the results based on whether a discount is available.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Determine the average averageVisitCost for travel destinations where destinationDescription contains the keyword 'beach'.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "List all travel destinations where the destinationDescription mentions 'popular', count how many destinations have such a description, and group these results by destinationName.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find all destinations in TravelDestinations where the destinationDescription contains the word 'beach', and count how many such destinations exist.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations where the destinationDescription includes 'beach', group the results by destinationName and count how many of these destinations are popular.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Show me travel destinations that include 'Beach' in their destinationName and count how many of them are popular using the popular attribute.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find all travel destinations where the destinationDescription contains the keyword 'beach', and group the results by whether or not the destination is popular.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations with descriptions that contain the keyword 'beaches' in destinationDescription.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find the average cost of all travel destinations that are popular, and group the results by each destination name.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find the total sum of packagePrice for all travel packages where discountAvailable is true.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "List and categorize all popular travel destinations by their names, and for each destination, count the number of detailed descriptions available, ensuring that only destinations currently popular among tourists are included.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Retrieve destinations with destinationName that are currently popular, then count the number of unique destinationName values.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find me all travel packages where there is a discountAvailable, count how many packages have a discount and organize the results by packageName.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find all travel destinations where the destination is currently popular, and calculate the percentage of all travel destinations that are popular.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find popular travel destinations, where 'popular' equals true, and group results by 'destinationName'.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Find travel destinations that are popular among tourists.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Count the number of travel agents grouped by their availability status, using the yearsOfExperience property.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "What is the average yearsOfExperience for all travel agents in the TravelAgents collection?",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "What is the count of each travel destination name grouped by whether the destination is popular?",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "What is the most common destination name in the Travel Destinations collection?",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Show the percentage of popular destinations for each destinationName by grouping the destinations and calculating how many are marked as popular.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Count how many travel destinations are currently popular and calculate the percentage of popular destinations in the TravelDestinations collection.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Group all travel destinations by the boolean property popular and determine the averageVisitCost for each group to understand the cost difference between popular and non-popular destinations.",
+    "collections": [
+      "TravelDestinations",
+      "TravelAgents",
+      "TravelPackages"
+    ]
+  },
+  {
+    "natural_language_command": "Explore art pieces of significant historical relevance, filter those with a currentValuation greater than 1,000,000, calculate the average currentValuation, and group the results by their onDisplay status.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find the average currentValuation of art pieces with significant historical details in their artPieceHistory where the currentValuation is greater than 1,000,000.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Explore exhibitions that feature modern art and innovative installations, focusing only on those with an averageVisitorCount above 100, grouped by the exhibitionTitle to identify how many unique exhibitions match this criterion.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find exhibitions with descriptions about exploring the influence of Impressionism, where the averageVisitorCount is greater than 500, and count unique exhibition titles.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find top museums highlighting Renaissance art, where entry fees are no more than 20, group results by exhibitHighlights, and determine how many are open today.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "List exhibitions with cultural themes in their exhibitionDescription that have an averageVisitorCount greater than 100, and summarize how many of these exhibitions are currentlyRunning.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums where the exhibit highlights emphasize historical significance, filter for museums with entry fees exceeding 10, and group the results by each museum's name.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums with exhibitHighlights relevant to 'Impressionist art' that also have an entryFee greater than $10.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Search for art pieces with significant historical relevance using their artPieceHistory, filter for those that have 'Monet' in artPieceName, calculate the average of currentValuation, and group the results by their onDisplay status.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Search for museums whose exhibitHighlights semantically match 'famous art exhibits with rich historical significance', where museumName is exactly 'Louvre', and compute the sum of entryFee.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Retrieve museums with exhibit highlights similar to 'ancient artifacts', filter specifically on museums named 'Smithsonian', count the unique exhibit highlights available, and group the results by the museum name.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find exhibitions that focus on impressionist themes, check if they are currently running, and count the total number of distinct exhibition titles.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums with exhibits highlighting the historical significance of Vincent van Gogh's pieces using semantic search, filter for museums whose names include 'National', aggregate by counting the number of museums open today, and group results by museumName.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums that are most relevant to \"historical importance\" based on exhibitHighlights. Include only those museums where the museumName contains \"Art Gallery\", and show the percentage of these that are openToday.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find exhibitions that are about modern art with innovative displays by looking at the exhibition descriptions. Filter these exhibitions to include only those with 'Masterpiece' in their titles. Then, group the results based on whether the exhibitions are currently running or not.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Which museums, including those with names similar to 'Art Museum', have collections described as having significant cultural impact?",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "What are the museums, grouped by their names, that have exhibit highlights including renaissance art and are open today, along with the sum of their entry fees?",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find currently running exhibitions that explore the theme of Renaissance art and calculate the average visitor count.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find exhibitions with thematic content related to 'contemporary art' that are currently running, categorize them by exhibitionTitle, and count the number of occurrences of each exhibitionTitle.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums with exhibits that have historical significance and are open today, and count the number of unique museum names.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Explore museums with notable exhibit highlights that include ancient history artifacts, find which ones are open today, count the total number of museums open today, and segment the results by the museum name.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums that have notable exhibits with historical significance, indicate if they are open today, and provide the percentage of museums that are indeed open today.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums with exhibits related to the Renaissance that are open today, and group the results by the museum's name.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums that highlight Renaissance art exhibits using semantic search on the exhibitHighlights property and filter to only those where openToday is true.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums that have Impressionist art mentioned in their exhibitHighlights, calculate the average entryFee, and group results based on whether they are openToday.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find exhibitions focused on impressionism and calculate the total average visitor count using the averageVisitorCount property.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums with exhibits about Renaissance art, categorize the results by their entryFee, and show the 5 most common exhibitHighlights.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Which museums have the most notable exhibit highlights according to their exhibitHighlights description, and how many distinct museum names are there?",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Identify exhibitions focusing on historical themes, group them by their current status of being open to the public, and compute the percentage of exhibitions that are currently running.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums with exhibitions related to the Renaissance period and count how many of these museums are open today.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums where the exhibitHighlights mention ancient artifacts and group the results by whether they are openToday.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "What are the museums with exhibit highlights focusing on ancient civilizations?",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find exhibitions where the averageVisitorCount is at least 100, group them by exhibitionTitle, and compute the mean averageVisitorCount for each group.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find all exhibitions where the averageVisitorCount is greater than 500, and calculate the total sum of averageVisitorCount for these exhibitions.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find exhibitions where the averageVisitorCount is greater than 200, count the number of different exhibition titles, and group the results by whether the exhibition is currentlyRunning.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find exhibitions where the averageVisitorCount is greater than 1000 and count how many unique exhibitionDescription texts there are.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums where the entryFee is 15 or less, aggregate the percentage of museums that are openToday, and group the results by museumName.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find art pieces from ArtPieces with a currentValuation of at least 1,000,000 and count how many of these are onDisplay.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Show exhibitions where the averageVisitorCount is greater than or equal to 100, and group the results by the currentlyRunning status.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find art pieces with a currentValuation greater than 1,000,000.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "For museums that are currently open, calculate the average entry fee grouped by the name of the museum.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find the average currentValuation of all art pieces in the ArtPieces collection whose artPieceHistory contains the word 'Renaissance'.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Count the number of unique museums with exhibitHighlights containing 'historical significance' and group these counts by whether or not the museum is open today.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find art pieces where \"Monet\" is mentioned in artPieceHistory, and count the number of unique artPieceName values.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums where exhibitHighlights contain the keyword 'ancient artifacts', calculate what percentage of these museums are openToday, and group the museums by entryFee to see the distribution across different price categories.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums that mention 'renaissance' in their exhibitHighlights and count how many of them are open today.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find exhibitions where the exhibitionTitle contains 'Impressionism' and group the results by currentlyRunning status.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find art pieces where the artPieceName contains the word 'Starry'.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find a summary of the total averageVisitorCount for each exhibitionTitle where the exhibition is currentlyRunning.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find all art pieces that are on display and calculate the total current valuation of these pieces using the `onDisplay` property for filtering and `currentValuation` property for aggregation.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Retrieve a list of all museums that are open today, group them by the museumName, and within each group, count the occurrence of each unique exhibitHighlights.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums in the Museums collection that are open today (using the 'openToday' boolean property filter), and determine the most common exhibit highlights among them (using text property aggregation on 'exhibitHighlights').",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Show the percentage of exhibitions on 'exhibitionTitle' that are currently running. Group the results by exhibitionTitle to determine which specific exhibitions have the highest visitor count while currentlyRunning.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Count how many exhibitions are currently open to the public and find those that are open.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "List all museums that are open today and group them by their entry fee.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find museums where the openToday flag is set to true.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "For each unique exhibitionTitle, determine the count of exhibitions that are currently running by aggregating over the currentlyRunning property and grouping the results by exhibitionTitle.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "What is the mean of the averageVisitorCount in the Exhibitions collection?",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "What are the top 5 most common exhibit highlights in terms of descriptions for museums, grouped by each museum's name?",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "What is the count of unique museum names in the Museums collection?",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Find out how many museums are open today and group this information by museumName.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Calculate the percentage of museums that are open today based on the openToday property.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  },
+  {
+    "natural_language_command": "Organize museums based on whether they are open today and calculate the average entry fee for each group.",
+    "collections": [
+      "Museums",
+      "Exhibitions",
+      "ArtPieces"
+    ]
+  }
+]
