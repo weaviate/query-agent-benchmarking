@@ -3,10 +3,10 @@ import os
 import time
 import yaml
 import weaviate
-from cmd.dataset import load_dataset
-from cmd.database import load_database
+from benchmarker.cmd.dataset import load_dataset
+from benchmarker.cmd.database import load_database
 from benchmarker.cmd.agent import QueryAgentBuilder
-from cmd.query_agent_benchmark import run_queries, analyze_results
+from benchmarker.cmd.query_agent_benchmark import run_queries, analyze_results
 
 config = yaml.safe_load(open("config.yml"))
 

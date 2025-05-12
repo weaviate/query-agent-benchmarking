@@ -1,8 +1,8 @@
 import time
 from typing import Any
-from cmd.metrics.lm_as_judge_agent import lm_as_judge_agent, LMJudgeAgentDeps
-from cmd.metrics.ir_metrics import calculate_recall_at_k
-from cmd.utils import qa_source_parser
+from benchmarker.cmd.metrics.lm_as_judge_agent import lm_as_judge_agent, LMJudgeAgentDeps
+from benchmarker.cmd.metrics.ir_metrics import calculate_recall_at_k
+from benchmarker.cmd.utils import qa_source_parser
 
 def run_queries(
     queries: list[str],

@@ -1,6 +1,6 @@
 import weaviate
 from typing import Any, Optional
-from weaviate.agents.query import QueryAgent, QueryAgentResponse
+from weaviate.agents.query import QueryAgent
 
 class QueryAgentBuilder():
     def __init__(
@@ -23,7 +23,7 @@ class QueryAgentBuilder():
                 agents_host=self.agents_host,
             )
     
-    def run(self, inputs: dict[str, Any]) -> QueryAgentResponse:
+    def run(self, inputs: dict[str, Any]):
         if self.agent_name == "query-agent":
             response = self.agent.run(**inputs)
             return response
