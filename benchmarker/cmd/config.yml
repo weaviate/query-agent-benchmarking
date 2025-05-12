@@ -1,2 +1,3 @@
 agent_name: query-agent
 dataset: weaviate-gorilla
+test_samples: 50
