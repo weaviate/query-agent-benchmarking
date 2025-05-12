@@ -1,20 +1,18 @@
-`uv` lookup with experimental weaviate agent clients:
+# Weaviate Query Agent Benchmarker
 
-```bash
-uv add weaviate-client@git+https://github.com/cdpierse/weaviate-python-client.git@main
-```
+This repo helps you benchmark the Query Agent end-to-end.
 
-Look for this in `pyproject.toml`:
+Project Structure:
 
 ```
-[dependencies]
-weaviate-client = { git = "https://github.com/cdpierse/weaviate-python-client.git", rev = "main" }
+cmd/
+  metrics/
+    lm_as_judge_agent.py
+  benchmark_run.py
+  config.yml
+  database.py
+  dataset.py
+  query_agent_benchmark.py
+  run_agent.py
 ```
 
-...
-
-```bash
-uv install
-
-uv run python3 benchmark_run.py
-```
