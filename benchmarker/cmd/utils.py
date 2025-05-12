@@ -14,3 +14,10 @@ def qa_source_parser(
         dataset_ids.append(o.properties.get('dataset_id'))
     
     return dataset_ids
+
+def get_object_by_dataset_id(dataset_id, objects_list):
+    """Retrieve an object by its dataset_id from the objects list."""
+    for obj in objects_list:
+        if obj["dataset_id"] == dataset_id:
+            return obj
+    return None
