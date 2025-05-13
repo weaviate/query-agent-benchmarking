@@ -4,6 +4,7 @@ import time
 import yaml
 import weaviate
 import asyncio
+import argparse
 from pathlib import Path
 from benchmarker.cmd.dataset import in_memory_dataset_loader
 from benchmarker.cmd.database import database_loader
@@ -11,6 +12,11 @@ from benchmarker.cmd.agent import QueryAgentBuilder
 from benchmarker.cmd.query_agent_benchmark import run_queries, analyze_results
 
 async def main():
+    parser = argparse.ArgumentParser(description='Run benchmark tests')
+    parser.add_argument('--agents-host', type=str, default="https://api.agents.weaviate.io",
+                        help='Host URL for agents API')
+    args = parser.parse_args()
+    
     config_path = Path(os.path.dirname(__file__), "config.yml")
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found at {config_path}")
@@ -33,7 +39,8 @@ async def main():
 
     query_agent = QueryAgentBuilder(
         weaviate_client,
-        config["dataset"]
+        config["dataset"],
+        agents_host=args.agents_host
     )
 
     results = run_queries(
