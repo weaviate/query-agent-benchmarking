@@ -16,15 +16,13 @@ class QueryAgentBuilder():
 
         self.agents_host = agents_host or "https://api.agents.weaviate.io"
 
-        if self.agent_name == "query-agent":
-            self.agent = QueryAgent(
-                client=self.weaviate_client,
-                collections=self.collections,
-                agents_host=self.agents_host,
-            )
+        self.agent = QueryAgent(
+            client=self.weaviate_client,
+            collections=self.collections,
+            agents_host=self.agents_host,
+        )
     
-    def run(self, inputs: dict[str, Any]):
-        if self.agent_name == "query-agent":
-            response = self.agent.run(**inputs)
-            return response
+    def run(self, query: str):
+        response = self.agent.run(query)
+        return response
 

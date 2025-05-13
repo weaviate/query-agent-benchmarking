@@ -5,21 +5,28 @@ import random
 
 from datasets import load_dataset
 
-from benchmarker.cmd.models.weaviate_query import WeaviateQuery
+def in_memory_dataset_loader(dataset_name: str):
+    if dataset_name == "enron":
+        emails = _load_dataset_from_hf_hub("weaviate/enron-qa-emails-dasovich-j")
+        questions = _load_dataset_from_hf_hub("weaviate/enron-qa-questions-dasovich-j")
+        return emails, questions
+    else:
+        return None
 
-class QueryAgentTest(BaseModel):
-    natural_language_command: str
-    database_schema: str
-    gold_answer: Optional[str]
-    ground_truth_queries: Optional[list[WeaviateQuery]] = None
+def _load_dataset_from_hf_hub(filepath):
+    ds = load_dataset(filepath)
+    train_dataset = ds["train"]
+    
+    dataset_dicts = []
+    for item in train_dataset:
+        dataset_dicts.append(dict(item))
+    
+    return dataset_dicts
 
-def load_dataset_from_json(filepath):
+def _load_dataset_from_json(filepath):
     with open(filepath, 'r') as f:
         data = json.load(f)
-        return [QueryAgentTest(**item) for item in data]
-
-def load_dataset_from_hf_hub(filepath):
-    ds = load_dataset("weaviate/enron-qa-dasovich-j")
+    return data
 
 def split_dataset(dataset, train_ratio=0.8, shuffle=True):
     if shuffle:

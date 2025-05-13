@@ -3,7 +3,7 @@ import time
 import weaviate
 import weaviate.collections.classes.config as wvcc
 
-def load_database(
+def database_loader(
     weaviate_client,
     dataset_name: str, 
     objects: dict
