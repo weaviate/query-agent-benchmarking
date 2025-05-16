@@ -1,0 +1,3 @@
+agent_name: vanilla-rag
+dataset: wixqa
+reload_database: False

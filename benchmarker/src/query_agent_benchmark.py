@@ -2,19 +2,21 @@ import time
 from typing import Any
 from tqdm import tqdm
 import numpy as np
-from benchmarker.cmd.metrics.lm_as_judge_agent import lm_as_judge_agent, LMJudgeAgentDeps
-from benchmarker.cmd.metrics.ir_metrics import calculate_recall
-from benchmarker.cmd.utils import qa_source_parser
+from benchmarker.src.metrics.lm_as_judge_agent import lm_as_judge_agent, LMJudgeAgentDeps
+from benchmarker.src.metrics.ir_metrics import calculate_recall
+from benchmarker.src.utils import qa_source_parser
 
 def run_queries(
     queries: list[dict],
-    query_agent,
-    test_samples: int
+    agent_name: str,
+    query_agent: Any,
+    num_samples: int
 ):
     results = []
     start = time.time()
-    for i, query in enumerate(tqdm(queries[:test_samples], desc="Running queries")):
+    for i, query in enumerate(tqdm(queries[:num_samples], desc="Running queries")):
         response = query_agent.run(query["question"])
+
         results.append({
             "query": query,
             "query_id": query["dataset_ids"],
@@ -25,7 +27,7 @@ def run_queries(
         
         # Print rolling update every 10 queries
         if (i + 1) % 10 == 0:
-            print(f"\n\033[93m--- Progress Update ({i + 1}/{test_samples}) ---\033[0m")
+            print(f"\n\033[93m--- Progress Update ({i + 1}/{num_samples}) ---\033[0m")
             print(f"Latest query: {query['question']}")
             print(f"Latest response: {response.final_answer[:200]}...")
             

@@ -1,3 +1,0 @@
-agent_name: query-agent
-dataset: enron
-reload_database: False

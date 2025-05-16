@@ -125,7 +125,7 @@ def main():
         )
         
         print("\nDatabase setup completed successfully!")
-        print(f"Created and populated the following collections:")
+        print("Created and populated the following collections:")
         for schema in processed_schemas:
             print(f"- {schema}")
             

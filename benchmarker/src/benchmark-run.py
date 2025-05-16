@@ -1,15 +1,13 @@
-import json
 import os
-import time
 import yaml
 import weaviate
 import asyncio
 import argparse
 from pathlib import Path
-from benchmarker.cmd.dataset import in_memory_dataset_loader
-from benchmarker.cmd.database import database_loader
-from benchmarker.cmd.agent import QueryAgentBuilder
-from benchmarker.cmd.query_agent_benchmark import run_queries, analyze_results
+from benchmarker.src.dataset import in_memory_dataset_loader
+from benchmarker.src.database import database_loader
+from benchmarker.src.agent import AgentBuilder
+from benchmarker.src.query_agent_benchmark import run_queries, analyze_results
 
 async def main():
     parser = argparse.ArgumentParser(description='Run benchmark tests')
@@ -39,18 +37,19 @@ async def main():
     if config["reload_database"]:
         database_loader(weaviate_client, config["dataset"], documents)
 
-    query_agent = QueryAgentBuilder(
-        weaviate_client,
-        config["dataset"],
+    query_agent = AgentBuilder(
+        dataset_name=config["dataset"],
+        agent_name=config["agent_name"],
         agents_host=args.agents_host
     )
 
     num_samples = args.num_samples if args.num_samples is not None else 5
     
     results = run_queries(
-        queries,
-        query_agent,
-        num_samples
+        queries=queries,
+        agent_name=config["agent_name"],
+        query_agent=query_agent,
+        num_samples=num_samples
     )
 
     await analyze_results(weaviate_client, config["dataset"], results, queries)
