@@ -1,6 +1,4 @@
-import os
 import time
-import weaviate
 import weaviate.collections.classes.config as wvcc
 
 def database_loader(

@@ -1,5 +1,3 @@
-from pydantic import BaseModel
-from typing import Optional
 import json
 import random
 

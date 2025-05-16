@@ -1,15 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import json
-import time
-from typing import List, Optional, Union
-from dataclasses import dataclass
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from pydantic_ai import Agent, ModelRetry, RunContext
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.result import Usage
 
 RETRIES = 3
 

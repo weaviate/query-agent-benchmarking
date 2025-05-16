@@ -1,6 +1,4 @@
-import json
 import os
-import time
 import yaml
 import weaviate
 import asyncio
