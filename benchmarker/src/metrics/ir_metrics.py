@@ -8,11 +8,9 @@ def calculate_recall(target_ids: list[str], retrieved_ids: list[str]):
     Returns:
         float: Recall score (0.0 to 1.0)
     """
-    # Convert target_ids to a list if it's a single value
     if not isinstance(target_ids, list):
         target_ids = [target_ids]
     
-    # Ensure all IDs are strings for consistent comparison
     target_ids = [str(id) for id in target_ids]
     retrieved_ids = [str(id) for id in retrieved_ids] if retrieved_ids else []
     
