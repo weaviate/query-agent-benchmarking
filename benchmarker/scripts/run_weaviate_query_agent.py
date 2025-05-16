@@ -1,3 +1,4 @@
+import os
 import weaviate
 from weaviate.agents.query import QueryAgent
 

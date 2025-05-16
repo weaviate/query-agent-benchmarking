@@ -10,7 +10,7 @@ def database_loader(
         if weaviate_client.collections.exists("EnronEmails"):
             weaviate_client.collections.delete("EnronEmails")
         
-        enron_emails_collection = weaviate_client.collections.create(
+        weaviate_client.collections.create(
             name="EnronEmails",
             vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             properties=[
@@ -39,7 +39,7 @@ def database_loader(
         if weaviate_client.collections.exists("WixKB"):
             weaviate_client.collections.delete("WixKB")
         
-        wix_kb_collection = weaviate_client.collections.create(
+        weaviate_client.collections.create(
             name="WixKB",
             vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             properties=[
