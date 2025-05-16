@@ -14,7 +14,8 @@ class GenerateAnswer(dspy.Signature):
 def weaviate_search_tool(
         query: str,
         collection_name: str,
-        target_property_name: str
+        target_property_name: str,
+        id_property: str = None
 ):
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
@@ -28,7 +29,13 @@ def weaviate_search_tool(
         limit=5
     )
 
-    return _stringify_search_results(search_results)
+    object_ids = []
+    if id_property and search_results.objects:
+        for obj in search_results.objects:
+            if obj.properties and id_property in obj.properties:
+                object_ids.append(obj.properties[id_property])
+
+    return _stringify_search_results(search_results, view_properties=[target_property_name]), object_ids
 
 def _stringify_search_results(search_results: QueryReturn, view_properties=None) -> str:
     """
@@ -74,21 +81,23 @@ def _stringify_search_results(search_results: QueryReturn, view_properties=None)
     return result_str
 
 class VanillaRAG():
-    def __init__(self, collection_name: str, target_property_name: str):
+    def __init__(self, collection_name: str, target_property_name: str, id_property: str):
         self.generate_answer = dspy.Predict(GenerateAnswer)
         self.collection_name = collection_name
         self.target_property_name = target_property_name
+        self.id_property = id_property
 
     def forward(self, question):
-        contexts = weaviate_search_tool(
+        contexts, retrieved_ids = weaviate_search_tool(
             query=question,
             collection_name=self.collection_name,
-            target_property_name=self.target_property_name
+            target_property_name=self.target_property_name,
+            id_property=self.id_property
         )
         return self.generate_answer(
             question=question,
             contexts=contexts
-        ).answer
+        ).answer, retrieved_ids
 
 def main():
     """Test the VanillaRAG implementation."""
@@ -97,13 +106,16 @@ def main():
     
     collection_name = "WixKB"
     target_property_name = "contents"
-    rag = VanillaRAG(collection_name, target_property_name)
+    id_property = "dataset_id"
+    rag = VanillaRAG(collection_name, target_property_name, id_property)
     
     test_question = "What is Wix?"
     print(f"\033[96mQuestion: {test_question}\033[0m")
     
-    answer = rag.forward(test_question)
-    print(f"\033[92mAnswer: {answer}\033[0m")
+    answer, ids = rag.forward(test_question)
+    print(f"\033[92m{answer}\033[0m\n")
+    print("\033[96mRetrieved IDs:\033[0m\n")
+    print(f"\033[92m{ids}\033[0m")
 
 if __name__ == "__main__":
     main()
