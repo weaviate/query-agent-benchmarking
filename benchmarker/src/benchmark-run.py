@@ -6,10 +6,10 @@ import weaviate
 import asyncio
 import argparse
 from pathlib import Path
-from benchmarker.cmd.dataset import in_memory_dataset_loader
-from benchmarker.cmd.database import database_loader
-from benchmarker.cmd.agent import QueryAgentBuilder
-from benchmarker.cmd.query_agent_benchmark import run_queries, analyze_results
+from benchmarker.src.dataset import in_memory_dataset_loader
+from benchmarker.src.database import database_loader
+from benchmarker.src.agent import QueryAgentBuilder
+from benchmarker.src.query_agent_benchmark import run_queries, analyze_results
 
 async def main():
     parser = argparse.ArgumentParser(description='Run benchmark tests')
@@ -40,7 +40,6 @@ async def main():
         database_loader(weaviate_client, config["dataset"], documents)
 
     query_agent = QueryAgentBuilder(
-        weaviate_client,
         config["dataset"],
         agents_host=args.agents_host
     )
