@@ -1,21 +1,28 @@
 import os
 
 import dspy
+from pydantic import BaseModel
 import weaviate
 from weaviate.outputs.query import QueryReturn
+
+class Source(BaseModel):
+    object_id: str
+
+class AgentRAGResponse(BaseModel):
+    final_answer: str
+    sources: list[Source]
 
 class GenerateAnswer(dspy.Signature):
     """Assess the context and answer the question."""
 
     question = dspy.InputField()
-    context = dspy.InputField()
-    answer = dspy.OutputField()
+    contexts = dspy.InputField()
+    final_answer = dspy.OutputField()
 
 def weaviate_search_tool(
         query: str,
         collection_name: str,
-        target_property_name: str,
-        id_property: str = None
+        target_property_name: str
 ):
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
@@ -29,11 +36,14 @@ def weaviate_search_tool(
         limit=5
     )
 
+    weaviate_client.close()
+
     object_ids = []
-    if id_property and search_results.objects:
+    if search_results.objects:
         for obj in search_results.objects:
-            if obj.properties and id_property in obj.properties:
-                object_ids.append(obj.properties[id_property])
+            object_ids.append(Source(
+                object_id=str(obj.uuid)
+            ))
 
     return _stringify_search_results(search_results, view_properties=[target_property_name]), object_ids
 
@@ -81,23 +91,22 @@ def _stringify_search_results(search_results: QueryReturn, view_properties=None)
     return result_str
 
 class VanillaRAG():
-    def __init__(self, collection_name: str, target_property_name: str, id_property: str):
+    def __init__(self, collection_name: str, target_property_name: str):
         self.generate_answer = dspy.Predict(GenerateAnswer)
         self.collection_name = collection_name
         self.target_property_name = target_property_name
-        self.id_property = id_property
 
     def forward(self, question):
-        contexts, retrieved_ids = weaviate_search_tool(
+        contexts, sources = weaviate_search_tool(
             query=question,
             collection_name=self.collection_name,
-            target_property_name=self.target_property_name,
-            id_property=self.id_property
+            target_property_name=self.target_property_name
         )
-        return self.generate_answer(
+        final_answer = self.generate_answer(
             question=question,
             contexts=contexts
-        ).answer, retrieved_ids
+        ).final_answer
+        return dspy.Prediction(final_answer=final_answer, sources=sources)
 
 def main():
     """Test the VanillaRAG implementation."""
@@ -106,16 +115,15 @@ def main():
     
     collection_name = "WixKB"
     target_property_name = "contents"
-    id_property = "dataset_id"
-    rag = VanillaRAG(collection_name, target_property_name, id_property)
+    rag = VanillaRAG(collection_name, target_property_name)
     
     test_question = "What is Wix?"
     print(f"\033[96mQuestion: {test_question}\033[0m")
     
-    answer, ids = rag.forward(test_question)
-    print(f"\033[92m{answer}\033[0m\n")
-    print("\033[96mRetrieved IDs:\033[0m\n")
-    print(f"\033[92m{ids}\033[0m")
+    response = rag.forward(test_question)
+    print(f"\033[92m{response.final_answer}\033[0m\n")
+    print("\033[96mSources:\033[0m\n")
+    print(f"\033[92m{response.sources}\033[0m")
 
 if __name__ == "__main__":
     main()
