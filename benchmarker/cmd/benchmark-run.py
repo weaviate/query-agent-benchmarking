@@ -15,6 +15,8 @@ async def main():
     parser = argparse.ArgumentParser(description='Run benchmark tests')
     parser.add_argument('--agents-host', type=str, default="https://api.agents.weaviate.io",
                         help='Host URL for agents API')
+    parser.add_argument('--num-samples', type=int, default=None,
+                        help='Number of samples to test (overrides config value)')
     args = parser.parse_args()
     
     config_path = Path(os.path.dirname(__file__), "config.yml")
@@ -43,10 +45,12 @@ async def main():
         agents_host=args.agents_host
     )
 
+    num_samples = args.num_samples if args.num_samples is not None else 5
+    
     results = run_queries(
         queries,
         query_agent,
-        config["test_samples"]
+        num_samples
     )
 
     await analyze_results(weaviate_client, config["dataset"], results, queries)

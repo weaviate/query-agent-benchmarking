@@ -17,7 +17,7 @@ def run_queries(
         response = query_agent.run(query["question"])
         results.append({
             "query": query,
-            "query_id": query["dataset_id"],
+            "query_id": query["dataset_ids"],
             "answer": response.final_answer,
             "sources": response.sources,
             "misc_response": response,
@@ -36,10 +36,12 @@ async def analyze_results(
     weaviate_client: Any,
     dataset_name: str,
     results: list,
-    ground_truths: list[str],
+    ground_truths: list[dict],
 ):
     if dataset_name == "enron":
-            collection = weaviate_client.collections.get("EnronEmails")
+        collection = weaviate_client.collections.get("EnronEmails")
+    elif dataset_name == "wixqa":
+        collection = weaviate_client.collections.get("WixKB")
     
     lm_judge_scores = []
     recall_scores = []
@@ -62,7 +64,7 @@ async def analyze_results(
              collection
         )
         recall = calculate_recall(
-            ground_truth["dataset_id"],
+            ground_truth["dataset_ids"],
             source_objects
         )
         recall_scores.append(recall)
@@ -86,7 +88,7 @@ async def analyze_results(
     print(f"Dataset: {dataset_name}")
     print(f"Number of queries: {len(results)}")
     print(f"Average LM Judge Score: {avg_lm_judge_score:.2f}")
-    print(f"Average Recall@K: {avg_recall:.2f}")
+    print(f"Average Recall: {avg_recall:.2f}")
     
     return {
         "results": results,

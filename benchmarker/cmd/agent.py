@@ -13,6 +13,8 @@ class QueryAgentBuilder():
 
         if dataset_name == "enron":
             self.collections = ["EnronEmails"]
+        if dataset_name == "wixqa":
+            self.collections = ["WixKB"]
 
         self.agents_host = agents_host or "https://api.agents.weaviate.io"
 

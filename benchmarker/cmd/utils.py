@@ -14,7 +14,10 @@ def qa_source_parser(
     
     dataset_ids = []
     for o in matching_objects.objects:
-        dataset_ids.append(o.properties.get('dataset_id'))
+        dataset_id = o.properties.get('dataset_id')
+        if dataset_id is not None:
+            # Ensure dataset_id is added as a string to the list
+            dataset_ids.append(str(dataset_id))
     
     return dataset_ids
 

@@ -1,4 +1,3 @@
 agent_name: query-agent
 dataset: enron
-test_samples: 5
 reload_database: False
