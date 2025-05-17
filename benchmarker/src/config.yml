@@ -1,3 +1,7 @@
-agent_name: vanilla-rag
+agent_name: rag-ablation
 dataset: wixqa
 reload_database: False
+write_queries: True
+filter_results: True
+summarize_results: False
+model_name: openai/gpt-4o

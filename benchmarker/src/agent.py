@@ -5,7 +5,7 @@ import dspy
 import weaviate
 from weaviate.agents.query import QueryAgent
 
-from benchmarker.src.dspy_rag import VanillaRAG
+from benchmarker.src.dspy_rag import RAGAblation
 
 class AgentBuilder():
     def __init__(
@@ -13,6 +13,10 @@ class AgentBuilder():
             dataset_name: str,
             agent_name: str,
             agents_host: Optional[str] | None = None,
+            write_queries: Optional[bool] = False,
+            filter_results: Optional[bool] = False,
+            summarize_results: Optional[bool] = False,
+            model_name: Optional[str] = 'openai/gpt-4o'
         ):
         self.weaviate_client = weaviate.connect_to_weaviate_cloud(
             cluster_url=os.getenv("WEAVIATE_URL"),
@@ -37,20 +41,29 @@ class AgentBuilder():
                 collections=[self.collection],
                 agents_host=self.agents_host,
             )
-        elif agent_name == "vanilla-rag":
-            lm = dspy.LM('openai/gpt-4o', api_key=os.getenv("OPENAI_API_KEY")) # update this to ablate model
-            dspy.configure(lm=lm)
+        elif agent_name == "rag-ablation":
+            lm = dspy.LM(
+                model_name, 
+                api_key=os.getenv("OPENAI_API_KEY"), 
+                cache=False
+            )
+            
+            print(f"\033[95mConfiguring DSPy with model {model_name} and usage tracking...\033[0m")
+            dspy.configure(lm=lm, track_usage=True)
 
-            self.agent = VanillaRAG(
+            self.agent = RAGAblation(
                 collection_name=self.collection,
-                target_property_name=self.target_property_name
+                target_property_name=self.target_property_name,
+                write_queries=write_queries,
+                filter_results=filter_results,
+                summarize_results=summarize_results
             )
 
     def run(self, query: str):
         if self.agent_name == "query-agent":
             response = self.agent.run(query)
             return response
-        if self.agent_name == "vanilla-rag":
+        if self.agent_name == "rag-ablation":
             response = self.agent.forward(query)
             return response
 

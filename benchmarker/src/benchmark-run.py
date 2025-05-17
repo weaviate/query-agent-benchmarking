@@ -23,6 +23,11 @@ async def main():
         
     config = yaml.safe_load(open(config_path))
 
+    write_queries = config.get("write_queries", False)
+    filter_results = config.get("filter_results", False)
+    summarize_results = config.get("summarize_results", False)
+    model_name = config.get("model_name", "openai/gpt-4o")
+
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
         auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
@@ -40,7 +45,11 @@ async def main():
     query_agent = AgentBuilder(
         dataset_name=config["dataset"],
         agent_name=config["agent_name"],
-        agents_host=args.agents_host
+        agents_host=args.agents_host,
+        write_queries=write_queries,
+        filter_results=filter_results,
+        summarize_results=summarize_results,
+        model_name=model_name
     )
 
     num_samples = args.num_samples if args.num_samples is not None else 5
