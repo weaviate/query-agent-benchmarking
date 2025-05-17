@@ -205,7 +205,7 @@ class RAGAblation():
             if query_pred.get_lm_usage():
                 print(f"\033[94mQuery writer usage: {query_pred.get_lm_usage()}\033[0m")
             else:
-                print(f"\033[91mWARNING: No usage data captured for query writer\033[0m")
+                print("\033[91mWARNING: No usage data captured for query writer\033[0m")
         else:
             questions = [question]
 
@@ -239,7 +239,7 @@ class RAGAblation():
                 if filter_pred.get_lm_usage():
                     print(f"\033[94mFilter usage for query '{q}': {filter_pred.get_lm_usage()}\033[0m")
                 else:
-                    print(f"\033[91mWARNING: No usage data captured for filter\033[0m")
+                    print("\033[91mWARNING: No usage data captured for filter\033[0m")
                 
                 # Keep only the filtered results
                 filtered_result = {}
@@ -262,7 +262,7 @@ class RAGAblation():
                 if summarize_pred.get_lm_usage():
                     print(f"\033[94mSummarizer usage for query '{q}': {summarize_pred.get_lm_usage()}\033[0m")
                 else:
-                    print(f"\033[91mWARNING: No usage data captured for summarizer\033[0m")
+                    print("\033[91mWARNING: No usage data captured for summarizer\033[0m")
                     
                 result = summarize_pred.summary  # Now a string
                 all_preds.append(summarize_pred)
@@ -291,7 +291,7 @@ class RAGAblation():
         if answer_pred.get_lm_usage():
             print(f"\033[94mAnswer generator usage: {answer_pred.get_lm_usage()}\033[0m")
         else:
-            print(f"\033[91mWARNING: No usage data captured for answer generator\033[0m")
+            print("\033[91mWARNING: No usage data captured for answer generator\033[0m")
 
         # Check individual usages before merging
         for i, pred in enumerate(all_preds):
