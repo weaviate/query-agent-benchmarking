@@ -9,6 +9,21 @@ from benchmarker.src.database import database_loader
 from benchmarker.src.agent import AgentBuilder
 from benchmarker.src.query_agent_benchmark import run_queries, analyze_results
 
+def load_config(config_path: str):
+    """Load main config and any agent-specific config if available."""
+    # Load main config
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+    
+    # Load agent-specific config if it exists
+    agent_config = {}
+    agent_config_path = Path(os.path.dirname(__file__), "rag_ablation_config.yml")
+    if config["agent_name"] == "rag-ablation":
+        with open(agent_config_path) as f:
+            agent_config = yaml.safe_load(f)
+    
+    return config, agent_config
+
 async def main():
     parser = argparse.ArgumentParser(description='Run benchmark tests')
     parser.add_argument('--agents-host', type=str, default="https://api.agents.weaviate.io",
@@ -18,15 +33,15 @@ async def main():
     args = parser.parse_args()
     
     config_path = Path(os.path.dirname(__file__), "config.yml")
-    if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found at {config_path}")
-        
-    config = yaml.safe_load(open(config_path))
-
-    write_queries = config.get("write_queries", False)
-    filter_results = config.get("filter_results", False)
-    summarize_results = config.get("summarize_results", False)
-    model_name = config.get("model_name", "openai/gpt-4o")
+    config, agent_config = load_config(config_path)
+    
+    # Extract agent-specific parameters with defaults
+    agent_params = {
+        "write_queries": agent_config.get("write_queries", False),
+        "filter_results": agent_config.get("filter_results", False),
+        "summarize_results": agent_config.get("summarize_results", False),
+        "model_name": agent_config.get("model_name", "openai/gpt-4o")
+    }
 
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
@@ -46,10 +61,7 @@ async def main():
         dataset_name=config["dataset"],
         agent_name=config["agent_name"],
         agents_host=args.agents_host,
-        write_queries=write_queries,
-        filter_results=filter_results,
-        summarize_results=summarize_results,
-        model_name=model_name
+        **agent_params
     )
 
     num_samples = args.num_samples if args.num_samples is not None else 5

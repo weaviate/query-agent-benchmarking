@@ -42,13 +42,7 @@ class AgentBuilder():
                 agents_host=self.agents_host,
             )
         elif agent_name == "rag-ablation":
-            lm = dspy.LM(
-                model_name, 
-                api_key=os.getenv("OPENAI_API_KEY"), 
-                cache=False
-            )
-            
-            print(f"\033[95mConfiguring DSPy with model {model_name} and usage tracking...\033[0m")
+            lm = dspy.LM(model_name, api_key=os.getenv("OPENAI_API_KEY"), cache=False)
             dspy.configure(lm=lm, track_usage=True)
 
             self.agent = RAGAblation(

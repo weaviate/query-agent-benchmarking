@@ -1,0 +1,4 @@
+write_queries: True
+filter_results: True
+summarize_results: False
+model_name: openai/gpt-4o
