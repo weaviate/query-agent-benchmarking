@@ -1,0 +1,481 @@
+{
+  "results": [
+    {
+      "query": {
+        "question": "Can I start accepting payments on my site while my Wix Payments account is still under verification?",
+        "answer": "You can start accepting payments on your site using [Wix Payments](https://support.wix.com/en/article/about-wix-payments) almost immediately. However, we need to verify your identity before your account can be fully activated.",
+        "dataset_ids": [
+          "49d9e88fadbf11fa4e685c847590078ff9394c2fe7566094f504f53ca4aca465"
+        ]
+      },
+      "query_id": [
+        "49d9e88fadbf11fa4e685c847590078ff9394c2fe7566094f504f53ca4aca465"
+      ],
+      "answer": "Yes, you can start accepting payments on your Wix site while your Wix Payments account is still under verification. When your account is in the \"Accepting Payments\" status, you have connected Wix Payments as a payment method and customers can complete their purchases on your site. However, during this period, you cannot yet receive payouts to your bank account until the account verification is fully completed.\n\nTo start accepting payments, your site must be published and upgraded to a Wix Premium or Studio plan that supports payments. After this, you need to complete your account setup and provide all necessary information and documentation for verification, which may include personal/business details, photo ID, bank statement, and address verification documents.\n\nWix requires up to 7 business days to review and verify your account and site content. From the time of the first successful transaction, you have 30 days to complete the verification process. If not completed within this timeframe, your account will be suspended, and you will no longer be able to accept payments. Even after activation, further verification may be requested occasionally.\n\nDuring verification, although you can accept payments, payouts are temporarily unavailable until verification concludes successfully. Make sure to check your verification status in the Accept Payments section of your site's dashboard and promptly provide any requested information to avoid suspension.\n\nIn summary, accepting payments while your Wix Payments account is under verification is permitted, but payouts will be on hold until verification is complete and the account becomes active.",
+      "sources": [
+        {
+          "object_id": "76addf1a-b922-4d11-b9a5-dd24ef314e1d",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "151daeb2-f78a-4433-b6e6-b756abe5708b",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "c8ef63dd-9a53-4b72-9b2d-c521b4904368",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "64a85be0-d8e0-4c4b-b6bf-b474bd891b91",
+          "collection": "WixKB"
+        }
+      ],
+      "misc_response": {
+        "original_query": "Can I start accepting payments on my site while my Wix Payments account is still under verification?",
+        "collection_names": [
+          "WixKB"
+        ],
+        "searches": [
+          [
+            {
+              "queries": [
+                "accepting payments on site while Wix Payments account is under verification"
+              ],
+              "filters": [
+                []
+              ],
+              "filter_operators": "AND",
+              "collection": "WixKB"
+            }
+          ]
+        ],
+        "aggregations": [],
+        "usage": {
+          "requests": 3,
+          "request_tokens": 17277,
+          "response_tokens": 508,
+          "total_tokens": 17785,
+          "details": null
+        },
+        "total_time": 15.364737272262573,
+        "aggregation_answer": "You can accept payments on your Wix site while your Wix Payments account is under verification in the \"Accepting Payments\" status. Customers can complete purchases, but you cannot receive payouts until verification is complete. You have 30 days from the first transaction to complete verification, or the account will be suspended. The verification process can take up to 7 business days, and additional verification may be required after activation.",
+        "has_aggregation_answer": true,
+        "has_search_answer": true,
+        "is_partial_answer": false,
+        "missing_information": [],
+        "final_answer": "Yes, you can start accepting payments on your Wix site while your Wix Payments account is still under verification. When your account is in the \"Accepting Payments\" status, you have connected Wix Payments as a payment method and customers can complete their purchases on your site. However, during this period, you cannot yet receive payouts to your bank account until the account verification is fully completed.\n\nTo start accepting payments, your site must be published and upgraded to a Wix Premium or Studio plan that supports payments. After this, you need to complete your account setup and provide all necessary information and documentation for verification, which may include personal/business details, photo ID, bank statement, and address verification documents.\n\nWix requires up to 7 business days to review and verify your account and site content. From the time of the first successful transaction, you have 30 days to complete the verification process. If not completed within this timeframe, your account will be suspended, and you will no longer be able to accept payments. Even after activation, further verification may be requested occasionally.\n\nDuring verification, although you can accept payments, payouts are temporarily unavailable until verification concludes successfully. Make sure to check your verification status in the Accept Payments section of your site's dashboard and promptly provide any requested information to avoid suspension.\n\nIn summary, accepting payments while your Wix Payments account is under verification is permitted, but payouts will be on hold until verification is complete and the account becomes active.",
+        "sources": [
+          {
+            "object_id": "76addf1a-b922-4d11-b9a5-dd24ef314e1d",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "151daeb2-f78a-4433-b6e6-b756abe5708b",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "c8ef63dd-9a53-4b72-9b2d-c521b4904368",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "64a85be0-d8e0-4c4b-b6bf-b474bd891b91",
+            "collection": "WixKB"
+          }
+        ]
+      },
+      "time_taken": 16.479259967803955
+    },
+    {
+      "query": {
+        "question": "I am inquiring about purchasing the yearly premium plan for $17.00, which includes a free domain for 1 year. However, the voucher does not show up at checkout. Do I need to purchase the plan first and then will the voucher be available to activate?",
+        "answer": "When you purchase a yearly Premium plan, the free domain voucher is not immediately visible at checkout. Instead, the voucher becomes available after you complete the purchase of the plan. You can then claim the voucher by visiting the [Premium Vouchers page](https://manage.wix.com/account/vouchers?referralAdditionalInfo=%7Btheir) in your Wix account. The voucher is valid for two months from the date of purchase, and you can use it to register a domain for free for one year. If you have already purchased the plan and still do not see the voucher, ensure that you meet all eligibility criteria, such as not having purchased a monthly plan or a domain prior to the plan. If issues persist, you can [contact Wix Customer Care](https://support.wix.com/en/article/contacting-wix-customer-care-for-support) for further assistance.",
+        "dataset_ids": [
+          "06535db983ea0ffe0214af14497a1d158f279d92c92f211e87b8820aa95dbe43"
+        ]
+      },
+      "query_id": [
+        "06535db983ea0ffe0214af14497a1d158f279d92c92f211e87b8820aa95dbe43"
+      ],
+      "answer": "If you are purchasing the yearly premium plan for $17.00 which includes a free domain for 1 year, the voucher for the free domain does not automatically show up at checkout because you first need to purchase the plan. The free domain voucher is a promotional gift that is included only with the initial purchase of selected yearly or multi-year Premium plans, and it is not available for monthly plans or renewals/upgrades of existing plans.\n\nAfter purchasing the yearly plan, you will receive the voucher which you must claim within 2 months from the date of purchase by going to the Premium Vouchers page in your Wix account. Once claimed, you can then apply the voucher to register a new domain for free for one year. The voucher enables registration of a domain for free for the first year but does require entering payment information to process renewal payments after this period.\n\nIn summary:\n- You need to complete the purchase of the yearly premium plan first.\n- Then, check the Premium Vouchers page to claim your free domain voucher.\n- After claiming, apply the voucher during domain registration within the voucher's validity period.\n\nIf you do not see the voucher, ensure you're purchasing a yearly plan (not monthly), and that this is your first purchase of such a plan, as renewals and upgrades do not come with a new voucher. Also, collaborators with Billing Manager permissions might have already applied the voucher if you share site management.\n\nThis process means the voucher doesn\u2019t appear as something to activate at checkout but instead is accessed and applied separately after your plan purchase.",
+      "sources": [
+        {
+          "object_id": "feb825c2-0317-41bf-b32d-6ae3e77706cc",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "285bcd70-15e8-4c63-8e1f-ac9cd92f7f1c",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "846948f4-5cc1-4dfc-b868-9010fada7402",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "d98085bc-7448-4567-9b01-0cea3389caf2",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "73168daa-bda5-4c7e-8f58-65e4d8958777",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "207259bf-4d29-42d9-9c08-3c709c906a84",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "19076a3a-1117-4645-a335-011ae4fc4d0e",
+          "collection": "WixKB"
+        }
+      ],
+      "misc_response": {
+        "original_query": "I am inquiring about purchasing the yearly premium plan for $17.00, which includes a free domain for 1 year. However, the voucher does not show up at checkout. Do I need to purchase the plan first and then will the voucher be available to activate?",
+        "collection_names": [
+          "WixKB"
+        ],
+        "searches": [
+          [
+            {
+              "queries": [
+                "yearly premium plan $17.00 includes a free domain for 1 year"
+              ],
+              "filters": [
+                []
+              ],
+              "filter_operators": "AND",
+              "collection": "WixKB"
+            },
+            {
+              "queries": [
+                "voucher not showing up at checkout for yearly premium plan"
+              ],
+              "filters": [
+                []
+              ],
+              "filter_operators": "AND",
+              "collection": "WixKB"
+            },
+            {
+              "queries": [
+                "purchase plan required to activate voucher",
+                "activate voucher before purchasing plan",
+                "voucher activation requirements"
+              ],
+              "filters": [
+                [],
+                [],
+                []
+              ],
+              "filter_operators": "OR",
+              "collection": "WixKB"
+            }
+          ]
+        ],
+        "aggregations": [],
+        "usage": {
+          "requests": 5,
+          "request_tokens": 21804,
+          "response_tokens": 714,
+          "total_tokens": 22518,
+          "details": null
+        },
+        "total_time": 15.886083602905273,
+        "aggregation_answer": "Purchasing a yearly premium plan includes a free domain voucher that is not visible at checkout because the voucher is offered after the plan purchase. The voucher must be claimed within 2 months of purchase from the Premium Vouchers page in the Wix account and then applied to register a free domain for one year. The voucher is only available with initial yearly or multi-year upgrades, not monthly plans, renewals, or existing plan upgrades. Collaborators with Billing Manager permissions can also apply the voucher on behalf of the site owner. The voucher requires payment info entry but no charge for the first year, allowing domain renewal processing after the free period.",
+        "has_aggregation_answer": true,
+        "has_search_answer": true,
+        "is_partial_answer": false,
+        "missing_information": [],
+        "final_answer": "If you are purchasing the yearly premium plan for $17.00 which includes a free domain for 1 year, the voucher for the free domain does not automatically show up at checkout because you first need to purchase the plan. The free domain voucher is a promotional gift that is included only with the initial purchase of selected yearly or multi-year Premium plans, and it is not available for monthly plans or renewals/upgrades of existing plans.\n\nAfter purchasing the yearly plan, you will receive the voucher which you must claim within 2 months from the date of purchase by going to the Premium Vouchers page in your Wix account. Once claimed, you can then apply the voucher to register a new domain for free for one year. The voucher enables registration of a domain for free for the first year but does require entering payment information to process renewal payments after this period.\n\nIn summary:\n- You need to complete the purchase of the yearly premium plan first.\n- Then, check the Premium Vouchers page to claim your free domain voucher.\n- After claiming, apply the voucher during domain registration within the voucher's validity period.\n\nIf you do not see the voucher, ensure you're purchasing a yearly plan (not monthly), and that this is your first purchase of such a plan, as renewals and upgrades do not come with a new voucher. Also, collaborators with Billing Manager permissions might have already applied the voucher if you share site management.\n\nThis process means the voucher doesn\u2019t appear as something to activate at checkout but instead is accessed and applied separately after your plan purchase.",
+        "sources": [
+          {
+            "object_id": "feb825c2-0317-41bf-b32d-6ae3e77706cc",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "285bcd70-15e8-4c63-8e1f-ac9cd92f7f1c",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "846948f4-5cc1-4dfc-b868-9010fada7402",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "d98085bc-7448-4567-9b01-0cea3389caf2",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "73168daa-bda5-4c7e-8f58-65e4d8958777",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "207259bf-4d29-42d9-9c08-3c709c906a84",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "19076a3a-1117-4645-a335-011ae4fc4d0e",
+            "collection": "WixKB"
+          }
+        ]
+      },
+      "time_taken": 16.911364316940308
+    },
+    {
+      "query": {
+        "question": "I'm want to know how much it would cost to upgrade my email plan.",
+        "answer": "To upgrade your email marketing plan:\n[Go to Email Marketing](https://www.wix.com/my-account/site-selector/?buttonText=Email%20Marketing%20Dashboard&title=Select%20a%20Site&autoSelectOnSingleSite=true&actionUrl=https://www.wix.com/dashboard/%7B%7BmetaSiteId%7D%7D/shoutout/) in your site's dashboard.  Under Monthly Balance click Upgrade.\n  Choose a plan that works best for you and checkout.",
+        "dataset_ids": [
+          "de6e96935f0b3321cf29416ec164482247b5035f1d2e12b36e203be8126ca8b8"
+        ]
+      },
+      "query_id": [
+        "de6e96935f0b3321cf29416ec164482247b5035f1d2e12b36e203be8126ca8b8"
+      ],
+      "answer": "The cost to upgrade your email plan depends on the type of email service you are using and the features you want. For example, if you want to upgrade your email marketing plan, you can do so by choosing a package that suits the number of emails you plan to send each month and any additional features you need. There are free plans sending up to 200 emails monthly, with upgrades available for higher limits. For business email plans like Google Workspace through Wix, upgrading gives you increased storage and more collaborative features, with tiered plans such as Starter, Standard, and Plus offering varying storage from 30GB to 5TB and other features. The upgrade process involves selecting your desired plan and completing the checkout, with any remaining credit from your current plan applied toward the new purchase. Specific pricing details are not provided here, so you would need to review the plan options directly in your service dashboard to see exact costs and compare which best fits your needs. Additionally, it\u2019s noted that when upgrading, billing cycles remain the same, and certain downgrades are not allowed. Lastly, upgrading your site plan (distinct from email plans) also has associated costs and benefits but is separate from email planning.",
+      "sources": [
+        {
+          "object_id": "d60288b6-d225-49d1-86b6-c77a5b80e70e",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "72a8a634-c92f-4620-8d92-14a6f9b38726",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "9ffb9436-4f58-464c-a42e-e1e77409a58a",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "54ff2156-e998-4125-9411-bdb5ac9443af",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "e6a9c3ac-313c-4239-be20-8824d563658c",
+          "collection": "WixKB"
+        }
+      ],
+      "misc_response": {
+        "original_query": "I'm want to know how much it would cost to upgrade my email plan.",
+        "collection_names": [
+          "WixKB"
+        ],
+        "searches": [
+          [
+            {
+              "queries": [
+                "cost to upgrade email plan"
+              ],
+              "filters": [
+                []
+              ],
+              "filter_operators": "AND",
+              "collection": "WixKB"
+            }
+          ]
+        ],
+        "aggregations": [],
+        "usage": {
+          "requests": 3,
+          "request_tokens": 6940,
+          "response_tokens": 370,
+          "total_tokens": 7310,
+          "details": null
+        },
+        "total_time": 11.95019268989563,
+        "aggregation_answer": null,
+        "has_aggregation_answer": false,
+        "has_search_answer": true,
+        "is_partial_answer": true,
+        "missing_information": [
+          "Exact pricing details for different email plan upgrades"
+        ],
+        "final_answer": "The cost to upgrade your email plan depends on the type of email service you are using and the features you want. For example, if you want to upgrade your email marketing plan, you can do so by choosing a package that suits the number of emails you plan to send each month and any additional features you need. There are free plans sending up to 200 emails monthly, with upgrades available for higher limits. For business email plans like Google Workspace through Wix, upgrading gives you increased storage and more collaborative features, with tiered plans such as Starter, Standard, and Plus offering varying storage from 30GB to 5TB and other features. The upgrade process involves selecting your desired plan and completing the checkout, with any remaining credit from your current plan applied toward the new purchase. Specific pricing details are not provided here, so you would need to review the plan options directly in your service dashboard to see exact costs and compare which best fits your needs. Additionally, it\u2019s noted that when upgrading, billing cycles remain the same, and certain downgrades are not allowed. Lastly, upgrading your site plan (distinct from email plans) also has associated costs and benefits but is separate from email planning.",
+        "sources": [
+          {
+            "object_id": "d60288b6-d225-49d1-86b6-c77a5b80e70e",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "72a8a634-c92f-4620-8d92-14a6f9b38726",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "9ffb9436-4f58-464c-a42e-e1e77409a58a",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "54ff2156-e998-4125-9411-bdb5ac9443af",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "e6a9c3ac-313c-4239-be20-8824d563658c",
+            "collection": "WixKB"
+          }
+        ]
+      },
+      "time_taken": 12.592097043991089
+    },
+    {
+      "query": {
+        "question": "I want to know if the Wix store function work for selling services instead of just physical goods",
+        "answer": "Wix Stores gives you all the tools you need to create a sleek, professional online store and grow your eCommerce business.\n  \nWix Bookings, however, is an easy-to-use scheduling system that lets your members book and [pay for] (https://support.wix.com/en/article/wix-bookings-about-getting-paid-online) services online, so you can focus on managing your business. Whether you offer services like workshops, courses, or private sessions, online or in-person, Wix Bookings has you covered.",
+        "dataset_ids": [
+          "a513a215c1798f329293330cb5f5e975a18978954b5ee27d84441e029f900d51",
+          "b9ba8c318ee75f49eaa89c1d5b8d461fa2b4c27167381b869aeb31027d7187f9"
+        ]
+      },
+      "query_id": [
+        "a513a215c1798f329293330cb5f5e975a18978954b5ee27d84441e029f900d51",
+        "b9ba8c318ee75f49eaa89c1d5b8d461fa2b4c27167381b869aeb31027d7187f9"
+      ],
+      "answer": "The Wix Stores function primarily supports selling physical and digital products, including options such as product subscriptions, dropshipping, and selling on multiple sales channels. However, selling services directly via Wix Stores as you would physical goods is not its primary function. Instead, Wix provides Wix Bookings for selling services like appointments, classes, or other bookable services. Notably, Wix Bookings and Wix Stores can be integrated for a combined checkout experience, allowing clients to pay for store products and bookings services together in the same sale, including features like tips, coupons, and discounts.\n\nTherefore, while Wix Stores is designed for tangible or digital products, for selling services, Wix Bookings is the recommended tool. You can use these together for an integrated selling experience if you want to offer both products and services on your site.\n\nIn summary, Wix Stores alone is not designed to sell services like physical goods, but Wix Bookings complements it to handle service sales effectively.",
+      "sources": [
+        {
+          "object_id": "988173fd-a5ad-4e8d-b108-d97167f39854",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "517b6869-6a5e-48cb-a700-cfe571b0f98d",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "06ccea8e-b87f-4239-90ce-bc8c73b8fde5",
+          "collection": "WixKB"
+        }
+      ],
+      "misc_response": {
+        "original_query": "I want to know if the Wix store function work for selling services instead of just physical goods",
+        "collection_names": [
+          "WixKB"
+        ],
+        "searches": [
+          [
+            {
+              "queries": [
+                "Does Wix store function support selling services instead of just physical goods"
+              ],
+              "filters": [
+                []
+              ],
+              "filter_operators": "AND",
+              "collection": "WixKB"
+            }
+          ]
+        ],
+        "aggregations": [],
+        "usage": {
+          "requests": 3,
+          "request_tokens": 7619,
+          "response_tokens": 325,
+          "total_tokens": 7944,
+          "details": null
+        },
+        "total_time": 10.324782609939575,
+        "aggregation_answer": null,
+        "has_aggregation_answer": false,
+        "has_search_answer": true,
+        "is_partial_answer": false,
+        "missing_information": [],
+        "final_answer": "The Wix Stores function primarily supports selling physical and digital products, including options such as product subscriptions, dropshipping, and selling on multiple sales channels. However, selling services directly via Wix Stores as you would physical goods is not its primary function. Instead, Wix provides Wix Bookings for selling services like appointments, classes, or other bookable services. Notably, Wix Bookings and Wix Stores can be integrated for a combined checkout experience, allowing clients to pay for store products and bookings services together in the same sale, including features like tips, coupons, and discounts.\n\nTherefore, while Wix Stores is designed for tangible or digital products, for selling services, Wix Bookings is the recommended tool. You can use these together for an integrated selling experience if you want to offer both products and services on your site.\n\nIn summary, Wix Stores alone is not designed to sell services like physical goods, but Wix Bookings complements it to handle service sales effectively.",
+        "sources": [
+          {
+            "object_id": "988173fd-a5ad-4e8d-b108-d97167f39854",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "517b6869-6a5e-48cb-a700-cfe571b0f98d",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "06ccea8e-b87f-4239-90ce-bc8c73b8fde5",
+            "collection": "WixKB"
+          }
+        ]
+      },
+      "time_taken": 11.184322118759155
+    },
+    {
+      "query": {
+        "question": "How can I add discounts to my service prices when customers pay for a plan?",
+        "answer": "To add discounts to your service prices when customers pay for a plan, you can create discount coupons for your pricing plans. You can choose to offer a price discount or a percentage discount coupon. You can also choose whether your discount coupons apply to a specific plan or to all your pricing plans. Your clients redeem the coupon at checkout to take advantage of the discounted plans. Note: Discount coupons for Pricing Plans cover the plans themselves, but not any setup fees you may have enabled. To create discount coupons for your pricing plans:\n\n1. Go to Pricing Plans in your site's dashboard.\n2. Click the More Actions icon at the top.\n3. Click Create a coupon.\n4. Select the type of coupon you want to offer:\n   - $ Discount: Offer a fixed monetary discount amount.\n   - % Discount: Offer a percentage discount.\n5. Enter the Coupon code clients use to redeem the coupon.\n6. Enter the Coupon name for your own records.\n7. Click the Apply to drop-down and choose the relevant pricing plan(s):\n   - All plans: This is applied to all your available pricing plans.\n   - Specific plan: Click the Pricing plan drop-down and select the relevant plan.\n8. Choose how the coupon works with your pricing plans:\n   - First billing cycle: The coupon offers a one-time discount at the start of the pricing plan.\n   - All billing cycles: The coupon offers a recurring discount, every time your client is charged.\n   - Custom: You choose how your coupons work with recurring payments (e.g. give a discount for the first 4 billing cycles).\n9. Select the dates the coupon is valid between.\n10. (Optional) Select the Limit the total number of uses for this coupon checkbox and enter the number of times the coupon can be used.\n11. (Optional) Select the Limit to one use per customer checkbox if you want clients to be able to use the coupon only one time.\n12. Click Create Coupon.",
+        "dataset_ids": [
+          "8cc75fbcc571336d1ef1768e7727bd9d1e6c1333f22eeb5366232b9a1a066418"
+        ]
+      },
+      "query_id": [
+        "8cc75fbcc571336d1ef1768e7727bd9d1e6c1333f22eeb5366232b9a1a066418"
+      ],
+      "answer": "When customers pay for a plan and you want to add discounts to your service prices, one recommended approach is to use pricing plans that bundle services with discounted pricing. For example, you can create one-time or recurring payment plans that include multiple services at a reduced rate compared to purchasing them individually. To do this, you typically create a pricing plan in your website dashboard, specify the services included in the plan, and set the discounted price for that plan.\n\nSteps to add discounts through pricing plans:\n1. Create a new pricing plan in your site's dashboard, giving it a name and description.\n2. List the included services and content that come with this plan; these represent the benefits customers receive.\n3. Set the price for the plan, which can be lower than the sum of individual service prices to offer a discount.\n4. Define the plan's duration and payment frequency (one-time or recurring).\n5. Optionally, you can add policies, custom form fields, and other settings to tailor the plan experience.\n\nNote, however, that the current system does not allow adding optional extra benefits to a plan where customers can choose them individually for additional fees. All benefits connected to a plan apply to all customers who purchase it.\n\nYou can also manage and update existing plans and their connected benefits, including their prices and durations, but price changes will only affect new customers, not existing clients under existing plans.\n\nTo encourage customers to try your plans, consider offering trial or free plans alongside discounted bundle plans.\n\nIn summary, instead of adding discounts directly to individual service prices when customers pay via a plan, you provide them a bundled pricing plan that offers access to multiple services at a discounted combined rate.\n\nIf you want to promote your plans further, creating coupons linked to your pricing plans can be an effective approach.",
+      "sources": [
+        {
+          "object_id": "cf8a4770-d238-4416-94c9-451e287b5a78",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "ebb72649-f96b-4b4e-be49-3ede5bd1a5b7",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "9558b520-6602-489c-9df4-e34c883a126a",
+          "collection": "WixKB"
+        }
+      ],
+      "misc_response": {
+        "original_query": "How can I add discounts to my service prices when customers pay for a plan?",
+        "collection_names": [
+          "WixKB"
+        ],
+        "searches": [
+          [
+            {
+              "queries": [
+                "add discounts to service prices when customers pay for a plan"
+              ],
+              "filters": [
+                []
+              ],
+              "filter_operators": "AND",
+              "collection": "WixKB"
+            }
+          ]
+        ],
+        "aggregations": [],
+        "usage": {
+          "requests": 3,
+          "request_tokens": 6251,
+          "response_tokens": 505,
+          "total_tokens": 6756,
+          "details": null
+        },
+        "total_time": 16.062138080596924,
+        "aggregation_answer": null,
+        "has_aggregation_answer": false,
+        "has_search_answer": true,
+        "is_partial_answer": false,
+        "missing_information": [],
+        "final_answer": "When customers pay for a plan and you want to add discounts to your service prices, one recommended approach is to use pricing plans that bundle services with discounted pricing. For example, you can create one-time or recurring payment plans that include multiple services at a reduced rate compared to purchasing them individually. To do this, you typically create a pricing plan in your website dashboard, specify the services included in the plan, and set the discounted price for that plan.\n\nSteps to add discounts through pricing plans:\n1. Create a new pricing plan in your site's dashboard, giving it a name and description.\n2. List the included services and content that come with this plan; these represent the benefits customers receive.\n3. Set the price for the plan, which can be lower than the sum of individual service prices to offer a discount.\n4. Define the plan's duration and payment frequency (one-time or recurring).\n5. Optionally, you can add policies, custom form fields, and other settings to tailor the plan experience.\n\nNote, however, that the current system does not allow adding optional extra benefits to a plan where customers can choose them individually for additional fees. All benefits connected to a plan apply to all customers who purchase it.\n\nYou can also manage and update existing plans and their connected benefits, including their prices and durations, but price changes will only affect new customers, not existing clients under existing plans.\n\nTo encourage customers to try your plans, consider offering trial or free plans alongside discounted bundle plans.\n\nIn summary, instead of adding discounts directly to individual service prices when customers pay via a plan, you provide them a bundled pricing plan that offers access to multiple services at a discounted combined rate.\n\nIf you want to promote your plans further, creating coupons linked to your pricing plans can be an effective approach.",
+        "sources": [
+          {
+            "object_id": "cf8a4770-d238-4416-94c9-451e287b5a78",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "ebb72649-f96b-4b4e-be49-3ede5bd1a5b7",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "9558b520-6602-489c-9df4-e34c883a126a",
+            "collection": "WixKB"
+          }
+        ]
+      },
+      "time_taken": 16.954077005386353
+    }
+  ],
+  "config": {
+    "dataset": "wixqa",
+    "agent_name": "query-agent",
+    "experiment_name": "query_agent_prod",
+    "agents_host": "https://api.agents.weaviate.io",
+    "num_samples": 5,
+    "timestamp": "20250521_144743"
+  }
+}

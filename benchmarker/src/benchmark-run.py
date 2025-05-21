@@ -7,7 +7,13 @@ from pathlib import Path
 from benchmarker.src.dataset import in_memory_dataset_loader
 from benchmarker.src.database import database_loader
 from benchmarker.src.agent import AgentBuilder
-from benchmarker.src.query_agent_benchmark import run_queries, analyze_results
+from benchmarker.src.query_agent_benchmark import (
+    run_queries, 
+    analyze_results,
+    pretty_print_query_agent_benchmark_metrics,
+    query_agent_benchmark_metrics_to_markdown
+)
+from benchmarker.src.utils import save_all_results, pretty_print_dict
 
 def load_config(config_path: str):
     """Load main config and any agent-specific config if available."""
@@ -30,6 +36,8 @@ async def main():
                         help='Host URL for agents API')
     parser.add_argument('--num-samples', type=int, default=None,
                         help='Number of samples to test (overrides config value)')
+    parser.add_argument('--experiment-name', type=str, default="query_agent_prod",
+                        help='Name for this experiment run')
     args = parser.parse_args()
     
     config_path = Path(os.path.dirname(__file__), "config.yml")
@@ -50,9 +58,9 @@ async def main():
 
     documents, queries = in_memory_dataset_loader(config["dataset"])
     print("\033[92mFirst Document:\033[0m")
-    print(documents[0])
+    pretty_print_dict(documents[0])
     print("\033[92mFirst Query\033[0m")
-    print(queries[0])
+    pretty_print_dict(queries[0])
 
     if config["reload_database"]:
         database_loader(weaviate_client, config["dataset"], documents)
@@ -73,7 +81,25 @@ async def main():
         num_samples=num_samples
     )
 
-    await analyze_results(weaviate_client, config["dataset"], results, queries)
+    save_all_results(
+        results=results, 
+        config=config,
+        experiment_name=args.experiment_name,
+        agents_host=args.agents_host,
+        num_samples=num_samples
+    )
+
+    metrics = await analyze_results(weaviate_client, config["dataset"], results, queries)
+
+    pretty_print_query_agent_benchmark_metrics(metrics)
+    
+    query_agent_benchmark_metrics_to_markdown(
+        metrics=metrics,
+        dataset_name=config["dataset"],
+        experiment_name=args.experiment_name
+    )
+
+    weaviate_client.close()
 
 if __name__ == "__main__":
     asyncio.run(main())

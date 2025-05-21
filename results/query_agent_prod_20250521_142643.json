@@ -1,0 +1,104 @@
+{
+  "results": [
+    {
+      "query": {
+        "question": "Can I start accepting payments on my site while my Wix Payments account is still under verification?",
+        "answer": "You can start accepting payments on your site using [Wix Payments](https://support.wix.com/en/article/about-wix-payments) almost immediately. However, we need to verify your identity before your account can be fully activated.",
+        "dataset_ids": [
+          "49d9e88fadbf11fa4e685c847590078ff9394c2fe7566094f504f53ca4aca465"
+        ]
+      },
+      "query_id": [
+        "49d9e88fadbf11fa4e685c847590078ff9394c2fe7566094f504f53ca4aca465"
+      ],
+      "answer": "Yes, you can start accepting payments on your site while your Wix Payments account is still under verification. After connecting Wix Payments as a payment method and starting to accept payments, your customers can complete their purchases. However, you will not receive payouts to your bank account until your account setup and verification process is complete. \n\nThe verification process involves submitting personal and business information, uploading documents such as a valid government-issued ID and bank statement, and ensuring your site complies with Wix's terms. This process usually takes up to 7 business days. You have 30 days from the time of the first transaction to complete your account setup/verification; otherwise, your account will be suspended and you will not be able to accept payments via Wix Payments.\n\nWhile waiting for verification completion, you can accept payments but cannot withdraw funds to your bank. Once verified and active, payouts will be processed according to your payout schedule.\n\nBe aware that if you update your account settings during verification, your payments acceptance can continue but payouts to the bank will be temporarily paused until re-verification finishes.\n\nIn summary:\n- Payments acceptance is possible during verification.\n- Payouts are withheld until verification completion.\n- You must complete verification within 30 days to avoid suspension.\n- Upgrade to a Wix Premium or Studio plan and publish your site to accept payments.\n\nThis is based on Wix Payments account status details and verification requirements.",
+      "sources": [
+        {
+          "object_id": "76addf1a-b922-4d11-b9a5-dd24ef314e1d",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "c8ef63dd-9a53-4b72-9b2d-c521b4904368",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "151daeb2-f78a-4433-b6e6-b756abe5708b",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "c6d57e6f-9163-4f8f-b535-c6be099d5370",
+          "collection": "WixKB"
+        },
+        {
+          "object_id": "64a85be0-d8e0-4c4b-b6bf-b474bd891b91",
+          "collection": "WixKB"
+        }
+      ],
+      "misc_response": {
+        "original_query": "Can I start accepting payments on my site while my Wix Payments account is still under verification?",
+        "collection_names": [
+          "WixKB"
+        ],
+        "searches": [
+          [
+            {
+              "queries": [
+                "accepting payments while Wix Payments account is under verification"
+              ],
+              "filters": [
+                []
+              ],
+              "filter_operators": "AND",
+              "collection": "WixKB"
+            }
+          ]
+        ],
+        "aggregations": [],
+        "usage": {
+          "requests": 3,
+          "request_tokens": 16869,
+          "response_tokens": 555,
+          "total_tokens": 17424,
+          "details": null
+        },
+        "total_time": 13.836571216583252,
+        "aggregation_answer": "Wix Payments allows you to start accepting payments as soon as you connect it to your site and begin the account setup, even if the verification process is not yet complete. Customers can complete purchases but payouts to your bank are on hold until verification finishes. The account needs to be verified within 30 days of the first transaction to avoid suspension. Verification typically takes up to 7 business days and requires submitting personal and business information, bank details, photo ID, and address verification documents. During verification or any account updates, you can accept payments but payouts are paused until verification completes. To accept payments, your site must be published and upgraded to a plan that supports payments.",
+        "has_aggregation_answer": true,
+        "has_search_answer": true,
+        "is_partial_answer": false,
+        "missing_information": [],
+        "final_answer": "Yes, you can start accepting payments on your site while your Wix Payments account is still under verification. After connecting Wix Payments as a payment method and starting to accept payments, your customers can complete their purchases. However, you will not receive payouts to your bank account until your account setup and verification process is complete. \n\nThe verification process involves submitting personal and business information, uploading documents such as a valid government-issued ID and bank statement, and ensuring your site complies with Wix's terms. This process usually takes up to 7 business days. You have 30 days from the time of the first transaction to complete your account setup/verification; otherwise, your account will be suspended and you will not be able to accept payments via Wix Payments.\n\nWhile waiting for verification completion, you can accept payments but cannot withdraw funds to your bank. Once verified and active, payouts will be processed according to your payout schedule.\n\nBe aware that if you update your account settings during verification, your payments acceptance can continue but payouts to the bank will be temporarily paused until re-verification finishes.\n\nIn summary:\n- Payments acceptance is possible during verification.\n- Payouts are withheld until verification completion.\n- You must complete verification within 30 days to avoid suspension.\n- Upgrade to a Wix Premium or Studio plan and publish your site to accept payments.\n\nThis is based on Wix Payments account status details and verification requirements.",
+        "sources": [
+          {
+            "object_id": "76addf1a-b922-4d11-b9a5-dd24ef314e1d",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "c8ef63dd-9a53-4b72-9b2d-c521b4904368",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "151daeb2-f78a-4433-b6e6-b756abe5708b",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "c6d57e6f-9163-4f8f-b535-c6be099d5370",
+            "collection": "WixKB"
+          },
+          {
+            "object_id": "64a85be0-d8e0-4c4b-b6bf-b474bd891b91",
+            "collection": "WixKB"
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "dataset": "wixqa",
+    "agent_name": "query-agent",
+    "experiment_name": "query_agent_prod",
+    "agents_host": "https://api.agents.weaviate.io",
+    "num_samples": 1,
+    "timestamp": "20250521_142643"
+  }
+}

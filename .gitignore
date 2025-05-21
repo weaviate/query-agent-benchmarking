@@ -1,11 +1,5 @@
 .DS_Store
-weaviate-data
-datasets
-benchmark-data
-results
-output.png
 .venv
 .env
 .ipynb_checkpoints
-*.mdx
-*.png
+*.pyc
