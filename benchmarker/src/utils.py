@@ -52,7 +52,7 @@ def make_json_serializable(obj):
         except Exception:
             return f"<Non-serializable object of type {type(obj).__name__}>"
 
-def save_results(
+def save_all_results(
     results: dict, 
     config: dict, 
     experiment_name: str = "query_agent_prod", 
@@ -104,3 +104,16 @@ def save_results(
     print(f"Results saved to {filepath}")
     return filepath
     
+def pretty_print_dict(dict_to_print: dict):
+    """
+    Pretty prints a dictionary with colored keys and formatted output.
+    
+    Args:
+        dict_to_print: Dictionary to be printed
+    """
+    print("="*60)
+    for key, value in dict_to_print.items():
+        # Print key in cyan, value in white
+        print(f"\t\033[96m{key}\033[0m: {value}")
+    print("="*60)
+    print("\n\n")
