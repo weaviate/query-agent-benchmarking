@@ -181,7 +181,7 @@ def pretty_print_query_agent_benchmark_metrics(metrics: dict, dataset_name: str 
         
         # LM Judge scores
         lm_scores = np.array(metrics['lm_judge_average_scores'])
-        print(f"  • LM Judge Scores:")
+        print("  • LM Judge Scores:")
         print(f"    - Min: {np.min(lm_scores):.2f}")
         print(f"    - Max: {np.max(lm_scores):.2f}")
         print(f"    - Median: {np.median(lm_scores):.2f}")
@@ -189,7 +189,7 @@ def pretty_print_query_agent_benchmark_metrics(metrics: dict, dataset_name: str 
         
         # Recall scores
         recall_scores = np.array(metrics['recall_scores'])
-        print(f"  • Recall Scores:")
+        print("  • Recall Scores:")
         print(f"    - Min: {np.min(recall_scores):.2f}")
         print(f"    - Max: {np.max(recall_scores):.2f}")
         print(f"    - Median: {np.median(recall_scores):.2f}")
@@ -198,7 +198,7 @@ def pretty_print_query_agent_benchmark_metrics(metrics: dict, dataset_name: str 
         # Query times
         if 'query_times' in metrics and metrics['query_times']:
             query_times = np.array(metrics['query_times'])
-            print(f"  • Query Times (seconds):")
+            print("  • Query Times (seconds):")
             print(f"    - Min: {np.min(query_times):.2f}")
             print(f"    - Max: {np.max(query_times):.2f}")
             print(f"    - Median: {np.median(query_times):.2f}")
