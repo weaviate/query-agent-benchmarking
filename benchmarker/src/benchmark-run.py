@@ -8,6 +8,7 @@ from benchmarker.src.dataset import in_memory_dataset_loader
 from benchmarker.src.database import database_loader
 from benchmarker.src.agent import AgentBuilder
 from benchmarker.src.query_agent_benchmark import run_queries, analyze_results
+from benchmarker.src.utils import save_results
 
 def load_config(config_path: str):
     """Load main config and any agent-specific config if available."""
@@ -30,6 +31,8 @@ async def main():
                         help='Host URL for agents API')
     parser.add_argument('--num-samples', type=int, default=None,
                         help='Number of samples to test (overrides config value)')
+    parser.add_argument('--experiment-name', type=str, default="query_agent_prod",
+                        help='Name for this experiment run')
     args = parser.parse_args()
     
     config_path = Path(os.path.dirname(__file__), "config.yml")
@@ -70,6 +73,14 @@ async def main():
         queries=queries,
         agent_name=config["agent_name"],
         query_agent=query_agent,
+        num_samples=num_samples
+    )
+
+    save_results(
+        results=results, 
+        config=config,
+        experiment_name=args.experiment_name,
+        agents_host=args.agents_host,
         num_samples=num_samples
     )
 
