@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 import dspy
 
 from dspy_signatures import (
+    Source,
     AgentRAGResponse,
     GenerateAnswer,
     WriteSearchQueries,
@@ -37,6 +38,8 @@ class RAGAblation(abc.ABC):
     @abc.abstractmethod
     def forward(self, question: str) -> AgentRAGResponse: ...
 
+# --- Search Only Ablations ---
+
 class SearchOnlyRAG(RAGAblation):
     def forward(self, question: str) -> AgentRAGResponse:
         _, sources = weaviate_search_tool(
@@ -51,6 +54,38 @@ class SearchOnlyRAG(RAGAblation):
             sources=sources,
             usage={},
         )
+
+class SearchOnlyWithQueryWriter(RAGAblation):
+    """
+    1. Rewrite the user question into one or more search queries
+       using the DSPy `WriteSearchQueries` predictor.
+    2. Issue each query to Weaviate, collect sources.
+    3. Return *no* generated answer (final_answer == "").
+    """
+
+    def forward(self, question: str) -> AgentRAGResponse:
+        qw_pred = self.query_writer(question=question)
+        queries: list[str] = qw_pred.search_queries or [question]
+
+        usage_buckets = [qw_pred.get_lm_usage()]
+
+        sources: list[Source] = []
+        for q in queries:
+            _, src = weaviate_search_tool(
+                query=q,
+                collection_name=self.collection_name,
+                target_property_name=self.target_property_name,
+                return_dict=False,
+            )
+            sources.extend(src)
+
+        return AgentRAGResponse(
+            final_answer="",
+            sources=sources,
+            usage=self._merge_usage(*usage_buckets),
+        )
+    
+# --- End-to-End RAG Ablations ---
 
 class VanillaRAG(RAGAblation):
     def forward(self, question: str) -> AgentRAGResponse:
@@ -74,10 +109,6 @@ class VanillaRAG(RAGAblation):
         )
 
 class SearchQueryWriter(RAGAblation):
-    """
-    Variant: use a query-writer, skip filtering & summarising.
-    """
-
     def forward(self, question: str) -> AgentRAGResponse:
         qw_pred = self.query_writer(question=question)
         queries: list[str] = qw_pred.search_queries
@@ -133,6 +164,13 @@ def main():
     # Test SearchOnlyRAG
     print("\n\033[95m=== Testing SearchOnlyRAG ===\033[0m")
     search_only_rag = SearchOnlyRAG(collection_name, target_property_name)
+    search_only_response = search_only_rag.forward(test_question)
+    print("\033[96mSources:\033[0m")
+    print(f"\033[92m{search_only_response.sources}\033[0m")
+
+    # Test SearchOnlyRAG
+    print("\n\033[95m=== Testing SearchOnlyWithQueryWriter ===\033[0m")
+    search_only_rag = SearchOnlyWithQueryWriter(collection_name, target_property_name)
     search_only_response = search_only_rag.forward(test_question)
     print("\033[96mSources:\033[0m")
     print(f"\033[92m{search_only_response.sources}\033[0m")
