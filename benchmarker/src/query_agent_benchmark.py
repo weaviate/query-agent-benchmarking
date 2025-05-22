@@ -118,9 +118,9 @@ async def analyze_results(
             print(f"Current average query time: {current_avg_time:.2f} seconds")
             print(f"Latest recall: {recall:.2f}")
             if result["answer"] == "":
-                print(f"Latest LM Judge score: N/A (empty answer)")
-                print(f"Latest LM Judge score range: N/A (empty answer)")
-                print(f"Latest LM Judge score variance: N/A (empty answer)")
+                print("Latest LM Judge score: N/A (empty answer)")
+                print("Latest LM Judge score range: N/A (empty answer)")
+                print("Latest LM Judge score variance: N/A (empty answer)")
             else:
                 print(f"Latest LM Judge score: {avg_score:.2f}")
                 print(f"Latest LM Judge score range: {score_range:.2f}")
