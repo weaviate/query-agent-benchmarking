@@ -1,3 +1,5 @@
+from weaviate.collections.classes.filters import Filter
+
 def qa_source_parser(
     query_agent_sources_response,
     collection
@@ -8,9 +10,12 @@ def qa_source_parser(
     sources = query_agent_sources_response
     source_uuids = [source.object_id for source in sources]
     
-    matching_objects = collection.query.fetch_objects_by_ids(
-        source_uuids
+    print(f"Starting with {len(source_uuids)}!")
+    matching_objects = collection.query.fetch_objects(
+        filters=Filter.by_id().contains_any(source_uuids),
+        limit=len(source_uuids),
     )
+    print(f"Left with {len(matching_objects.objects)} unique objects!")
     
     dataset_ids = []
     for o in matching_objects.objects:

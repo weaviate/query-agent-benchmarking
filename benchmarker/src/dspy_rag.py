@@ -56,16 +56,10 @@ class SearchOnlyRAG(RAGAblation):
         )
 
 class SearchOnlyWithQueryWriter(RAGAblation):
-    """
-    1. Rewrite the user question into one or more search queries
-       using the DSPy `WriteSearchQueries` predictor.
-    2. Issue each query to Weaviate, collect sources.
-    3. Return *no* generated answer (final_answer == "").
-    """
-
     def forward(self, question: str) -> AgentRAGResponse:
         qw_pred = self.query_writer(question=question)
         queries: list[str] = qw_pred.search_queries or [question]
+        print(f"\033[95mWrote {len(queries)} queries!\033[0m")
 
         usage_buckets = [qw_pred.get_lm_usage()]
 
@@ -78,6 +72,8 @@ class SearchOnlyWithQueryWriter(RAGAblation):
                 return_dict=False,
             )
             sources.extend(src)
+
+        print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
 
         return AgentRAGResponse(
             final_answer="",
