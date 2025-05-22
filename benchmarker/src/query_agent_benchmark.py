@@ -8,7 +8,6 @@ from benchmarker.src.utils import qa_source_parser
 
 def run_queries(
     queries: list[dict],
-    agent_name: str,
     query_agent: Any,
     num_samples: int
 ):
@@ -58,35 +57,43 @@ async def analyze_results(
     
     for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths), desc="Analyzing results", total=len(results))):
         # calculate lm_as_judge score
-        deps = LMJudgeAgentDeps(
-            question=ground_truth["question"],
-            system_response=result["answer"]
-        )
-
-        # Run judge multiple times and collect scores
-        current_scores = []
-        for _ in range(judge_inferences):
-            judge_response = await lm_as_judge_agent.run(
-                deps=deps,
-                model="openai:gpt-4.1"
+        if result["answer"] == "":
+            lm_judge_average_scores.append(1.0)
+            lm_judge_score_ranges.append(0.0)
+            lm_judge_score_variances.append(0.0)
+        else:
+            deps = LMJudgeAgentDeps(
+                question=ground_truth["question"],
+                system_response=result["answer"]
             )
-            current_scores.append(judge_response.data.rating)
-        
-        # Calculate statistics
-        avg_score = sum(current_scores) / len(current_scores)
-        score_range = max(current_scores) - min(current_scores)
-        score_variance = np.var(current_scores)
-        
-        # Store the statistics
-        lm_judge_average_scores.append(avg_score)
-        lm_judge_score_ranges.append(score_range)
-        lm_judge_score_variances.append(score_variance)
+
+            # Run judge multiple times and collect scores
+            current_scores = []
+            for _ in range(judge_inferences):
+                judge_response = await lm_as_judge_agent.run(
+                    deps=deps,
+                    model="openai:gpt-4.1"
+                )
+                current_scores.append(judge_response.data.rating)
+            
+            # Calculate statistics
+            avg_score = sum(current_scores) / len(current_scores)
+            score_range = max(current_scores) - min(current_scores)
+            score_variance = np.var(current_scores)
+            
+            # Store the statistics
+            lm_judge_average_scores.append(avg_score)
+            lm_judge_score_ranges.append(score_range)
+            lm_judge_score_variances.append(score_variance)
 
         # calculate recall
+        sources_counter = len(result["sources"])
+        print(f"Starting with {sources_counter} sources!")
         source_objects = qa_source_parser(
-             result["sources"],
-             collection
+            result["sources"],
+            collection
         )
+        print(f"Found {len(source_objects)} to compute recall against!")
         recall = calculate_recall(
             ground_truth["dataset_ids"],
             source_objects
@@ -110,9 +117,14 @@ async def analyze_results(
             print(f"Current average LM Judge score variance: {current_avg_variance:.4f}")
             print(f"Current average query time: {current_avg_time:.2f} seconds")
             print(f"Latest recall: {recall:.2f}")
-            print(f"Latest LM Judge score: {avg_score:.2f}")
-            print(f"Latest LM Judge score range: {score_range:.2f}")
-            print(f"Latest LM Judge score variance: {score_variance:.4f}")
+            if result["answer"] == "":
+                print("Latest LM Judge score: N/A (empty answer)")
+                print("Latest LM Judge score range: N/A (empty answer)")
+                print("Latest LM Judge score variance: N/A (empty answer)")
+            else:
+                print(f"Latest LM Judge score: {avg_score:.2f}")
+                print(f"Latest LM Judge score range: {score_range:.2f}")
+                print(f"Latest LM Judge score variance: {score_variance:.4f}")
             print(f"Latest query time: {result['time_taken']:.2f} seconds")
     
     # Calculate aggregate metrics

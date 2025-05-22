@@ -16,19 +16,9 @@ from benchmarker.src.query_agent_benchmark import (
 from benchmarker.src.utils import save_all_results, pretty_print_dict
 
 def load_config(config_path: str):
-    """Load main config and any agent-specific config if available."""
-    # Load main config
     with open(config_path) as f:
         config = yaml.safe_load(f)
-    
-    # Load agent-specific config if it exists
-    agent_config = {}
-    agent_config_path = Path(os.path.dirname(__file__), "rag_ablation_config.yml")
-    if config["agent_name"] == "rag-ablation":
-        with open(agent_config_path) as f:
-            agent_config = yaml.safe_load(f)
-    
-    return config, agent_config
+    return config
 
 async def main():
     parser = argparse.ArgumentParser(description='Run benchmark tests')
@@ -41,15 +31,7 @@ async def main():
     args = parser.parse_args()
     
     config_path = Path(os.path.dirname(__file__), "config.yml")
-    config, agent_config = load_config(config_path)
-    
-    # Extract agent-specific parameters with defaults
-    agent_params = {
-        "write_queries": agent_config.get("write_queries", False),
-        "filter_results": agent_config.get("filter_results", False),
-        "summarize_results": agent_config.get("summarize_results", False),
-        "model_name": agent_config.get("model_name", "openai/gpt-4o")
-    }
+    config = load_config(config_path)
 
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
@@ -69,14 +51,12 @@ async def main():
         dataset_name=config["dataset"],
         agent_name=config["agent_name"],
         agents_host=args.agents_host,
-        **agent_params
     )
 
     num_samples = args.num_samples if args.num_samples is not None else 5
     
     results = run_queries(
         queries=queries,
-        agent_name=config["agent_name"],
         query_agent=query_agent,
         num_samples=num_samples
     )

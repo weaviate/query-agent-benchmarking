@@ -1,3 +1,3 @@
-agent_name: query-agent
+agent_name: search-only-with-qw
 dataset: wixqa
 reload_database: False
