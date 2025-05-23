@@ -10,10 +10,9 @@ from benchmarker.src.agent import AgentBuilder
 from benchmarker.src.query_agent_benchmark import (
     run_queries, 
     analyze_results,
-    pretty_print_query_agent_benchmark_metrics,
-    query_agent_benchmark_metrics_to_markdown
+    pretty_print_query_agent_benchmark_metrics
 )
-from benchmarker.src.utils import save_all_results, pretty_print_dict
+from benchmarker.src.utils import pretty_print_dict
 
 def load_config(config_path: str):
     with open(config_path) as f:
