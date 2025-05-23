@@ -48,6 +48,10 @@ async def analyze_results(
         collection = weaviate_client.collections.get("EnronEmails")
     elif dataset_name == "wixqa":
         collection = weaviate_client.collections.get("WixKB")
+    elif dataset_name == "freshstack-langchain":
+        collection = weaviate_client.collections.get("FreshStackLangChain")
+    else:
+        raise Exception("Enter a valid dataset_name!")
     
     lm_judge_average_scores = []
     lm_judge_score_ranges = []
@@ -94,10 +98,18 @@ async def analyze_results(
             collection
         )
         print(f"Found {len(source_objects)} to compute recall against!")
-        recall = calculate_recall(
-            ground_truth["dataset_ids"],
-            source_objects
-        )
+        
+        if dataset_name == "freshstack-langchain":
+            recall = calculate_recall(
+                ground_truth["dataset_ids"],
+                source_objects,
+                nugget_data=ground_truth["nugget_data"]
+            )
+        else:
+            recall = calculate_recall(
+                ground_truth["dataset_ids"],
+                source_objects
+            )
         recall_scores.append(recall)
         
         # Store query time
@@ -219,14 +231,14 @@ def pretty_print_query_agent_benchmark_metrics(metrics: dict, dataset_name: str 
     print("\n" + "="*60)
 
 
-def query_agent_benchmark_metrics_to_markdown(metrics: dict, dataset_name: str = None, experiment_name: str = None, output_path: str = None):
+def query_agent_benchmark_metrics_to_markdown(metrics: dict, dataset_name: str = None, agent_name: str = None, output_path: str = None):
     """
     Formats the metrics returned by analyze_results function as markdown and saves to disk.
     
     Args:
         metrics: Dictionary containing benchmark metrics
         dataset_name: Optional name of the dataset used
-        experiment_name: Optional name of the experiment
+        agent_name: Optional name of the agent
         output_path: Path to save the markdown file (defaults to results/metrics_{timestamp}.md)
     """
     import os
@@ -235,9 +247,9 @@ def query_agent_benchmark_metrics_to_markdown(metrics: dict, dataset_name: str =
     # Generate markdown content
     markdown = []
     
-    # Add header with experiment info
-    if experiment_name:
-        markdown.append(f"# {experiment_name} Benchmark Results")
+    # Add header with agent info
+    if agent_name:
+        markdown.append(f"# {agent_name} Benchmark Results")
     else:
         markdown.append("# Query Agent Benchmark Results")
     
@@ -302,8 +314,8 @@ def query_agent_benchmark_metrics_to_markdown(metrics: dict, dataset_name: str =
         
         # Generate filename with timestamp
         file_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        exp_name = experiment_name.replace(" ", "_").lower() if experiment_name else "query_agent"
-        output_path = os.path.join(results_dir, f"metrics_{exp_name}_{file_timestamp}.md")
+        agent_name_clean = agent_name.replace(" ", "_").lower() if agent_name else "query_agent"
+        output_path = os.path.join(results_dir, f"metrics_{agent_name_clean}_{file_timestamp}.md")
     
     # Write markdown to file
     with open(output_path, 'w') as f:

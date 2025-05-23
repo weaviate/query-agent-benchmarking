@@ -60,7 +60,7 @@ def make_json_serializable(obj):
 def save_all_results(
     results: dict, 
     config: dict, 
-    experiment_name: str = "query_agent_prod", 
+    agent_name: str = "query_agent_prod", 
     agents_host: str = None,
     num_samples: int = None
 ):
@@ -69,7 +69,7 @@ def save_all_results(
     Args:
         results: Dictionary containing benchmark results
         config: Dictionary containing benchmark configuration
-        experiment_name: Name of this experiment run
+        agent_name: Name of the agent used in this run
         agents_host: Host URL for agents API
         num_samples: Number of samples tested
     """
@@ -83,7 +83,7 @@ def save_all_results(
     
     # Generate filename with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{experiment_name}_{timestamp}.json"
+    filename = f"{agent_name}_{timestamp}.json"
     filepath = os.path.join(results_dir, filename)
     
     # Convert results to JSON serializable format
@@ -95,7 +95,6 @@ def save_all_results(
         "config": {
             "dataset": config.get("dataset"),
             "agent_name": config.get("agent_name"),
-            "experiment_name": experiment_name,
             "agents_host": agents_host,
             "num_samples": num_samples,
             "timestamp": timestamp

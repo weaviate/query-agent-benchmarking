@@ -44,6 +44,10 @@ class AgentBuilder:
             self.collection = "WixKB"
             self.target_property_name = "contents"
             self.id_property = "dataset_id"
+        elif dataset_name == "freshstack-langchain":
+            self.collection = "FreshStackLangChain"
+            self.target_property_name = "docs_text"
+            self.id_property = "dataset_id"
         else:
             raise ValueError(f"Unknown dataset: {dataset_name}")
 

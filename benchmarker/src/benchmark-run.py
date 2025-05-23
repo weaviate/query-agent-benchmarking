@@ -61,23 +61,23 @@ async def main():
         num_samples=num_samples
     )
 
-    save_all_results(
-        results=results, 
-        config=config,
-        experiment_name=args.experiment_name,
-        agents_host=args.agents_host,
-        num_samples=num_samples
-    )
+    # save_all_results(
+    #     results=results, 
+    #     config=config,
+    #     agent_name=config["agent_name"],
+    #     agents_host=args.agents_host,
+    #     num_samples=num_samples
+    # )
 
     metrics = await analyze_results(weaviate_client, config["dataset"], results, queries)
 
     pretty_print_query_agent_benchmark_metrics(metrics)
     
-    query_agent_benchmark_metrics_to_markdown(
-        metrics=metrics,
-        dataset_name=config["dataset"],
-        experiment_name=args.experiment_name
-    )
+    # query_agent_benchmark_metrics_to_markdown(
+    #     metrics=metrics,
+    #     dataset_name=config["dataset"],
+    #     agent_name=config["agent_name"]
+    # )
 
     weaviate_client.close()
 
