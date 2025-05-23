@@ -68,3 +68,33 @@ def database_loader(
             end_time = time.time()
             upload_time = end_time - start_time
             print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {upload_time:.2f} seconds)")
+        
+    if dataset_name == "freshstack-langchain":
+        if weaviate_client.collections.exists("FreshStackLangChain"):
+            weaviate_client.collections.delete("FreshStackLangChain")
+        
+        weaviate_client.collections.create(
+            name="FreshStackLangChain",
+            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            properties=[
+                wvcc.Property(name="docs_text", data_type=wvcc.DataType.TEXT),
+                wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT),
+            ],
+        )
+
+        start_time = time.time()
+        with weaviate_client.batch.fixed_size(batch_size=100, concurrent_requests=4) as batch:
+            for i, doc in enumerate(objects):
+                batch.add_object(
+                    collection="FreshStackLangChain",
+                    properties={
+                        "docs_text": doc["text"],
+                        "dataset_id": str(doc["dataset_id"])
+                    }
+                )
+                if i % 1000 == 999:
+                    print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {time.time()-start_time:.2f} seconds)")
+
+        end_time = time.time()
+        upload_time = end_time - start_time
+        print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {upload_time:.2f} seconds)")
