@@ -8,6 +8,8 @@ class Source(BaseModel):
 class AgentRAGResponse(BaseModel):
     final_answer: str
     sources: list[Source]
+    searches: Optional[list[str]] = None
+    aggregations: Optional[list] = None
     usage: Optional[Dict[str, Any]] = None
 
 class GenerateAnswer(dspy.Signature):

@@ -25,6 +25,8 @@ def run_queries(
             "query_id": query["dataset_ids"],
             "answer": response.final_answer,
             "sources": response.sources,
+            "num_searches": len(response.searches),
+            "num_aggregations": len(response.aggregations),
             "misc_response": response,
             "time_taken": query_time_taken
         })
@@ -83,6 +85,8 @@ async def run_queries_async(
                     "query_id": query["dataset_ids"],
                     "answer": response.final_answer,
                     "sources": response.sources,
+                    "num_searches": len(response.searches),
+                    "num_aggregations": len(response.aggregations),
                     "misc_response": response,
                     "time_taken": query_time_taken,
                     "index": index  # Keep track of original order
@@ -102,6 +106,8 @@ async def run_queries_async(
                     "query_id": query["dataset_ids"],
                     "answer": "",
                     "sources": [],
+                    "num_searches": 0,
+                    "num_aggregations": 0,
                     "misc_response": None,
                     "time_taken": query_time_taken,
                     "index": index,
@@ -141,7 +147,6 @@ async def run_queries_async(
         print(f"\n\033[93m--- Batch {batch_idx // batch_size + 1} Complete ({completed}/{len(queries_to_process)}) ---\033[0m")
         print(f"Successes: {batch_successes}, Errors: {batch_errors}")
         print(f"Batch completed in {batch_time:.2f} seconds")
-        print(f"Average time per query in batch: {batch_time/len(batch):.2f} seconds")
         
         # Print sample from successful queries
         successful_results = [r for r in batch_results if "error" not in r]

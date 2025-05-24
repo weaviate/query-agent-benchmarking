@@ -52,6 +52,8 @@ class SearchOnlyRAG(RAGAblation):
         return AgentRAGResponse(
             final_answer="",
             sources=sources,
+            searches=[question],
+            aggregations=None,
             usage={},
         )
 
@@ -78,6 +80,8 @@ class SearchOnlyWithQueryWriter(RAGAblation):
         return AgentRAGResponse(
             final_answer="",
             sources=sources,
+            searches=queries,
+            aggregations=None,
             usage=self._merge_usage(*usage_buckets),
         )
     
@@ -101,6 +105,8 @@ class VanillaRAG(RAGAblation):
         return AgentRAGResponse(
             final_answer=ans_pred.final_answer,
             sources=sources,
+            searches=[question],
+            aggregations=None,
             usage=usage,
         )
 
@@ -133,6 +139,8 @@ class SearchQueryWriter(RAGAblation):
         return AgentRAGResponse(
             final_answer=ans_pred.final_answer,
             sources=sources,
+            searches=queries,
+            aggregations=None,
             usage=self._merge_usage(*usage_buckets),
         )
 
