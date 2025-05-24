@@ -1,7 +1,6 @@
 import time
 import asyncio
-from typing import Any, Optional
-from tqdm.asyncio import tqdm as async_tqdm
+from typing import Any
 from tqdm import tqdm
 import numpy as np
 from benchmarker.src.metrics.lm_as_judge_agent import lm_as_judge_agent, LMJudgeAgentDeps
@@ -166,7 +165,7 @@ async def run_queries_async(
     total_successes = sum(1 for r in results if "error" not in r)
     total_errors = len(results) - total_successes
     
-    print(f"\n\033[95mAsync experiment completed!\033[0m")
+    print("\n\033[95mAsync experiment completed!\033[0m")
     print(f"\033[95mResults: {total_successes} successful, {total_errors} failed out of {len(results)} total\033[0m")
     print(f"\033[95mTotal time: {total_time:.2f} seconds\033[0m")
     print(f"\033[95mAverage time per query: {total_time/len(results):.2f} seconds\033[0m")
