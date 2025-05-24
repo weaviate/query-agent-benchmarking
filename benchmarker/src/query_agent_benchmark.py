@@ -20,13 +20,17 @@ def run_queries(
         response = query_agent.run(query["question"])
         query_time_taken = time.time() - query_start_time
 
+        # Calculate total searches and aggregations across all lists
+        total_searches = sum(len(search_list) for search_list in response.searches)
+        total_aggregations = sum(len(agg_list) for agg_list in response.aggregations)
+
         results.append({
             "query": query,
             "query_id": query["dataset_ids"],
             "answer": response.final_answer,
             "sources": response.sources,
-            "num_searches": len(response.searches),
-            "num_aggregations": len(response.aggregations),
+            "num_searches": total_searches,
+            "num_aggregations": total_aggregations,
             "misc_response": response,
             "time_taken": query_time_taken
         })
@@ -80,13 +84,17 @@ async def run_queries_async(
                 response = await query_agent.run_async(query["question"])
                 query_time_taken = time.time() - query_start_time
                 
+                # Calculate total searches and aggregations across all lists
+                total_searches = sum(len(search_list) for search_list in response.searches)
+                total_aggregations = sum(len(agg_list) for agg_list in response.aggregations)
+                
                 return {
                     "query": query,
                     "query_id": query["dataset_ids"],
                     "answer": response.final_answer,
                     "sources": response.sources,
-                    "num_searches": len(response.searches),
-                    "num_aggregations": len(response.aggregations),
+                    "num_searches": total_searches,
+                    "num_aggregations": total_aggregations,
                     "misc_response": response,
                     "time_taken": query_time_taken,
                     "index": index  # Keep track of original order
@@ -199,6 +207,8 @@ async def analyze_results(
     lm_judge_score_variances = []
     recall_scores = []
     query_times = []
+    num_searches_list = []
+    num_aggregations_list = []
     
     for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths), desc="Analyzing results", total=len(results))):
         # Skip if there was an error
@@ -209,6 +219,8 @@ async def analyze_results(
             lm_judge_score_variances.append(0.0)
             recall_scores.append(0.0)
             query_times.append(result["time_taken"])
+            num_searches_list.append(0)
+            num_aggregations_list.append(0)
             continue
             
         # calculate lm_as_judge score
@@ -241,14 +253,10 @@ async def analyze_results(
             lm_judge_score_ranges.append(score_range)
             lm_judge_score_variances.append(score_variance)
 
-        # calculate recall
-        sources_counter = len(result["sources"])
-        print(f"Starting with {sources_counter} sources!")
         source_objects = qa_source_parser(
             result["sources"],
             collection
         )
-        print(f"Found {len(source_objects)} to compute recall against!")
         
         if dataset_name == "freshstack-langchain":
             recall = calculate_recall(
@@ -266,6 +274,10 @@ async def analyze_results(
         # Store query time
         query_times.append(result["time_taken"])
         
+        # Store num_searches and num_aggregations
+        num_searches_list.append(result["num_searches"])
+        num_aggregations_list.append(result["num_aggregations"])
+        
         # Print rolling update every 10 queries
         if (i + 1) % 10 == 0:
             current_avg_recall = np.mean(recall_scores)
@@ -273,12 +285,16 @@ async def analyze_results(
             current_avg_range = np.mean(lm_judge_score_ranges)
             current_avg_variance = np.mean(lm_judge_score_variances)
             current_avg_time = np.mean(query_times)
+            current_avg_searches = np.mean(num_searches_list)
+            current_avg_aggregations = np.mean(num_aggregations_list)
             print(f"\n\033[93m--- Analysis Progress ({i + 1}/{len(results)}) ---\033[0m")
             print(f"Current average recall: {current_avg_recall:.2f}")
             print(f"Current average LM Judge score: {current_avg_lm_judge:.2f}")
             print(f"Current average LM Judge score range: {current_avg_range:.2f}")
             print(f"Current average LM Judge score variance: {current_avg_variance:.4f}")
             print(f"Current average query time: {current_avg_time:.2f} seconds")
+            print(f"Current average searches: {current_avg_searches:.2f}")
+            print(f"Current average aggregations: {current_avg_aggregations:.2f}")
             print(f"Latest recall: {recall:.2f}")
             if result["answer"] == "":
                 print("Latest LM Judge score: N/A (empty answer)")
@@ -289,6 +305,8 @@ async def analyze_results(
                 print(f"Latest LM Judge score range: {score_range:.2f}")
                 print(f"Latest LM Judge score variance: {score_variance:.4f}")
             print(f"Latest query time: {result['time_taken']:.2f} seconds")
+            print(f"Latest searches: {result['num_searches']}")
+            print(f"Latest aggregations: {result['num_aggregations']}")
     
     # Calculate aggregate metrics
     avg_lm_judge_score = sum(lm_judge_average_scores) / len(lm_judge_average_scores) if lm_judge_average_scores else 0
@@ -296,6 +314,8 @@ async def analyze_results(
     avg_lm_judge_range = sum(lm_judge_score_ranges) / len(lm_judge_score_ranges) if lm_judge_score_ranges else 0
     avg_lm_judge_variance = sum(lm_judge_score_variances) / len(lm_judge_score_variances) if lm_judge_score_variances else 0
     avg_query_time = sum(query_times) / len(query_times) if query_times else 0
+    avg_num_searches = sum(num_searches_list) / len(num_searches_list) if num_searches_list else 0
+    avg_num_aggregations = sum(num_aggregations_list) / len(num_aggregations_list) if num_aggregations_list else 0
     
     # Print summary
     print("\033[92m\n===== Benchmark Results =====\033[0m")
@@ -306,6 +326,8 @@ async def analyze_results(
     print(f"Average LM Judge Score Variance: {avg_lm_judge_variance:.4f}")
     print(f"Average Recall: {avg_recall:.2f}")
     print(f"Average Query Time: {avg_query_time:.2f} seconds")
+    print(f"Average Number of Searches: {avg_num_searches:.2f}")
+    print(f"Average Number of Aggregations: {avg_num_aggregations:.2f}")
     
     return {
         "avg_lm_judge_score": avg_lm_judge_score,
@@ -313,11 +335,15 @@ async def analyze_results(
         "avg_lm_judge_variance": avg_lm_judge_variance,
         "avg_recall": avg_recall,
         "avg_query_time": avg_query_time,
+        "avg_num_searches": avg_num_searches,
+        "avg_num_aggregations": avg_num_aggregations,
         "lm_judge_average_scores": lm_judge_average_scores,
         "lm_judge_score_ranges": lm_judge_score_ranges,
         "lm_judge_score_variances": lm_judge_score_variances,
         "recall_scores": recall_scores,
-        "query_times": query_times
+        "query_times": query_times,
+        "num_searches_list": num_searches_list,
+        "num_aggregations_list": num_aggregations_list
     }
 
 
@@ -347,8 +373,10 @@ def pretty_print_query_agent_benchmark_metrics(metrics: dict, dataset_name: str 
     print(f"  • Average LM Judge Score:       \033[1m{metrics['avg_lm_judge_score']:.2f}\033[0m")
     print(f"  • Average Recall:               \033[1m{metrics['avg_recall']:.2f}\033[0m")
     print(f"  • Average LM Judge Score Range: \033[1m{metrics['avg_lm_judge_range']:.2f}\033[0m")
-    print(f"  • Average LM Judge Variance:    \033[1m{metrics['avg_lm_judge_variance']:.4f}\033[0m")
+    print(f"  • Average LM Judge Score Variance:    \033[1m{metrics['avg_lm_judge_variance']:.4f}\033[0m")
     print(f"  • Average Query Time:           \033[1m{metrics['avg_query_time']:.2f}\033[0m seconds")
+    print(f"  • Average Number of Searches:   \033[1m{metrics['avg_num_searches']:.2f}\033[0m")
+    print(f"  • Average Number of Aggregations: \033[1m{metrics['avg_num_aggregations']:.2f}\033[0m")
     
     # Print distribution statistics if available
     if 'lm_judge_average_scores' in metrics and metrics['lm_judge_average_scores']:
@@ -378,6 +406,24 @@ def pretty_print_query_agent_benchmark_metrics(metrics: dict, dataset_name: str 
             print(f"    - Max: {np.max(query_times):.2f}")
             print(f"    - Median: {np.median(query_times):.2f}")
             print(f"    - Std Dev: {np.std(query_times):.2f}")
+        
+        # Number of searches
+        if 'num_searches_list' in metrics and metrics['num_searches_list']:
+            num_searches = np.array(metrics['num_searches_list'])
+            print("  • Number of Searches:")
+            print(f"    - Min: {np.min(num_searches):.0f}")
+            print(f"    - Max: {np.max(num_searches):.0f}")
+            print(f"    - Median: {np.median(num_searches):.1f}")
+            print(f"    - Std Dev: {np.std(num_searches):.2f}")
+        
+        # Number of aggregations
+        if 'num_aggregations_list' in metrics and metrics['num_aggregations_list']:
+            num_aggregations = np.array(metrics['num_aggregations_list'])
+            print("  • Number of Aggregations:")
+            print(f"    - Min: {np.min(num_aggregations):.0f}")
+            print(f"    - Max: {np.max(num_aggregations):.0f}")
+            print(f"    - Median: {np.median(num_aggregations):.1f}")
+            print(f"    - Std Dev: {np.std(num_aggregations):.2f}")
     
     print("\n" + "="*60)
 
@@ -421,6 +467,8 @@ def query_agent_benchmark_metrics_to_markdown(metrics: dict, dataset_name: str =
     markdown.append(f"| Average LM Judge Score Range | **{metrics['avg_lm_judge_range']:.2f}** |")
     markdown.append(f"| Average LM Judge Variance | **{metrics['avg_lm_judge_variance']:.4f}** |")
     markdown.append(f"| Average Query Time | **{metrics['avg_query_time']:.2f}** seconds |")
+    markdown.append(f"| Average Number of Searches | **{metrics['avg_num_searches']:.2f}** |")
+    markdown.append(f"| Average Number of Aggregations | **{metrics['avg_num_aggregations']:.2f}** |")
     
     # Add distribution statistics if available
     if 'lm_judge_average_scores' in metrics and metrics['lm_judge_average_scores']:
@@ -456,6 +504,28 @@ def query_agent_benchmark_metrics_to_markdown(metrics: dict, dataset_name: str =
             markdown.append(f"| Max | {np.max(query_times):.2f} |")
             markdown.append(f"| Median | {np.median(query_times):.2f} |")
             markdown.append(f"| Std Dev | {np.std(query_times):.2f} |")
+        
+        # Number of searches
+        if 'num_searches_list' in metrics and metrics['num_searches_list']:
+            num_searches = np.array(metrics['num_searches_list'])
+            markdown.append("\n### Number of Searches")
+            markdown.append("| Statistic | Value |")
+            markdown.append("| --------- | ----- |")
+            markdown.append(f"| Min | {np.min(num_searches):.0f} |")
+            markdown.append(f"| Max | {np.max(num_searches):.0f} |")
+            markdown.append(f"| Median | {np.median(num_searches):.1f} |")
+            markdown.append(f"| Std Dev | {np.std(num_searches):.2f} |")
+        
+        # Number of aggregations
+        if 'num_aggregations_list' in metrics and metrics['num_aggregations_list']:
+            num_aggregations = np.array(metrics['num_aggregations_list'])
+            markdown.append("\n### Number of Aggregations")
+            markdown.append("| Statistic | Value |")
+            markdown.append("| --------- | ----- |")
+            markdown.append(f"| Min | {np.min(num_aggregations):.0f} |")
+            markdown.append(f"| Max | {np.max(num_aggregations):.0f} |")
+            markdown.append(f"| Median | {np.median(num_aggregations):.1f} |")
+            markdown.append(f"| Std Dev | {np.std(num_aggregations):.2f} |")
     
     # Determine output path
     if output_path is None:
