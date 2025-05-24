@@ -26,7 +26,7 @@ app = FastAPI(title="Weaviate Async Query Agent Server")
 async def startup_event():
     global query_agent, weaviate_client
     
-    logger.info("🚀 Starting up Weaviate Async Query Agent Server...")
+    logger.info("Starting up Weaviate Async Query Agent Server...")
     
     try:
         weaviate_client = weaviate.use_async_with_weaviate_cloud(
@@ -42,11 +42,11 @@ async def startup_event():
             agents_host="https://api.agents.weaviate.io"
         )
         
-        logger.info("✅ Weaviate Async Query Agent initialized and ready!")
-        logger.info(f"📊 Using collection: {COLLECTION}")
+        logger.info("Weaviate Async Query Agent initialized and ready!")
+        logger.info(f"Using collection: {COLLECTION}")
         
     except Exception as e:
-        logger.error(f"❌ Failed to initialize Async Query Agent: {e}")
+        logger.error(f"Failed to initialize Async Query Agent: {e}")
         raise
 
 @app.post("/query", response_model=QueryResponse)
@@ -57,7 +57,7 @@ async def query_agent_endpoint(request: QueryRequest):
         if query_agent is None:
             raise HTTPException(status_code=500, detail="Async Query Agent not initialized")
         
-        logger.info(f"🔍 Processing query: {request.question}")
+        logger.info(f"Processing query: {request.question}")
         
         agent_response = await query_agent.run(request.question)
         
@@ -71,7 +71,7 @@ async def query_agent_endpoint(request: QueryRequest):
         )
         
     except Exception as e:
-        logger.error(f"❌ Error processing query: {str(e)}")
+        logger.error(f"Error processing query: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing query: {str(e)}")
 
 @app.get("/health")
@@ -87,7 +87,7 @@ async def shutdown_event():
     global weaviate_client
     if weaviate_client:
         await weaviate_client.close()
-        logger.info("🔌 Weaviate client connection closed")
+        logger.info("Weaviate client connection closed")
 
 if __name__ == "__main__":
     import uvicorn
