@@ -1,4 +1,5 @@
 import time
+import asyncio
 from typing import Any
 from tqdm import tqdm
 import numpy as np
@@ -11,6 +12,7 @@ def run_queries(
     query_agent: Any,
     num_samples: int
 ):
+    """Synchronous version of run_queries"""
     results = []
     start = time.time()
     for i, query in enumerate(tqdm(queries[:num_samples], desc="Running queries")):
@@ -37,6 +39,139 @@ def run_queries(
     print(f"\033[95mExperiment completed {len(results)} queries in {time.time() - start:.2f} seconds.\033[0m")
     return results
 
+async def run_queries_async(
+    queries: list[dict],
+    query_agent: Any,
+    num_samples: int,
+    batch_size: int = 10,
+    max_concurrent: int = 3  # Reduced default to avoid rate limiting
+):
+    """
+    Asynchronous version of run_queries with concurrent execution.
+    
+    Args:
+        queries: List of query dictionaries
+        query_agent: Async agent instance
+        num_samples: Number of queries to run
+        batch_size: Number of queries to process in each batch
+        max_concurrent: Maximum number of concurrent requests
+    """
+    results = []
+    start = time.time()
+    
+    # Semaphore to limit concurrent requests
+    semaphore = asyncio.Semaphore(max_concurrent)
+    
+    async def process_query(query, index, retry_count=0, max_retries=3):
+        async with semaphore:
+            query_start_time = time.time()
+            try:
+                # Add a small delay between requests to avoid overwhelming the API
+                if retry_count > 0:
+                    delay = min(2 ** retry_count, 10)  # Exponential backoff, max 10 seconds
+                    print(f"\nRetrying query {index} (attempt {retry_count + 1}) after {delay}s delay...")
+                    await asyncio.sleep(delay)
+                elif index > 0:
+                    # Small delay between requests to be respectful to the API
+                    await asyncio.sleep(0.1)
+                
+                response = await query_agent.run_async(query["question"])
+                query_time_taken = time.time() - query_start_time
+                
+                return {
+                    "query": query,
+                    "query_id": query["dataset_ids"],
+                    "answer": response.final_answer,
+                    "sources": response.sources,
+                    "misc_response": response,
+                    "time_taken": query_time_taken,
+                    "index": index  # Keep track of original order
+                }
+            except Exception as e:
+                error_msg = str(e)
+                query_time_taken = time.time() - query_start_time
+                
+                # Check if it's a connection error that might benefit from retry
+                if "connection" in error_msg.lower() and retry_count < max_retries:
+                    print(f"\nConnection error for query {index}, retrying: {error_msg}")
+                    return await process_query(query, index, retry_count + 1, max_retries)
+                
+                print(f"\n\033[91mError processing query {index}: {error_msg}\033[0m")
+                return {
+                    "query": query,
+                    "query_id": query["dataset_ids"],
+                    "answer": "",
+                    "sources": [],
+                    "misc_response": None,
+                    "time_taken": query_time_taken,
+                    "index": index,
+                    "error": error_msg
+                }
+    
+    # Process queries in batches
+    queries_to_process = queries[:num_samples]
+    total_batches = (len(queries_to_process) + batch_size - 1) // batch_size
+    
+    print(f"\033[94mProcessing {len(queries_to_process)} queries in {total_batches} batches "
+          f"(batch_size={batch_size}, max_concurrent={max_concurrent})\033[0m")
+    
+    for batch_idx in range(0, len(queries_to_process), batch_size):
+        batch = queries_to_process[batch_idx:batch_idx + batch_size]
+        batch_start = time.time()
+        
+        print(f"\nStarting batch {batch_idx // batch_size + 1}/{total_batches}")
+        
+        # Create tasks for this batch
+        tasks = [
+            process_query(query, batch_idx + i) 
+            for i, query in enumerate(batch)
+        ]
+        
+        # Process batch concurrently
+        batch_results = await asyncio.gather(*tasks)
+        results.extend(batch_results)
+        
+        batch_time = time.time() - batch_start
+        completed = min(batch_idx + batch_size, len(queries_to_process))
+        
+        # Count successes and errors
+        batch_successes = sum(1 for r in batch_results if "error" not in r)
+        batch_errors = len(batch_results) - batch_successes
+        
+        print(f"\n\033[93m--- Batch {batch_idx // batch_size + 1} Complete ({completed}/{len(queries_to_process)}) ---\033[0m")
+        print(f"Successes: {batch_successes}, Errors: {batch_errors}")
+        print(f"Batch completed in {batch_time:.2f} seconds")
+        print(f"Average time per query in batch: {batch_time/len(batch):.2f} seconds")
+        
+        # Print sample from successful queries
+        successful_results = [r for r in batch_results if "error" not in r]
+        if successful_results:
+            sample = successful_results[0]
+            print(f"Sample query: {sample['query']['question'][:100]}...")
+            print(f"Sample response: {sample['answer'][:200]}...")
+        
+        # Add a small delay between batches
+        if batch_idx + batch_size < len(queries_to_process):
+            await asyncio.sleep(1)
+    
+    # Sort results by original index to maintain order
+    results.sort(key=lambda x: x["index"])
+    
+    # Remove index field as it's no longer needed
+    for result in results:
+        result.pop("index", None)
+    
+    total_time = time.time() - start
+    total_successes = sum(1 for r in results if "error" not in r)
+    total_errors = len(results) - total_successes
+    
+    print("\n\033[95mAsync experiment completed!\033[0m")
+    print(f"\033[95mResults: {total_successes} successful, {total_errors} failed out of {len(results)} total\033[0m")
+    print(f"\033[95mTotal time: {total_time:.2f} seconds\033[0m")
+    print(f"\033[95mAverage time per query: {total_time/len(results):.2f} seconds\033[0m")
+    
+    return results
+
 async def analyze_results(
     weaviate_client: Any,
     dataset_name: str,
@@ -44,6 +179,7 @@ async def analyze_results(
     ground_truths: list[dict],
     judge_inferences: int = 3,
 ):
+    """Analyze results (remains mostly the same, already async)"""
     if dataset_name == "enron":
         collection = weaviate_client.collections.get("EnronEmails")
     elif dataset_name == "wixqa":
@@ -60,6 +196,16 @@ async def analyze_results(
     query_times = []
     
     for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths), desc="Analyzing results", total=len(results))):
+        # Skip if there was an error
+        if "error" in result:
+            print(f"\n\033[91mSkipping analysis for query {i} due to error: {result['error']}\033[0m")
+            lm_judge_average_scores.append(0.0)
+            lm_judge_score_ranges.append(0.0)
+            lm_judge_score_variances.append(0.0)
+            recall_scores.append(0.0)
+            query_times.append(result["time_taken"])
+            continue
+            
         # calculate lm_as_judge score
         if result["answer"] == "":
             lm_judge_average_scores.append(1.0)

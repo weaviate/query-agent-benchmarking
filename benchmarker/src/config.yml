@@ -1,3 +1,5 @@
-agent_name: search-only-with-qw
+agent_name: query-agent
 dataset: freshstack-langchain
 reload_database: False
+batch_size: 10
+max_concurrent: 10
