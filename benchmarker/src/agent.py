@@ -12,6 +12,7 @@ from benchmarker.src.dspy_rag.rag_programs import (
     SearchOnlyWithQueryWriter,
     SearchQueryWriter
 )
+from benchmarker.src.dspy_rag.rag_signatures import DSPyAgentRAGResponse
 
 RAG_VARIANTS = {
     "vanilla-rag":            VanillaRAG,
@@ -139,7 +140,12 @@ class AgentBuilder:
         
         if self.agent_name == "query-agent":
             return self.agent.run(query)
-        return self.agent.forward(query)
+        
+        # For DSPy RAG variants, convert DSPyAgentRAGResponse to AgentRAGResponse
+        dspy_response = self.agent.forward(query)
+        if isinstance(dspy_response, DSPyAgentRAGResponse):
+            return dspy_response.to_agent_rag_response()
+        return dspy_response
     
     async def run_async(self, query: str):
         if not self.use_async:

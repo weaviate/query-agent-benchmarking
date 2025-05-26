@@ -1,5 +1,7 @@
 # Weaviate Query Agent Benchmarker
 
+## **LAST UPDATED** May 25th, 2025
+
 This repository provides a comprehensive benchmarking framework for evaluating Weaviate Query Agents and custom RAG (Retrieval-Augmented Generation) implementations. The system supports both synchronous and asynchronous execution, multiple datasets, and various evaluation metrics.
 
 ## 🏗️ Architecture Overview
