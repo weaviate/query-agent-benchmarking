@@ -161,11 +161,7 @@ def main():
         return None
         
     finally:
-        try:
-            if 'weaviate_client' in locals():
-                weaviate_client.close()
-        except:
-            pass
+        weaviate_client.close()
 
 
 if __name__ == "__main__":
