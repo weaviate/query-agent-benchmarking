@@ -197,8 +197,8 @@ async def analyze_results(
         collection = weaviate_client.collections.get("EnronEmails")
     elif dataset_name == "wixqa":
         collection = weaviate_client.collections.get("WixKB")
-    elif dataset_name == "freshstack-langchain":
-        collection = weaviate_client.collections.get("FreshStackLangChain")
+    elif dataset_name.startswith("freshstack-"):
+        collection = weaviate_client.collections.get(f"FreshStack{dataset_name.split('-')[1].capitalize()}")
     else:
         raise Exception("Enter a valid dataset_name!")
     
@@ -258,7 +258,7 @@ async def analyze_results(
             collection
         )
         
-        if dataset_name == "freshstack-langchain":
+        if dataset_name.startswith("freshstack-"):
             recall = calculate_recall(
                 ground_truth["dataset_ids"],
                 source_objects,

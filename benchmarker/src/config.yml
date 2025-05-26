@@ -1,5 +1,5 @@
 agent_name: query-agent
 dataset: freshstack-godot
-reload_database: True
+reload_database: False
 batch_size: 5
 max_concurrent: 5
