@@ -8,8 +8,16 @@ def in_memory_dataset_loader(dataset_name: str):
         return _in_memory_dataset_loader_enron()
     elif dataset_name == "wixqa":
         return _in_memory_dataset_loader_wixqa()
+    elif dataset_name == "freshstack-angular":
+        return _in_memory_dataset_loader_freshstack(subset="angular")
+    elif dataset_name == "freshstack-godot":
+        return _in_memory_dataset_loader_freshstack(subset="godot")
     elif dataset_name == "freshstack-langchain":
-        return _in_memory_dataset_loader_freshstackqa_langchain()
+        return _in_memory_dataset_loader_freshstack(subset="langchain")
+    elif dataset_name == "freshstack-laravel":
+        return _in_memory_dataset_loader_freshstack(subset="laravel")
+    elif dataset_name == "freshstack-yolo":
+        return _in_memory_dataset_loader_freshstack(subset="yolo")
     else:
         return None
 
@@ -29,13 +37,13 @@ def _in_memory_dataset_loader_wixqa():
         question['dataset_ids'] = [article_ids] if not isinstance(article_ids, list) else article_ids
     return documents, questions
 
-def _in_memory_dataset_loader_freshstackqa_langchain():
-    docs = _load_dataset_from_hf_hub(filepath="freshstack/corpus-oct-2024", subset="langchain")
+def _in_memory_dataset_loader_freshstack(subset: str):
+    docs = _load_dataset_from_hf_hub(filepath="freshstack/corpus-oct-2024", subset=subset)
     for doc in docs:
         doc['dataset_id'] = doc.pop('_id')
     questions = _load_dataset_from_hf_hub(
         filepath="freshstack/queries-oct-2024", 
-        subset="langchain", 
+        subset=subset, 
         train=False
     )
 
