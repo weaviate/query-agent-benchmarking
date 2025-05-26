@@ -16,6 +16,6 @@ python3 benchmarker/src/benchmark-run.py --agents-host http://localhost:8000 --n
 
 # Supported Datasets
 
-- FreshStack LangChain
+- FreshStack (Angular, Godot, LangChain, Laravel, Yolo)
 - EnronQA (dasovich-j)
 - WixQA
