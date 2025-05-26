@@ -3,7 +3,7 @@ from typing import Dict
 
 import dspy
 
-from dspy_signatures import (
+from benchmarker.src.dspy_rag.rag_signatures import (
     Source,
     AgentRAGResponse,
     GenerateAnswer,
@@ -11,7 +11,7 @@ from dspy_signatures import (
     FilterIrrelevantSearchResults,
     SummarizeSearchResults
 )
-from rag_utils import weaviate_search_tool
+from benchmarker.src.dspy_rag.dspy_rag_utils import weaviate_search_tool
 
 class RAGAblation(abc.ABC):
     def __init__(self, collection_name: str, target_property_name: str) -> None:

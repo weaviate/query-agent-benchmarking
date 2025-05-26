@@ -6,7 +6,7 @@ import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
 
-from benchmarker.src.dspy_rag import (
+from benchmarker.src.dspy_rag.rag_programs import (
     VanillaRAG,
     SearchOnlyRAG,
     SearchOnlyWithQueryWriter,
