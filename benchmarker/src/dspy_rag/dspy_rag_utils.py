@@ -2,7 +2,7 @@ import os
 import weaviate
 from weaviate.outputs.query import QueryReturn
 
-from dspy_signatures import Source
+from benchmarker.src.dspy_rag.rag_signatures import Source
 
 def weaviate_search_tool(
         query: str,
