@@ -26,6 +26,6 @@ python3 benchmarker/src/benchmark-run.py --agents-host http://localhost:8000 --n
 |--------------|--------|-------------------|------------|
 | FreshStack Angular | 0.5 | 18.54 | 2.3 |
 | FreshStack Godot | 0.38 | 15.32 | 2.6 |
-| FreshStack LangChain | - | - | - |
+| FreshStack LangChain | 0.5 | 17.85 | 2.0 |
 | FreshStack Laravel | 0.35 | 19.07 | 2.6 |
 | FreshStack Yolo | 0.26 | 23.7 | 1.9 |
