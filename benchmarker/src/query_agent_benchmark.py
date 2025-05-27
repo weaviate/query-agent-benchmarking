@@ -564,6 +564,11 @@ def query_agent_benchmark_metrics_to_markdown(metrics: dict, dataset_name: str =
     if output_path is None:
         # Create results directory if it doesn't exist
         results_dir = os.path.join(os.getcwd(), "results")
+        
+        # Create dataset-specific subdirectory if dataset_name is provided
+        if dataset_name:
+            results_dir = os.path.join(results_dir, dataset_name)
+        
         os.makedirs(results_dir, exist_ok=True)
         
         # Generate filename with timestamp (month_day_year format: e.g., 5_27_25)

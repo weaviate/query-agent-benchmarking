@@ -1,6 +1,6 @@
 agent_name: query-agent
-dataset: freshstack-godot
-reload_database: False
+dataset: freshstack-angular
+reload_database: True
 batch_size: 5
 max_concurrent: 5
-experiment_name: pointwise-filter-result-more-queries-prompt
+experiment_name: query-agent-prod
