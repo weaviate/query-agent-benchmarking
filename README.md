@@ -22,6 +22,8 @@ python3 benchmarker/src/benchmark-run.py --agents-host http://localhost:8000 --n
 
 # Query Agent Prod Results
 
+*Note these are for 10 queries per dataset*
+
 | Dataset Name | Recall | Latency (seconds) | # Searches |
 |--------------|--------|-------------------|------------|
 | FreshStack Angular | 0.5 | 18.54 | 2.3 |
