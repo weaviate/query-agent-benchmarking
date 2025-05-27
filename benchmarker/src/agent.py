@@ -96,7 +96,6 @@ class AgentBuilder:
             self.weaviate_client = weaviate.use_async_with_weaviate_cloud(
                 cluster_url=self.cluster_url,
                 auth_credentials=Auth.api_key(self.api_key),
-                headers={"X-OpenAI-Api-Key": self.openai_api_key},
             )
             
             await self.weaviate_client.connect()
