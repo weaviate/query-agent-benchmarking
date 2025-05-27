@@ -11,7 +11,7 @@ python3 benchmarker/src/benchmark-run.py --num-samples 5
 ### Test a locally hosted Query Agent
 
 ```bash
-python3 benchmarker/src/benchmark-run.py --agents-host http://localhost:8000 --num-samples 5 --use-async True
+python3 benchmarker/src/benchmark-run.py --agents-host http://localhost:8000 --num-samples 5
 ```
 
 # Supported Datasets
