@@ -95,13 +95,13 @@ async def main():
     )
 
     # Save all results to JSON file
-    save_all_results(
-        results=results, 
-        config=config,
-        agent_name=config["experiment_name"],
-        agents_host=args.agents_host,
-        num_samples=num_samples
-    )
+    # save_all_results(
+    #     results=results, 
+    #     config=config,
+    #     agent_name=config["experiment_name"],
+    #     agents_host=args.agents_host,
+    #     num_samples=num_samples
+    # )
 
     metrics = await analyze_results(
         weaviate_client, 
