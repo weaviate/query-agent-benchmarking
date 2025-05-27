@@ -225,7 +225,6 @@ async def analyze_results(
             num_aggregations_list.append(0)
             continue
             
-        # calculate lm_as_judge score only if run_lm_judge is True
         if run_lm_judge:
             if result["answer"] == "":
                 lm_judge_average_scores.append(1.0)
