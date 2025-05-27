@@ -566,10 +566,10 @@ def query_agent_benchmark_metrics_to_markdown(metrics: dict, dataset_name: str =
         results_dir = os.path.join(os.getcwd(), "results")
         os.makedirs(results_dir, exist_ok=True)
         
-        # Generate filename with timestamp
-        file_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        agent_name_clean = agent_name.replace(" ", "_").lower() if agent_name else "query_agent"
-        output_path = os.path.join(results_dir, f"metrics_{agent_name_clean}_{file_timestamp}.md")
+        # Generate filename with timestamp (month_day_year format: e.g., 5_27_25)
+        file_timestamp = datetime.now().strftime("%-m_%-d_%y")
+        agent_name_clean = agent_name.replace(" ", "_").replace("(", "").replace(")", "").lower() if agent_name else "query_agent"
+        output_path = os.path.join(results_dir, f"{agent_name_clean}_{file_timestamp}.md")
     
     # Write markdown to file
     with open(output_path, 'w') as f:

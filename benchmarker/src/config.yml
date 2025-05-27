@@ -3,3 +3,4 @@ dataset: freshstack-godot
 reload_database: False
 batch_size: 5
 max_concurrent: 5
+experiment_name: query-agent-prod
