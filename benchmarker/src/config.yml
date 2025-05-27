@@ -1,5 +1,5 @@
 agent_name: query-agent
-dataset: freshstack-angular
+dataset: freshstack-langchain
 reload_database: True
 batch_size: 5
 max_concurrent: 5
