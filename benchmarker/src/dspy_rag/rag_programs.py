@@ -7,19 +7,12 @@ from benchmarker.src.dspy_rag.rag_signatures import (
     Source,
     DSPyAgentRAGResponse,
     GenerateAnswer,
-    WriteSearchQueries,
-    FilterIrrelevantSearchResults,
-    SummarizeSearchResults
+    WriteSearchQueries
 )
 from benchmarker.src.dspy_rag.utils import weaviate_search_tool
 
 class RAGAblation(dspy.Module):
     def __init__(self, collection_name: str, target_property_name: str) -> None:
-        self.generate_answer = dspy.Predict(GenerateAnswer)
-        self.query_writer = dspy.Predict(WriteSearchQueries)
-        self.result_filter = dspy.Predict(FilterIrrelevantSearchResults)
-        self.result_summarizer = dspy.Predict(SummarizeSearchResults)
-
         self.collection_name = collection_name
         self.target_property_name = target_property_name
 
@@ -63,6 +56,10 @@ class SearchOnlyRAG(RAGAblation):
         )
 
 class SearchOnlyWithQueryWriter(RAGAblation):
+    def __init__(self, collection_name: str, target_property_name: str):
+        super().__init__(collection_name, target_property_name)
+        self.query_writer = dspy.Predict(WriteSearchQueries)
+
     def forward(self, question: str) -> DSPyAgentRAGResponse:
         qw_pred = self.query_writer(question=question)
         queries: list[str] = qw_pred.search_queries or [question]
@@ -93,6 +90,10 @@ class SearchOnlyWithQueryWriter(RAGAblation):
 # --- End-to-End RAG Ablations ---
 
 class VanillaRAG(RAGAblation):
+    def __init__(self, collection_name: str, target_property_name: str):
+        super().__init__(collection_name, target_property_name)
+        self.generate_answer = dspy.Predict(GenerateAnswer)
+
     def forward(self, question: str) -> DSPyAgentRAGResponse:
         contexts, sources = weaviate_search_tool(
             query=question,
@@ -116,6 +117,11 @@ class VanillaRAG(RAGAblation):
         )
 
 class SearchQueryWriter(RAGAblation):
+    def __init__(self, collection_name: str, target_property_name: str):
+        super().__init__(collection_name, target_property_name)
+        self.query_writer = dspy.Predict(WriteSearchQueries)
+        self.generate_answer = dspy.Predict(GenerateAnswer)
+
     def forward(self, question: str) -> DSPyAgentRAGResponse:
         qw_pred = self.query_writer(question=question)
         queries: list[str] = qw_pred.search_queries

@@ -1,8 +1,13 @@
 import os
+import yaml
+from typing import Dict, Any
+
+import dspy
 import weaviate
 from weaviate.outputs.query import QueryReturn
 
 from benchmarker.src.dspy_rag.rag_signatures import Source
+
 
 def weaviate_search_tool(
         query: str,
@@ -123,3 +128,81 @@ def _dictify_search_results(search_results: QueryReturn, view_properties=None) -
         result_dict[result_id] = result_str
     
     return result_dict
+
+def load_optimization_config(config_path: str) -> Dict[str, Any]:
+    """
+    Load and process configuration from YAML file.
+    
+    Args:
+        config_path: Path to the YAML configuration file
+        
+    Returns:
+        Dictionary with processed configuration
+        
+    Raises:
+        ValueError: If file not found or YAML parsing fails
+    """
+    try:
+        # Load YAML configuration
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+            
+        # Apply quick test configuration if enabled
+        if config.get("quick_test", {}).get("enabled", False):
+            quick_config = config["quick_test"]
+            for key, value in quick_config.items():
+                if key != "enabled":
+                    config[key] = value
+            print("Applied quick test configuration")
+            
+        return config
+        
+    except FileNotFoundError:
+        raise ValueError(f"Configuration file not found: {config_path}")
+    except yaml.YAMLError as e:
+        raise ValueError(f"Error parsing YAML configuration: {e}")
+
+
+def setup_dspy():
+    """Configure DSPy."""
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is required")
+    
+    lm = dspy.LM("openai/gpt-4.1-mini", api_key=openai_api_key)
+    dspy.configure(lm=lm, track_usage=True)
+    print(f"DSPy configured with: {lm}")
+
+
+def setup_weaviate():
+    """Set up Weaviate client connection."""
+    cluster_url = os.getenv("WEAVIATE_URL")
+    api_key = os.getenv("WEAVIATE_API_KEY")
+    
+    if not cluster_url or not api_key:
+        raise ValueError("WEAVIATE_URL and WEAVIATE_API_KEY environment variables are required")
+    
+    client = weaviate.connect_to_weaviate_cloud(
+        cluster_url=cluster_url,
+        auth_credentials=weaviate.auth.AuthApiKey(api_key),
+    )
+    
+    print(f"Connected to Weaviate cluster: {cluster_url}")
+    return client
+
+
+def print_configuration_summary(config: Dict[str, Any]):
+    """Print a summary of the optimization configuration."""
+    print("=" * 60)
+    print("DSPy Optimization Configuration")
+    print("=" * 60)
+    print(f"Dataset: {config['dataset_name']}")
+    print(f"Agent: {config['agent_name']}")
+    print(f"Optimizer: {config['optimizer_type']}")
+    print(f"Metric: {config['metric_type']}")
+    print(f"Output Directory: {config['output_dir']}")
+    
+    if config.get("quick_test", {}).get("enabled"):
+        print("Quick Test Mode: ENABLED")
+    
+    print("=" * 60)
