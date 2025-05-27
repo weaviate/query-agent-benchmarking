@@ -6,12 +6,13 @@ import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
 
-from benchmarker.src.dspy_rag import (
+from benchmarker.src.dspy_rag.rag_programs import (
     VanillaRAG,
     SearchOnlyRAG,
     SearchOnlyWithQueryWriter,
     SearchQueryWriter
 )
+from benchmarker.src.dspy_rag.rag_signatures import DSPyAgentRAGResponse
 
 RAG_VARIANTS = {
     "vanilla-rag":            VanillaRAG,
@@ -49,8 +50,9 @@ class AgentBuilder:
             self.collection = "WixKB"
             self.target_property_name = "contents"
             self.id_property = "dataset_id"
-        elif dataset_name == "freshstack-langchain":
-            self.collection = "FreshStackLangChain"
+        elif dataset_name.startswith("freshstack-"):
+            subset = dataset_name.split("-")[1].capitalize()
+            self.collection = f"FreshStack{subset}"
             self.target_property_name = "docs_text"
             self.id_property = "dataset_id"
         else:
@@ -138,7 +140,12 @@ class AgentBuilder:
         
         if self.agent_name == "query-agent":
             return self.agent.run(query)
-        return self.agent.forward(query)
+        
+        # For DSPy RAG variants, convert DSPyAgentRAGResponse to AgentRAGResponse
+        dspy_response = self.agent.forward(query)
+        if isinstance(dspy_response, DSPyAgentRAGResponse):
+            return dspy_response.to_agent_rag_response()
+        return dspy_response
     
     async def run_async(self, query: str):
         if not self.use_async:

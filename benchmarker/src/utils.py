@@ -79,8 +79,8 @@ def save_all_results(
     results_dir = os.path.join(os.getcwd(), "results")
     os.makedirs(results_dir, exist_ok=True)
     
-    # Generate filename with timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # Generate filename with timestamp (month_day_year format: e.g., 5_27_25)
+    timestamp = datetime.now().strftime("%-m_%-d_%y")
     filename = f"{agent_name}_{timestamp}.json"
     filepath = os.path.join(results_dir, filename)
     

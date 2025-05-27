@@ -3,17 +3,17 @@ from typing import Dict
 
 import dspy
 
-from dspy_signatures import (
+from benchmarker.src.dspy_rag.rag_signatures import (
     Source,
-    AgentRAGResponse,
+    DSPyAgentRAGResponse,
     GenerateAnswer,
     WriteSearchQueries,
     FilterIrrelevantSearchResults,
     SummarizeSearchResults
 )
-from rag_utils import weaviate_search_tool
+from benchmarker.src.dspy_rag.utils import weaviate_search_tool
 
-class RAGAblation(abc.ABC):
+class RAGAblation(dspy.Module):
     def __init__(self, collection_name: str, target_property_name: str) -> None:
         self.generate_answer = dspy.Predict(GenerateAnswer)
         self.query_writer = dspy.Predict(WriteSearchQueries)
@@ -27,6 +27,9 @@ class RAGAblation(abc.ABC):
     def _merge_usage(*usages: Dict[str, Dict[str, int]]) -> Dict[str, Dict[str, int]]:
         merged: Dict[str, Dict[str, int]] = {}
         for usage in usages:
+            # Skip None values
+            if usage is None:
+                continue
             for lm_id, stats in usage.items():
                 bucket = merged.setdefault(
                     lm_id, {"prompt_tokens": 0, "completion_tokens": 0}
@@ -36,20 +39,22 @@ class RAGAblation(abc.ABC):
         return merged
 
     @abc.abstractmethod
-    def forward(self, question: str) -> AgentRAGResponse: ...
+    def forward(self, question: str) -> DSPyAgentRAGResponse: ...
 
 # --- Search Only Ablations ---
 
 class SearchOnlyRAG(RAGAblation):
-    def forward(self, question: str) -> AgentRAGResponse:
-        _, sources = weaviate_search_tool(
+    def forward(self, question: str) -> DSPyAgentRAGResponse:
+        contexts, sources = weaviate_search_tool(
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
             return_dict=False,
         )
 
-        return AgentRAGResponse(
+        print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
+
+        return DSPyAgentRAGResponse(
             final_answer="",
             sources=sources,
             searches=[question],
@@ -58,12 +63,12 @@ class SearchOnlyRAG(RAGAblation):
         )
 
 class SearchOnlyWithQueryWriter(RAGAblation):
-    def forward(self, question: str) -> AgentRAGResponse:
+    def forward(self, question: str) -> DSPyAgentRAGResponse:
         qw_pred = self.query_writer(question=question)
         queries: list[str] = qw_pred.search_queries or [question]
         print(f"\033[95mWrote {len(queries)} queries!\033[0m")
 
-        usage_buckets = [qw_pred.get_lm_usage()]
+        usage_buckets = [qw_pred.get_lm_usage() or {}]
 
         sources: list[Source] = []
         for q in queries:
@@ -77,7 +82,7 @@ class SearchOnlyWithQueryWriter(RAGAblation):
 
         print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
 
-        return AgentRAGResponse(
+        return DSPyAgentRAGResponse(
             final_answer="",
             sources=sources,
             searches=queries,
@@ -88,7 +93,7 @@ class SearchOnlyWithQueryWriter(RAGAblation):
 # --- End-to-End RAG Ablations ---
 
 class VanillaRAG(RAGAblation):
-    def forward(self, question: str) -> AgentRAGResponse:
+    def forward(self, question: str) -> DSPyAgentRAGResponse:
         contexts, sources = weaviate_search_tool(
             query=question,
             collection_name=self.collection_name,
@@ -102,7 +107,7 @@ class VanillaRAG(RAGAblation):
         )
 
         usage = ans_pred.get_lm_usage() or {}
-        return AgentRAGResponse(
+        return DSPyAgentRAGResponse(
             final_answer=ans_pred.final_answer,
             sources=sources,
             searches=[question],
@@ -111,12 +116,12 @@ class VanillaRAG(RAGAblation):
         )
 
 class SearchQueryWriter(RAGAblation):
-    def forward(self, question: str) -> AgentRAGResponse:
+    def forward(self, question: str) -> DSPyAgentRAGResponse:
         qw_pred = self.query_writer(question=question)
         queries: list[str] = qw_pred.search_queries
 
         # keep track of token usage for final accounting
-        usage_buckets = [qw_pred.get_lm_usage()]
+        usage_buckets = [qw_pred.get_lm_usage() or {}]
 
         contexts, sources = [], []
 
@@ -134,15 +139,22 @@ class SearchQueryWriter(RAGAblation):
             question=question,
             contexts="\n".join(contexts),
         )
-        usage_buckets.append(ans_pred.get_lm_usage())
+        usage_buckets.append(ans_pred.get_lm_usage() or {})
 
-        return AgentRAGResponse(
+        return DSPyAgentRAGResponse(
             final_answer=ans_pred.final_answer,
             sources=sources,
             searches=queries,
             aggregations=None,
             usage=self._merge_usage(*usage_buckets),
         )
+
+RAG_VARIANTS = {
+    "vanilla-rag": VanillaRAG,
+    "query-writer-rag": SearchQueryWriter,
+    "search-only": SearchOnlyRAG,
+    "search-only-with-query-writer": SearchOnlyWithQueryWriter,
+}
 
 def main():
     import os

@@ -1,0 +1,110 @@
+# DSPy Optimization Configuration
+# This file contains all configuration options for running DSPy optimization
+# on RAG programs in the Weaviate Query Agent Benchmarker
+
+# Core Configuration
+dataset_name: "freshstack-godot"                    # Dataset to use for optimization
+agent_name: "search-only-with-query-writer"         # RAG agent to optimize
+
+# Optimization Parameters
+optimizer_type: "bootstrap_few_shot"  # Options: bootstrap_few_shot, bootstrap_random_search, copro, mipro
+metric_type: "recall"              # Options: recall, lm_judge, composite, fast_recall
+
+# Data Configuration
+train_ratio: 0.7                 # Ratio of data to use for training (0.0-1.0)
+max_train_samples: null          # Maximum number of training samples (null = use all)
+max_dev_samples: null            # Maximum number of development samples (null = use all)
+
+# Optimizer-Specific Parameters
+max_bootstrapped_demos: 4        # Maximum number of bootstrapped demonstrations
+max_labeled_demos: 4             # Maximum number of labeled demonstrations  
+num_candidate_programs: 10       # Number of candidate programs to evaluate
+num_threads: 4                   # Number of threads for parallel processing
+
+# Metric Configuration
+recall_weight: 0.5               # Weight for recall metric in composite scoring
+lm_judge_weight: 0.5             # Weight for LM judge metric in composite scoring
+lm_judge_model: "openai:gpt-4o"  # Model to use for LM-as-a-judge evaluation
+
+# Output Configuration
+save_optimized_program: true     # Whether to save optimized program and results
+output_dir: "optimization_results"  # Directory to save optimization results
+experiment_name: null            # Name for this optimization experiment (null = auto-generate)
+
+# Database Configuration
+reload_database: false           # Whether to reload database before optimization
+
+# Quick Test Mode (overrides other settings for fast testing)
+quick_test:
+  enabled: false                 # Enable quick test mode
+  max_train_samples: 20          # Reduced training samples for testing
+  max_dev_samples: 10            # Reduced dev samples for testing
+  max_bootstrapped_demos: 2      # Reduced demos for testing
+  num_candidate_programs: 3      # Reduced candidates for testing
+  metric_type: "recall"          # Use faster metric for testing
+
+# Preset Configurations
+# You can uncomment one of these sections to use predefined configurations
+
+# # Fast Development Testing
+# preset: "fast_dev"
+# fast_dev:
+#   max_train_samples: 50
+#   max_dev_samples: 20
+#   max_bootstrapped_demos: 2
+#   num_candidate_programs: 5
+#   metric_type: "fast_recall"
+#   num_threads: 2
+
+# # Production Optimization
+# preset: "production"
+# production:
+#   max_train_samples: null
+#   max_dev_samples: 100
+#   max_bootstrapped_demos: 8
+#   num_candidate_programs: 20
+#   metric_type: "composite"
+#   num_threads: 8
+
+# # Recall-Focused Optimization
+# preset: "recall_focused"
+# recall_focused:
+#   metric_type: "recall"
+#   recall_weight: 1.0
+#   lm_judge_weight: 0.0
+#   max_bootstrapped_demos: 6
+#   num_candidate_programs: 15
+
+# # Quality-Focused Optimization (slower but higher quality)
+# preset: "quality_focused"
+# quality_focused:
+#   metric_type: "composite"
+#   recall_weight: 0.3
+#   lm_judge_weight: 0.7
+#   max_bootstrapped_demos: 8
+#   num_candidate_programs: 25
+#   lm_judge_model: "openai:gpt-4o"
+
+# Advanced Configuration
+advanced:
+  # DSPy LM Configuration
+  dspy_lm_model: "openai/gpt-4o"     # Model for DSPy language model
+  dspy_cache: false                   # Whether to enable DSPy caching
+  dspy_track_usage: true             # Whether to track DSPy usage
+
+  # Optimization Specific Settings
+  copro_depth: 3                     # Number of optimization rounds for COPRO
+  copro_init_temperature: 1.4        # Initial temperature for COPRO
+  mipro_init_temperature: 1.0        # Initial temperature for MIPROv2
+  
+  # Evaluation Settings
+  max_validation_samples: 50         # Maximum samples for validation during optimization
+  evaluation_batch_size: 10          # Batch size for evaluation
+  
+  # Error Handling
+  max_retries: 3                     # Maximum retries for failed evaluations
+  timeout_seconds: 300               # Timeout for individual evaluations
+  
+  # Logging
+  log_level: "INFO"                  # Logging level (DEBUG, INFO, WARNING, ERROR)
+  save_intermediate_results: false   # Save results after each optimization step 

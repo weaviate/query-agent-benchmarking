@@ -14,7 +14,7 @@ from benchmarker.src.query_agent_benchmark import (
     pretty_print_query_agent_benchmark_metrics,
     query_agent_benchmark_metrics_to_markdown
 )
-from benchmarker.src.utils import pretty_print_dict
+from benchmarker.src.utils import pretty_print_dict, save_all_results
 
 def load_config(config_path: str):
     with open(config_path) as f:
@@ -26,11 +26,11 @@ async def main():
     parser.add_argument('--agents-host', type=str, default="https://api.agents.weaviate.io",
                         help='Host URL for agents API')
     parser.add_argument('--num-samples', type=int, default=None,
-                        help='Number of samples to test (overrides config value)')
+                        help='Number of samples to test (defaults to 5)')
     parser.add_argument('--use-async', type=bool, default=True,
                         help='Use async query processing for better performance')
-    parser.add_argument('--experiment-name', type=str, default="query_agent_prod",
-                        help='Name for this experiment run')
+    parser.add_argument('--run-lm-judge', type=bool, default=False,
+                        help='Run LM judge evaluation (defaults to False)')
     args = parser.parse_args()
     
     config_path = Path(os.path.dirname(__file__), "config.yml")
@@ -94,26 +94,33 @@ async def main():
         auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
     )
 
-    # save_all_results(
-    #     results=results, 
-    #     config=config,
-    #     agent_name=config["agent_name"],
-    #     agents_host=args.agents_host,
-    #     num_samples=num_samples
-    # )
+    # Save all results to JSON file
+    save_all_results(
+        results=results, 
+        config=config,
+        agent_name=config["experiment_name"],
+        agents_host=args.agents_host,
+        num_samples=num_samples
+    )
 
-    metrics = await analyze_results(weaviate_client, config["dataset"], results, queries)
+    metrics = await analyze_results(
+        weaviate_client, 
+        config["dataset"], 
+        results, 
+        queries,
+        run_lm_judge=args.run_lm_judge
+    )
 
     pretty_print_query_agent_benchmark_metrics(
         metrics, 
         dataset_name=config["dataset"],
-        experiment_name=args.experiment_name + (" (async)" if args.use_async else " (sync)")
+        experiment_name=config["experiment_name"]
     )
     
     query_agent_benchmark_metrics_to_markdown(
         metrics=metrics,
         dataset_name=config["dataset"],
-        agent_name=config["agent_name"] + (" (async)" if args.use_async else " (sync)")
+        agent_name=config["experiment_name"]
     )
 
     weaviate_client.close()
