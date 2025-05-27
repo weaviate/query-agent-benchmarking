@@ -14,7 +14,7 @@ from benchmarker.src.query_agent_benchmark import (
     pretty_print_query_agent_benchmark_metrics,
     query_agent_benchmark_metrics_to_markdown
 )
-from benchmarker.src.utils import pretty_print_dict, save_all_results
+from benchmarker.src.utils import pretty_print_dict
 
 def load_config(config_path: str):
     with open(config_path) as f:
@@ -95,13 +95,13 @@ async def main():
     )
 
     # Save all results to JSON file
-    save_all_results(
-        results=results, 
-        config=config,
-        agent_name=config["experiment_name"],
-        agents_host=args.agents_host,
-        num_samples=num_samples
-    )
+    # save_all_results(
+    #     results=results, 
+    #     config=config,
+    #     agent_name=config["experiment_name"],
+    #     agents_host=args.agents_host,
+    #     num_samples=num_samples
+    # )
 
     metrics = await analyze_results(
         weaviate_client, 
