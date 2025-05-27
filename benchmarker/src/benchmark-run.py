@@ -26,11 +26,13 @@ async def main():
     parser.add_argument('--agents-host', type=str, default="https://api.agents.weaviate.io",
                         help='Host URL for agents API')
     parser.add_argument('--num-samples', type=int, default=None,
-                        help='Number of samples to test (overrides config value)')
+                        help='Number of samples to test (defaults to 5)')
     parser.add_argument('--use-async', type=bool, default=True,
                         help='Use async query processing for better performance')
     parser.add_argument('--experiment-name', type=str, default="query_agent_prod",
                         help='Name for this experiment run')
+    parser.add_argument('--run-lm-judge', type=bool, default=False,
+                        help='Run LM judge evaluation (defaults to False)')
     args = parser.parse_args()
     
     config_path = Path(os.path.dirname(__file__), "config.yml")
@@ -102,7 +104,13 @@ async def main():
     #     num_samples=num_samples
     # )
 
-    metrics = await analyze_results(weaviate_client, config["dataset"], results, queries)
+    metrics = await analyze_results(
+        weaviate_client, 
+        config["dataset"], 
+        results, 
+        queries,
+        run_lm_judge=args.run_lm_judge
+    )
 
     pretty_print_query_agent_benchmark_metrics(
         metrics, 
