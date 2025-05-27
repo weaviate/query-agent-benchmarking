@@ -14,7 +14,7 @@ from benchmarker.src.query_agent_benchmark import (
     pretty_print_query_agent_benchmark_metrics,
     query_agent_benchmark_metrics_to_markdown
 )
-from benchmarker.src.utils import pretty_print_dict, save_all_results
+from benchmarker.src.utils import pretty_print_dict
 
 def load_config(config_path: str):
     with open(config_path) as f:
