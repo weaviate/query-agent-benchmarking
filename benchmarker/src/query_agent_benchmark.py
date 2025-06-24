@@ -4,7 +4,7 @@ from typing import Any
 from tqdm import tqdm
 import numpy as np
 from benchmarker.src.metrics.lm_as_judge_agent import lm_as_judge_agent, LMJudgeAgentDeps
-from benchmarker.src.metrics.ir_metrics import calculate_recall
+from benchmarker.src.metrics.ir_metrics import calculate_recall, calculate_coverage, calculate_alpha_ndcg
 from benchmarker.src.utils import qa_source_parser
 
 def run_queries(
@@ -65,26 +65,23 @@ async def run_queries_async(
     results = []
     start = time.time()
     
-    # Semaphore to limit concurrent requests
+    # Limit concurrent requests
     semaphore = asyncio.Semaphore(max_concurrent)
     
     async def process_query(query, index, retry_count=0, max_retries=3):
         async with semaphore:
             query_start_time = time.time()
             try:
-                # Add a small delay between requests to avoid overwhelming the API
                 if retry_count > 0:
-                    delay = min(2 ** retry_count, 10)  # Exponential backoff, max 10 seconds
+                    delay = min(2 ** retry_count, 10)  # Exponential backoff
                     print(f"\nRetrying query {index} (attempt {retry_count + 1}) after {delay}s delay...")
                     await asyncio.sleep(delay)
                 elif index > 0:
-                    # Small delay between requests to be respectful to the API
                     await asyncio.sleep(0.1)
                 
                 response = await query_agent.run_async(query["question"])
                 query_time_taken = time.time() - query_start_time
                 
-                # Calculate total searches and aggregations across all lists
                 total_searches = sum(len(search_list) for search_list in response.searches)
                 total_aggregations = sum(len(agg_list) for agg_list in response.aggregations)
                 
@@ -103,11 +100,6 @@ async def run_queries_async(
                 error_msg = str(e)
                 query_time_taken = time.time() - query_start_time
                 
-                # Check if it's a connection error that might benefit from retry
-                if "connection" in error_msg.lower() and retry_count < max_retries:
-                    print(f"\nConnection error for query {index}, retrying: {error_msg}")
-                    return await process_query(query, index, retry_count + 1, max_retries)
-                
                 print(f"\n\033[91mError processing query {index}: {error_msg}\033[0m")
                 return {
                     "query": query,
@@ -122,7 +114,6 @@ async def run_queries_async(
                     "error": error_msg
                 }
     
-    # Process queries in batches
     queries_to_process = queries[:num_samples]
     total_batches = (len(queries_to_process) + batch_size - 1) // batch_size
     
@@ -135,20 +126,17 @@ async def run_queries_async(
         
         print(f"\nStarting batch {batch_idx // batch_size + 1}/{total_batches}")
         
-        # Create tasks for this batch
         tasks = [
             process_query(query, batch_idx + i) 
             for i, query in enumerate(batch)
         ]
         
-        # Process batch concurrently
         batch_results = await asyncio.gather(*tasks)
         results.extend(batch_results)
         
         batch_time = time.time() - batch_start
         completed = min(batch_idx + batch_size, len(queries_to_process))
         
-        # Count successes and errors
         batch_successes = sum(1 for r in batch_results if "error" not in r)
         batch_errors = len(batch_results) - batch_successes
         
@@ -156,21 +144,17 @@ async def run_queries_async(
         print(f"Successes: {batch_successes}, Errors: {batch_errors}")
         print(f"Batch completed in {batch_time:.2f} seconds")
         
-        # Print sample from successful queries
         successful_results = [r for r in batch_results if "error" not in r]
         if successful_results:
             sample = successful_results[0]
             print(f"Sample query: {sample['query']['question'][:100]}...")
             print(f"Sample response: {sample['answer'][:200]}...")
         
-        # Add a small delay between batches
         if batch_idx + batch_size < len(queries_to_process):
             await asyncio.sleep(1)
     
-    # Sort results by original index to maintain order
     results.sort(key=lambda x: x["index"])
     
-    # Remove index field as it's no longer needed
     for result in results:
         result.pop("index", None)
     
@@ -193,23 +177,32 @@ async def analyze_results(
     judge_inferences: int = 3,
     run_lm_judge: bool = False,
 ):
-    """Analyze results (remains mostly the same, already async)"""
+    """Analyze results with dataset-specific metrics."""
+    
+    # Get collection and determine which metrics to use
     if dataset_name == "enron":
         collection = weaviate_client.collections.get("EnronEmails")
+        metrics = [calculate_recall]
     elif dataset_name == "wixqa":
         collection = weaviate_client.collections.get("WixKB")
+        metrics = [calculate_recall]
     elif dataset_name.startswith("freshstack-"):
-        collection = weaviate_client.collections.get(f"FreshStack{dataset_name.split('-')[1].capitalize()}")
+        collection = weaviate_client.collections.get(f"Freshstack{dataset_name.split('-')[1].capitalize()}")
+        metrics = [calculate_recall, calculate_coverage, calculate_alpha_ndcg]
     else:
         raise Exception("Enter a valid dataset_name!")
     
+    # Initialize result storage
     lm_judge_average_scores = []
     lm_judge_score_ranges = []
     lm_judge_score_variances = []
-    recall_scores = []
     query_times = []
     num_searches_list = []
     num_aggregations_list = []
+    
+    # Store results for each metric
+    # TODO: Update to `ir_metric_results`....
+    metric_results = {metric.__name__: [] for metric in metrics}
     
     for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths), desc="Analyzing results", total=len(results))):
         # Skip if there was an error
@@ -219,12 +212,14 @@ async def analyze_results(
                 lm_judge_average_scores.append(0.0)
                 lm_judge_score_ranges.append(0.0)
                 lm_judge_score_variances.append(0.0)
-            recall_scores.append(0.0)
+            for metric in metrics:
+                metric_results[metric.__name__].append(0.0)
             query_times.append(result["time_taken"])
             num_searches_list.append(0)
             num_aggregations_list.append(0)
             continue
             
+        # LM Judge evaluation (unchanged)
         if run_lm_judge:
             if result["answer"] == "":
                 lm_judge_average_scores.append(1.0)
@@ -236,7 +231,6 @@ async def analyze_results(
                     system_response=result["answer"]
                 )
 
-                # Run judge multiple times and collect scores
                 current_scores = []
                 for _ in range(judge_inferences):
                     judge_response = await lm_as_judge_agent.run(
@@ -245,340 +239,120 @@ async def analyze_results(
                     )
                     current_scores.append(judge_response.data.rating)
                 
-                # Calculate statistics
                 avg_score = sum(current_scores) / len(current_scores)
                 score_range = max(current_scores) - min(current_scores)
                 score_variance = np.var(current_scores)
                 
-                # Store the statistics
                 lm_judge_average_scores.append(avg_score)
                 lm_judge_score_ranges.append(score_range)
                 lm_judge_score_variances.append(score_variance)
 
-        source_objects = qa_source_parser(
+        retrieved_ids = qa_source_parser(
             result["sources"],
             collection
         )
         
-        if dataset_name.startswith("freshstack-"):
-            recall = calculate_recall(
-                ground_truth["dataset_ids"],
-                source_objects,
-                nugget_data=ground_truth["nugget_data"]
-            )
-        else:
-            recall = calculate_recall(
-                ground_truth["dataset_ids"],
-                source_objects
-            )
-        recall_scores.append(recall)
+        for metric in metrics:
+            if metric.__name__ == "calculate_recall":
+                # Traditional recall - just use target IDs
+                score = metric(
+                    ground_truth["dataset_ids"],
+                    retrieved_ids
+                )
+            elif metric.__name__ in ["calculate_coverage", "calculate_alpha_ndcg"]:
+                # Ensure nuggets have IDs
+                if ground_truth.get("nugget_data"):
+                    for idx, nugget in enumerate(ground_truth["nugget_data"]):
+                        if 'id' not in nugget:
+                            nugget['id'] = f"nugget_{idx}"
+                
+                if metric.__name__ == "calculate_coverage":
+                    score = metric(retrieved_ids, ground_truth["nugget_data"], k=20)
+                else:  # calculate_alpha_ndcg
+                    score = metric(retrieved_ids, ground_truth["nugget_data"], alpha=0.5, k=10)
+            
+            metric_results[metric.__name__].append(score)
         
-        # Store query time
+        # Store other metrics
         query_times.append(result["time_taken"])
-        
-        # Store num_searches and num_aggregations
         num_searches_list.append(result["num_searches"])
         num_aggregations_list.append(result["num_aggregations"])
         
         # Print rolling update every 10 queries
         if (i + 1) % 10 == 0:
-            current_avg_recall = np.mean(recall_scores)
-            current_avg_time = np.mean(query_times)
-            current_avg_searches = np.mean(num_searches_list)
-            current_avg_aggregations = np.mean(num_aggregations_list)
             print(f"\n\033[93m--- Analysis Progress ({i + 1}/{len(results)}) ---\033[0m")
-            print(f"Current average recall: {current_avg_recall:.2f}")
+            for metric_name, scores in metric_results.items():
+                if scores:
+                    # Clean up metric name for display
+                    display_name = metric_name.replace("calculate_", "").replace("_", " ").title()
+                    print(f"Current average {display_name}: {np.mean(scores):.2f}")
+            
             if run_lm_judge:
-                current_avg_lm_judge = np.mean(lm_judge_average_scores)
-                current_avg_range = np.mean(lm_judge_score_ranges)
-                current_avg_variance = np.mean(lm_judge_score_variances)
-                print(f"Current average LM Judge score: {current_avg_lm_judge:.2f}")
-                print(f"Current average LM Judge score range: {current_avg_range:.2f}")
-                print(f"Current average LM Judge score variance: {current_avg_variance:.4f}")
-            print(f"Current average query time: {current_avg_time:.2f} seconds")
-            print(f"Current average searches: {current_avg_searches:.2f}")
-            print(f"Current average aggregations: {current_avg_aggregations:.2f}")
-            print(f"Latest recall: {recall:.2f}")
-            if run_lm_judge:
-                if result["answer"] == "":
-                    print("Latest LM Judge score: N/A (empty answer)")
-                    print("Latest LM Judge score range: N/A (empty answer)")
-                    print("Latest LM Judge score variance: N/A (empty answer)")
-                else:
-                    print(f"Latest LM Judge score: {avg_score:.2f}")
-                    print(f"Latest LM Judge score range: {score_range:.2f}")
-                    print(f"Latest LM Judge score variance: {score_variance:.4f}")
-            print(f"Latest query time: {result['time_taken']:.2f} seconds")
-            print(f"Latest searches: {result['num_searches']}")
-            print(f"Latest aggregations: {result['num_aggregations']}")
+                print(f"Current average LM Judge score: {np.mean(lm_judge_average_scores):.2f}")
+                print(f"Current average LM Judge score range: {np.mean(lm_judge_score_ranges):.2f}")
+                print(f"Current average LM Judge score variance: {np.mean(lm_judge_score_variances):.4f}")
+            
+            print(f"Current average query time: {np.mean(query_times):.2f} seconds")
+            print(f"Current average searches: {np.mean(num_searches_list):.2f}")
+            print(f"Current average aggregations: {np.mean(num_aggregations_list):.2f}")
     
-    # Calculate aggregate metrics
-    avg_recall = sum(recall_scores) / len(recall_scores) if recall_scores else 0
-    avg_query_time = sum(query_times) / len(query_times) if query_times else 0
-    avg_num_searches = sum(num_searches_list) / len(num_searches_list) if num_searches_list else 0
-    avg_num_aggregations = sum(num_aggregations_list) / len(num_aggregations_list) if num_aggregations_list else 0
-    
-    # Calculate LM judge metrics only if run_lm_judge is True
-    if run_lm_judge:
-        avg_lm_judge_score = sum(lm_judge_average_scores) / len(lm_judge_average_scores) if lm_judge_average_scores else 0
-        avg_lm_judge_range = sum(lm_judge_score_ranges) / len(lm_judge_score_ranges) if lm_judge_score_ranges else 0
-        avg_lm_judge_variance = sum(lm_judge_score_variances) / len(lm_judge_score_variances) if lm_judge_score_variances else 0
-    else:
-        avg_lm_judge_score = None
-        avg_lm_judge_range = None
-        avg_lm_judge_variance = None
-    
-    # Print summary
-    print("\033[92m\n===== Benchmark Results =====\033[0m")
-    print(f"Dataset: {dataset_name}")
-    print(f"Number of queries: {len(results)}")
-    if run_lm_judge:
-        print(f"Average LM Judge Score: {avg_lm_judge_score:.2f}")
-        print(f"Average LM Judge Score Range: {avg_lm_judge_range:.2f}")
-        print(f"Average LM Judge Score Variance: {avg_lm_judge_variance:.4f}")
-    else:
-        print("LM Judge evaluation: Disabled")
-    print(f"Average Recall: {avg_recall:.2f}")
-    print(f"Average Query Time: {avg_query_time:.2f} seconds")
-    print(f"Average Number of Searches: {avg_num_searches:.2f}")
-    print(f"Average Number of Aggregations: {avg_num_aggregations:.2f}")
-    
-    return {
-        "avg_lm_judge_score": avg_lm_judge_score,
-        "avg_lm_judge_range": avg_lm_judge_range,
-        "avg_lm_judge_variance": avg_lm_judge_variance,
-        "avg_recall": avg_recall,
-        "avg_query_time": avg_query_time,
-        "avg_num_searches": avg_num_searches,
-        "avg_num_aggregations": avg_num_aggregations,
-        "lm_judge_average_scores": lm_judge_average_scores if run_lm_judge else [],
-        "lm_judge_score_ranges": lm_judge_score_ranges if run_lm_judge else [],
-        "lm_judge_score_variances": lm_judge_score_variances if run_lm_judge else [],
-        "recall_scores": recall_scores,
+    # Build results dictionary
+    results_dict = {
+        "avg_query_time": np.mean(query_times) if query_times else 0,
+        "avg_num_searches": np.mean(num_searches_list) if num_searches_list else 0,
+        "avg_num_aggregations": np.mean(num_aggregations_list) if num_aggregations_list else 0,
         "query_times": query_times,
         "num_searches_list": num_searches_list,
         "num_aggregations_list": num_aggregations_list,
         "run_lm_judge": run_lm_judge
     }
-
-
-def pretty_print_query_agent_benchmark_metrics(metrics: dict, dataset_name: str = None, experiment_name: str = None):
-    """
-    Pretty prints the metrics returned by analyze_results function.
     
-    Args:
-        metrics: Dictionary containing benchmark metrics
-        dataset_name: Optional name of the dataset used
-        experiment_name: Optional name of the experiment
-    """
-    # Print header with experiment info if provided
-    print("\n" + "="*60)
-    if experiment_name:
-        print(f"\033[1m\033[94m{experiment_name} Benchmark Results\033[0m")
+    # Add LM judge results if enabled
+    if run_lm_judge:
+        results_dict.update({
+            "avg_lm_judge_score": np.mean(lm_judge_average_scores) if lm_judge_average_scores else 0,
+            "avg_lm_judge_range": np.mean(lm_judge_score_ranges) if lm_judge_score_ranges else 0,
+            "avg_lm_judge_variance": np.mean(lm_judge_score_variances) if lm_judge_score_variances else 0,
+            "lm_judge_average_scores": lm_judge_average_scores,
+            "lm_judge_score_ranges": lm_judge_score_ranges,
+            "lm_judge_score_variances": lm_judge_score_variances,
+        })
     else:
-        print("\033[1m\033[94mQuery Agent Benchmark Results\033[0m")
-    print("="*60)
+        results_dict.update({
+            "avg_lm_judge_score": None,
+            "avg_lm_judge_range": None,
+            "avg_lm_judge_variance": None,
+            "lm_judge_average_scores": [],
+            "lm_judge_score_ranges": [],
+            "lm_judge_score_variances": [],
+        })
     
-    # Print dataset info if provided
-    if dataset_name:
-        print(f"\033[1mDataset:\033[0m {dataset_name}")
+    # Add metric-specific results
+    for metric_name, scores in metric_results.items():
+        clean_name = metric_name.replace("calculate_", "")
+        results_dict[f"avg_{clean_name}"] = np.mean(scores) if scores else 0
+        results_dict[f"{clean_name}_scores"] = scores
     
-    # Print aggregate metrics with formatting
-    print("\n\033[1m\033[92mAggregate Metrics:\033[0m")
+    # Print summary
+    print("\n\033[92m===== Benchmark Results =====\033[0m")
+    print(f"Dataset: {dataset_name}")
+    print(f"Number of queries: {len(results)}")
     
-    # Check if LM judge was run
-    run_lm_judge = metrics.get('run_lm_judge', True)  # Default to True for backward compatibility
-    
-    if run_lm_judge and metrics['avg_lm_judge_score'] is not None:
-        print(f"  • Average LM Judge Score:       \033[1m{metrics['avg_lm_judge_score']:.2f}\033[0m")
-        print(f"  • Average LM Judge Score Range: \033[1m{metrics['avg_lm_judge_range']:.2f}\033[0m")
-        print(f"  • Average LM Judge Score Variance:    \033[1m{metrics['avg_lm_judge_variance']:.4f}\033[0m")
+    if run_lm_judge:
+        print(f"Average LM Judge Score: {results_dict['avg_lm_judge_score']:.2f}")
+        print(f"Average LM Judge Score Range: {results_dict['avg_lm_judge_range']:.2f}")
+        print(f"Average LM Judge Score Variance: {results_dict['avg_lm_judge_variance']:.4f}")
     else:
-        print("  • LM Judge Evaluation:          \033[1mDisabled\033[0m")
+        print("LM Judge evaluation: Disabled")
     
-    print(f"  • Average Recall:               \033[1m{metrics['avg_recall']:.2f}\033[0m")
-    print(f"  • Average Query Time:           \033[1m{metrics['avg_query_time']:.2f}\033[0m seconds")
-    print(f"  • Average Number of Searches:   \033[1m{metrics['avg_num_searches']:.2f}\033[0m")
-    print(f"  • Average Number of Aggregations: \033[1m{metrics['avg_num_aggregations']:.2f}\033[0m")
+    # Print metric results
+    for metric_name, scores in metric_results.items():
+        if scores:
+            display_name = metric_name.replace("calculate_", "").replace("_", " ").title()
+            print(f"Average {display_name}: {np.mean(scores):.2f}")
     
-    # Print distribution statistics if available
-    print("\n\033[1m\033[92mDistribution Statistics:\033[0m")
+    print(f"Average Query Time: {results_dict['avg_query_time']:.2f} seconds")
+    print(f"Average Number of Searches: {results_dict['avg_num_searches']:.2f}")
+    print(f"Average Number of Aggregations: {results_dict['avg_num_aggregations']:.2f}")
     
-    # LM Judge scores (only if run)
-    if run_lm_judge and 'lm_judge_average_scores' in metrics and metrics['lm_judge_average_scores']:
-        lm_scores = np.array(metrics['lm_judge_average_scores'])
-        print("  • LM Judge Scores:")
-        print(f"    - Min: {np.min(lm_scores):.2f}")
-        print(f"    - Max: {np.max(lm_scores):.2f}")
-        print(f"    - Median: {np.median(lm_scores):.2f}")
-        print(f"    - Std Dev: {np.std(lm_scores):.2f}")
-    
-    # Recall scores
-    if 'recall_scores' in metrics and metrics['recall_scores']:
-        recall_scores = np.array(metrics['recall_scores'])
-        print("  • Recall Scores:")
-        print(f"    - Min: {np.min(recall_scores):.2f}")
-        print(f"    - Max: {np.max(recall_scores):.2f}")
-        print(f"    - Median: {np.median(recall_scores):.2f}")
-        print(f"    - Std Dev: {np.std(recall_scores):.2f}")
-    
-    # Query times
-    if 'query_times' in metrics and metrics['query_times']:
-        query_times = np.array(metrics['query_times'])
-        print("  • Query Times (seconds):")
-        print(f"    - Min: {np.min(query_times):.2f}")
-        print(f"    - Max: {np.max(query_times):.2f}")
-        print(f"    - Median: {np.median(query_times):.2f}")
-        print(f"    - Std Dev: {np.std(query_times):.2f}")
-    
-    # Number of searches
-    if 'num_searches_list' in metrics and metrics['num_searches_list']:
-        num_searches = np.array(metrics['num_searches_list'])
-        print("  • Number of Searches:")
-        print(f"    - Min: {np.min(num_searches):.0f}")
-        print(f"    - Max: {np.max(num_searches):.0f}")
-        print(f"    - Median: {np.median(num_searches):.1f}")
-        print(f"    - Std Dev: {np.std(num_searches):.2f}")
-    
-    # Number of aggregations
-    if 'num_aggregations_list' in metrics and metrics['num_aggregations_list']:
-        num_aggregations = np.array(metrics['num_aggregations_list'])
-        print("  • Number of Aggregations:")
-        print(f"    - Min: {np.min(num_aggregations):.0f}")
-        print(f"    - Max: {np.max(num_aggregations):.0f}")
-        print(f"    - Median: {np.median(num_aggregations):.1f}")
-        print(f"    - Std Dev: {np.std(num_aggregations):.2f}")
-    
-    print("\n" + "="*60)
-
-
-def query_agent_benchmark_metrics_to_markdown(metrics: dict, dataset_name: str = None, agent_name: str = None, output_path: str = None):
-    """
-    Formats the metrics returned by analyze_results function as markdown and saves to disk.
-    
-    Args:
-        metrics: Dictionary containing benchmark metrics
-        dataset_name: Optional name of the dataset used
-        agent_name: Optional name of the agent
-        output_path: Path to save the markdown file (defaults to results/metrics_{timestamp}.md)
-    """
-    import os
-    from datetime import datetime
-    
-    # Generate markdown content
-    markdown = []
-    
-    # Add header with agent info
-    if agent_name:
-        markdown.append(f"# {agent_name} Benchmark Results")
-    else:
-        markdown.append("# Query Agent Benchmark Results")
-    
-    # Add dataset info if provided
-    if dataset_name:
-        markdown.append(f"\n**Dataset:** {dataset_name}")
-    
-    # Add timestamp
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    markdown.append(f"\n**Generated:** {timestamp}")
-    
-    # Check if LM judge was run
-    run_lm_judge = metrics.get('run_lm_judge', True)  # Default to True for backward compatibility
-    
-    # Add aggregate metrics
-    markdown.append("\n## Aggregate Metrics")
-    markdown.append("| Metric | Value |")
-    markdown.append("| ------ | ----- |")
-    
-    if run_lm_judge and metrics['avg_lm_judge_score'] is not None:
-        markdown.append(f"| Average LM Judge Score | **{metrics['avg_lm_judge_score']:.2f}** |")
-        markdown.append(f"| Average LM Judge Score Range | **{metrics['avg_lm_judge_range']:.2f}** |")
-        markdown.append(f"| Average LM Judge Variance | **{metrics['avg_lm_judge_variance']:.4f}** |")
-    else:
-        markdown.append("| LM Judge Evaluation | **Disabled** |")
-    
-    markdown.append(f"| Average Recall | **{metrics['avg_recall']:.2f}** |")
-    markdown.append(f"| Average Query Time | **{metrics['avg_query_time']:.2f}** seconds |")
-    markdown.append(f"| Average Number of Searches | **{metrics['avg_num_searches']:.2f}** |")
-    markdown.append(f"| Average Number of Aggregations | **{metrics['avg_num_aggregations']:.2f}** |")
-    
-    # Add distribution statistics if available
-    markdown.append("\n## Distribution Statistics")
-    
-    # LM Judge scores (only if run)
-    if run_lm_judge and 'lm_judge_average_scores' in metrics and metrics['lm_judge_average_scores']:
-        lm_scores = np.array(metrics['lm_judge_average_scores'])
-        markdown.append("\n### LM Judge Scores")
-        markdown.append("| Statistic | Value |")
-        markdown.append("| --------- | ----- |")
-        markdown.append(f"| Min | {np.min(lm_scores):.2f} |")
-        markdown.append(f"| Max | {np.max(lm_scores):.2f} |")
-        markdown.append(f"| Median | {np.median(lm_scores):.2f} |")
-        markdown.append(f"| Std Dev | {np.std(lm_scores):.2f} |")
-    
-    # Recall scores
-    if 'recall_scores' in metrics and metrics['recall_scores']:
-        recall_scores = np.array(metrics['recall_scores'])
-        markdown.append("\n### Recall Scores")
-        markdown.append("| Statistic | Value |")
-        markdown.append("| --------- | ----- |")
-        markdown.append(f"| Min | {np.min(recall_scores):.2f} |")
-        markdown.append(f"| Max | {np.max(recall_scores):.2f} |")
-        markdown.append(f"| Median | {np.median(recall_scores):.2f} |")
-        markdown.append(f"| Std Dev | {np.std(recall_scores):.2f} |")
-    
-    # Query times
-    if 'query_times' in metrics and metrics['query_times']:
-        query_times = np.array(metrics['query_times'])
-        markdown.append("\n### Query Times (seconds)")
-        markdown.append("| Statistic | Value |")
-        markdown.append("| --------- | ----- |")
-        markdown.append(f"| Min | {np.min(query_times):.2f} |")
-        markdown.append(f"| Max | {np.max(query_times):.2f} |")
-        markdown.append(f"| Median | {np.median(query_times):.2f} |")
-        markdown.append(f"| Std Dev | {np.std(query_times):.2f} |")
-    
-    # Number of searches
-    if 'num_searches_list' in metrics and metrics['num_searches_list']:
-        num_searches = np.array(metrics['num_searches_list'])
-        markdown.append("\n### Number of Searches")
-        markdown.append("| Statistic | Value |")
-        markdown.append("| --------- | ----- |")
-        markdown.append(f"| Min | {np.min(num_searches):.0f} |")
-        markdown.append(f"| Max | {np.max(num_searches):.0f} |")
-        markdown.append(f"| Median | {np.median(num_searches):.1f} |")
-        markdown.append(f"| Std Dev | {np.std(num_searches):.2f} |")
-    
-    # Number of aggregations
-    if 'num_aggregations_list' in metrics and metrics['num_aggregations_list']:
-        num_aggregations = np.array(metrics['num_aggregations_list'])
-        markdown.append("\n### Number of Aggregations")
-        markdown.append("| Statistic | Value |")
-        markdown.append("| --------- | ----- |")
-        markdown.append(f"| Min | {np.min(num_aggregations):.0f} |")
-        markdown.append(f"| Max | {np.max(num_aggregations):.0f} |")
-        markdown.append(f"| Median | {np.median(num_aggregations):.1f} |")
-        markdown.append(f"| Std Dev | {np.std(num_aggregations):.2f} |")
-    
-    # Determine output path
-    if output_path is None:
-        # Create results directory if it doesn't exist
-        results_dir = os.path.join(os.getcwd(), "results")
-        
-        # Create dataset-specific subdirectory if dataset_name is provided
-        if dataset_name:
-            results_dir = os.path.join(results_dir, dataset_name)
-        
-        os.makedirs(results_dir, exist_ok=True)
-        
-        # Generate filename with timestamp (month_day_year format: e.g., 5_27_25)
-        file_timestamp = datetime.now().strftime("%-m_%-d_%y")
-        agent_name_clean = agent_name.replace(" ", "_").replace("(", "").replace(")", "").lower() if agent_name else "query_agent"
-        output_path = os.path.join(results_dir, f"{agent_name_clean}_{file_timestamp}.md")
-    
-    # Write markdown to file
-    with open(output_path, 'w') as f:
-        f.write('\n'.join(markdown))
-    
-    print(f"Metrics saved as markdown to {output_path}")
-    return output_path
+    return results_dict

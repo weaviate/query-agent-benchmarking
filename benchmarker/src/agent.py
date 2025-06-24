@@ -52,7 +52,7 @@ class AgentBuilder:
             self.id_property = "dataset_id"
         elif dataset_name.startswith("freshstack-"):
             subset = dataset_name.split("-")[1].capitalize()
-            self.collection = f"FreshStack{subset}"
+            self.collection = f"Freshstack{subset}"
             self.target_property_name = "docs_text"
             self.id_property = "dataset_id"
         else:

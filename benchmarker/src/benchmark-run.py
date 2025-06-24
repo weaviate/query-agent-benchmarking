@@ -4,15 +4,13 @@ import weaviate
 import asyncio
 import argparse
 from pathlib import Path
-from benchmarker.src.dataset import in_memory_dataset_loader
-from benchmarker.src.database import database_loader
 from benchmarker.src.agent import AgentBuilder
+from benchmarker.src.dataset import in_memory_dataset_loader
+
 from benchmarker.src.query_agent_benchmark import (
     run_queries,
     run_queries_async,
-    analyze_results,
-    pretty_print_query_agent_benchmark_metrics,
-    query_agent_benchmark_metrics_to_markdown
+    analyze_results
 )
 from benchmarker.src.utils import pretty_print_dict
 
@@ -36,23 +34,9 @@ async def main():
     config_path = Path(os.path.dirname(__file__), "config.yml")
     config = load_config(config_path)
 
-    # Initialize Weaviate client (sync version for data loading)
-    weaviate_client = weaviate.connect_to_weaviate_cloud(
-        cluster_url=os.getenv("WEAVIATE_URL"),
-        auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
-    )
-
-    documents, queries = in_memory_dataset_loader(config["dataset"])
-    print("\033[92mFirst Document:\033[0m")
-    pretty_print_dict(documents[0])
+    _, queries = in_memory_dataset_loader(config["dataset"])
     print("\033[92mFirst Query\033[0m")
     pretty_print_dict(queries[0])
-
-    if config["reload_database"]:
-        database_loader(weaviate_client, config["dataset"], documents)
-
-    # Close the sync client as we'll use async for queries
-    weaviate_client.close()
 
     # Create agent builder with async support if requested
     query_agent = AgentBuilder(
@@ -109,18 +93,6 @@ async def main():
         results, 
         queries,
         run_lm_judge=args.run_lm_judge
-    )
-
-    pretty_print_query_agent_benchmark_metrics(
-        metrics, 
-        dataset_name=config["dataset"],
-        experiment_name=config["experiment_name"]
-    )
-    
-    query_agent_benchmark_metrics_to_markdown(
-        metrics=metrics,
-        dataset_name=config["dataset"],
-        agent_name=config["experiment_name"]
     )
 
     weaviate_client.close()
