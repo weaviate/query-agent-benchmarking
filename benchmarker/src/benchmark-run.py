@@ -50,6 +50,7 @@ async def main():
     
     # Run queries based on async flag
     if args.use_async:        
+        print("\033[92mRunning queries async!\033[0m")
         # Initialize async agent
         await query_agent.initialize_async()
         
