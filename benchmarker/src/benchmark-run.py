@@ -95,6 +95,8 @@ async def main():
         run_lm_judge=args.run_lm_judge
     )
 
+    print(metrics)
+
     weaviate_client.close()
 
 if __name__ == "__main__":

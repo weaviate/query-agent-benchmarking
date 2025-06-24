@@ -158,7 +158,7 @@ def calculate_alpha_ndcg(retrieved_ids: list[str], nugget_data: list[dict], alph
     print(f"\033[96mα-nDCG@{k} evaluation (α={alpha}):\033[0m")
     print(f"Total nuggets: {len(nugget_data)}")
     print(f"Documents evaluated: {len(retrieved_ids)}")
-    print(f"\nPosition breakdown:")
+    print("\nPosition breakdown:")
     for pg in position_gains[:5]:  # Show first 5 positions
         nugget_info = ', '.join(pg['nuggets']) if pg['nuggets'] else 'none'
         print(f"  Pos {pg['position']}: doc={pg['doc_id'][:8]}... gain={pg['gain']:.2f} "
