@@ -82,8 +82,8 @@ async def run_queries_async(
                 response = await query_agent.run_async(query["question"])
                 query_time_taken = time.time() - query_start_time
                 
-                total_searches = sum(len(search_list) for search_list in response.searches)
-                total_aggregations = sum(len(agg_list) for agg_list in response.aggregations)
+                total_searches = sum(len(search_list) for search_list in response.searches) if response.searches else 0
+                total_aggregations = sum(len(agg_list) for agg_list in response.aggregations) if response.aggregations else 0
                 
                 return {
                     "query": query,

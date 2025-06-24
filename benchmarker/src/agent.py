@@ -61,6 +61,7 @@ class AgentBuilder:
         self.agent_name = agent_name
         self.agents_host = agents_host or "https://api.agents.weaviate.io"
 
+        # TODO: Separate this into `initialize_sync`
         if not use_async:
             self.weaviate_client = weaviate.connect_to_weaviate_cloud(
                 cluster_url=self.cluster_url,
@@ -76,7 +77,7 @@ class AgentBuilder:
             elif agent_name in RAG_VARIANTS:
                 rag_cls = RAG_VARIANTS[agent_name]
                 dspy.configure(
-                    lm=dspy.LM("openai/gpt-4o", api_key=self.openai_api_key, cache=False),
+                    lm=dspy.LM("openai/gpt-4.1-mini", api_key=self.openai_api_key, cache=False),
                     track_usage=True,
                 )
                 self.agent = rag_cls(
@@ -93,15 +94,16 @@ class AgentBuilder:
         print(f"Initializing async connection to {self.cluster_url}")
         
         try:
-            self.weaviate_client = weaviate.use_async_with_weaviate_cloud(
-                cluster_url=self.cluster_url,
-                auth_credentials=Auth.api_key(self.api_key),
-            )
-            
-            await self.weaviate_client.connect()
-            print("Async Weaviate client connected successfully")
-            
             if self.agent_name == "query-agent":
+                self.weaviate_client = weaviate.use_async_with_weaviate_cloud(
+                    cluster_url=self.cluster_url,
+                    auth_credentials=Auth.api_key(self.api_key),
+                )
+                
+                await self.weaviate_client.connect()
+                print("Async Weaviate client connected successfully")
+            
+            
                 self.agent = AsyncQueryAgent(
                     client=self.weaviate_client,
                     collections=[self.collection],
@@ -113,11 +115,19 @@ class AgentBuilder:
                 print("Testing AsyncQueryAgent with a simple query...")
                 test_response = await self.agent.run("What is this collection about?")
                 print(f"Test query successful: {test_response.final_answer[:100]}...")
-                
             elif self.agent_name in RAG_VARIANTS:
-                raise NotImplementedError(f"Async not implemented for {self.agent_name}")
+                # `dspy_rag` keeps the client use encapsulated in the `async_weaviate_search_tool`
+                rag_cls = RAG_VARIANTS[self.agent_name]
+                dspy.configure(
+                    lm=dspy.LM("openai/gpt-4.1-mini", api_key=self.openai_api_key, cache=False),
+                    track_usage=True,
+                )
+                self.agent = rag_cls(
+                    collection_name=self.collection,
+                    target_property_name=self.target_property_name,
+                )
             else:
-                raise ValueError(f"Unknown agent_name: {self.agent_name}")
+                raise ValueError(f"Unknown agent_name: {self.agent_name}. Must be 'query-agent' or one of {list(RAG_VARIANTS.keys())}")
                 
         except Exception as e:
             print(f"Failed to initialize async agent: {str(e)}")
@@ -146,21 +156,16 @@ class AgentBuilder:
             return dspy_response.to_agent_rag_response()
         return dspy_response
     
-    async def run_async(self, query: str):
-        if not self.use_async:
-            raise RuntimeError("Use run() for sync agents")
-            
-        if self.agent is None:
-            raise RuntimeError("Async agent not initialized. Call initialize_async() first.")
-            
-        if self.weaviate_client is None:
-            raise RuntimeError("Async Weaviate client not initialized.")
-            
+    async def run_async(self, query: str):            
         try:
             if self.agent_name == "query-agent":
                 response = await self.agent.run(query)
                 return response
-            raise NotImplementedError(f"Async not implemented for {self.agent_name}")
+            else:
+                dspy_response = await self.agent.aforward(query)
+                if isinstance(dspy_response, DSPyAgentRAGResponse):
+                    return dspy_response.to_agent_rag_response()
+                return dspy_response
         except Exception as e:
             print(f"Query '{query[:50]}...' failed with error: {str(e)}")
             raise

@@ -1,6 +1,7 @@
 import os
 import yaml
 from typing import Dict, Any
+import asyncio
 
 import dspy
 import weaviate
@@ -42,6 +43,45 @@ def weaviate_search_tool(
     else:
         # Return traditional string format
         return _stringify_search_results(search_results, view_properties=[target_property_name]), object_ids
+
+async def async_weaviate_search_tool(
+    query: str,
+    collection_name: str,
+    target_property_name: str,
+    return_dict: bool = False
+):
+    async_client = weaviate.use_async_with_weaviate_cloud(
+        cluster_url=os.getenv("WEAVIATE_URL"),
+        auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
+    )
+    
+    await async_client.connect()
+    
+    try:
+        collection = async_client.collections.get(collection_name)
+        
+        search_results = await collection.query.hybrid(
+            query=query,
+            limit=5
+        )
+        
+        object_ids = []
+        if search_results.objects:
+            for obj in search_results.objects:
+                object_ids.append(Source(
+                    object_id=str(obj.uuid)
+                ))
+        
+        if return_dict:
+            # Return dictionary with numeric IDs (1-based) and maintain mapping to UUIDs
+            return _dictify_search_results(search_results, view_properties=[target_property_name]), object_ids
+        else:
+            # Return traditional string format
+            return _stringify_search_results(search_results, view_properties=[target_property_name]), object_ids
+    
+    finally:
+        # Always close the connection
+        await async_client.close()
 
 def _stringify_search_results(search_results: QueryReturn, view_properties=None) -> str:
     """
@@ -206,3 +246,126 @@ def print_configuration_summary(config: Dict[str, Any]):
         print("Quick Test Mode: ENABLED")
     
     print("=" * 60)
+
+
+# NOTE: Vibe-coded main stub test.
+
+async def test_async_weaviate_search():
+    """Test the async_weaviate_search_tool function."""
+    print("\n" + "=" * 60)
+    print("Testing async_weaviate_search_tool")
+    print("=" * 60)
+    
+    # Test parameters
+    test_query = "What is LangChain?"
+    collection_name = "FreshstackLangchain"
+    target_property_name = "docs_text" # NOTE: UPDATE ME!
+    
+    print(f"\nQuery: {test_query}")
+    print(f"Collection: {collection_name}")
+    print(f"Target Property: {target_property_name}")
+    
+    # Test 1: String format (return_dict=False)
+    print("\n--- Test 1: String format ---")
+    try:
+        start_time = asyncio.get_event_loop().time()
+        contexts, sources = await async_weaviate_search_tool(
+            query=test_query,
+            collection_name=collection_name,
+            target_property_name=target_property_name,
+            return_dict=False
+        )
+        end_time = asyncio.get_event_loop().time()
+        
+        print(f"\nSearch completed in {end_time - start_time:.2f} seconds")
+        print(f"Found {len(sources)} sources")
+        print("\nContexts preview (first 500 chars):")
+        print(contexts[:500] + "..." if len(contexts) > 500 else contexts)
+        print("\nSource IDs:")
+        for i, source in enumerate(sources):
+            print(f"  {i+1}. {source.object_id}")
+            
+    except Exception as e:
+        print(f"Error in Test 1: {type(e).__name__}: {e}")
+    
+    # Test 2: Dictionary format (return_dict=True)
+    print("\n--- Test 2: Dictionary format ---")
+    try:
+        start_time = asyncio.get_event_loop().time()
+        contexts_dict, sources = await async_weaviate_search_tool(
+            query=test_query,
+            collection_name=collection_name,
+            target_property_name=target_property_name,
+            return_dict=True
+        )
+        end_time = asyncio.get_event_loop().time()
+        
+        print(f"\nSearch completed in {end_time - start_time:.2f} seconds")
+        print(f"Found {len(sources)} sources")
+        print(f"Dictionary has {len(contexts_dict)} entries")
+        
+        # Show first entry
+        if contexts_dict:
+            first_key = next(iter(contexts_dict))
+            print(f"\nFirst entry (key={first_key}):")
+            print(contexts_dict[first_key][:300] + "..." if len(contexts_dict[first_key]) > 300 else contexts_dict[first_key])
+            
+    except Exception as e:
+        print(f"Error in Test 2: {type(e).__name__}: {e}")
+    
+    # Test 3: Compare with sync version for consistency
+    print("\n--- Test 3: Comparing async vs sync results ---")
+    try:
+        # Run sync version
+        sync_contexts, sync_sources = weaviate_search_tool(
+            query=test_query,
+            collection_name=collection_name,
+            target_property_name=target_property_name,
+            return_dict=False
+        )
+        
+        # Run async version
+        async_contexts, async_sources = await async_weaviate_search_tool(
+            query=test_query,
+            collection_name=collection_name,
+            target_property_name=target_property_name,
+            return_dict=False
+        )
+        
+        # Compare results
+        print(f"\nSync sources: {len(sync_sources)}")
+        print(f"Async sources: {len(async_sources)}")
+        
+        if len(sync_sources) == len(async_sources):
+            matching_ids = sum(1 for s1, s2 in zip(sync_sources, async_sources) if s1.object_id == s2.object_id)
+            print(f"Matching source IDs: {matching_ids}/{len(sync_sources)}")
+        
+        print(f"\nSync context length: {len(sync_contexts)}")
+        print(f"Async context length: {len(async_contexts)}")
+        print(f"Contexts match: {sync_contexts == async_contexts}")
+        
+    except Exception as e:
+        print(f"Error in Test 3: {type(e).__name__}: {e}")
+    
+    print("\n" + "=" * 60)
+    print("Testing complete!")
+    print("=" * 60)
+
+
+def main():
+    """Main function to test async_weaviate_search_tool."""
+    # Check if required environment variables are set
+    required_env_vars = ["WEAVIATE_URL", "WEAVIATE_API_KEY"]
+    missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+    
+    if missing_vars:
+        print(f"Error: Missing required environment variables: {', '.join(missing_vars)}")
+        print("Please set these environment variables before running the test.")
+        return
+    
+    # Run the async test
+    asyncio.run(test_async_weaviate_search())
+
+
+if __name__ == "__main__":
+    main()
