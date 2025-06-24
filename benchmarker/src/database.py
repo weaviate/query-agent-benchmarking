@@ -70,7 +70,7 @@ def database_loader(
             print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {upload_time:.2f} seconds)")
         
     if dataset_name.startswith("freshstack-"):
-        collection_name = f"FreshStack{dataset_name.split('-')[1].capitalize()}"
+        collection_name = f"Freshstack{dataset_name.split('-')[1].capitalize()}"
         
         if weaviate_client.collections.exists(collection_name):
             weaviate_client.collections.delete(collection_name)
