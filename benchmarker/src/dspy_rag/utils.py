@@ -1,10 +1,11 @@
 import os
 import yaml
-from typing import Dict, Any
+from typing import Optional, Dict, Any
 import asyncio
 
 import dspy
 import weaviate
+from weaviate.classes.query import Filter
 from weaviate.outputs.query import QueryReturn
 
 from benchmarker.src.dspy_rag.rag_signatures import Source
@@ -14,7 +15,8 @@ def weaviate_search_tool(
         query: str,
         collection_name: str,
         target_property_name: str,
-        return_dict: bool = False
+        return_dict: bool = False,
+        tag_filter_value: Optional[str] | None = None
 ):
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
@@ -23,10 +25,18 @@ def weaviate_search_tool(
 
     collection = weaviate_client.collections.get(collection_name)
 
-    search_results = collection.query.hybrid(
-        query=query,
-        limit=5
-    )
+    if tag_filter_value:
+        search_results = collection.query.hybrid(
+            query=query,
+            filter=Filter.by_property("tags").contains_any([tag_filter_value]),
+            limit=5
+        )
+    else:
+        search_results = collection.query.hybrid(
+            query=query,
+            limit=5
+        )
+
 
     weaviate_client.close()
 
@@ -48,7 +58,8 @@ async def async_weaviate_search_tool(
     query: str,
     collection_name: str,
     target_property_name: str,
-    return_dict: bool = False
+    return_dict: bool = False,
+    tag_filter_value: Optional[str] | None = None
 ):
     async_client = weaviate.use_async_with_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
@@ -60,10 +71,17 @@ async def async_weaviate_search_tool(
     try:
         collection = async_client.collections.get(collection_name)
         
-        search_results = await collection.query.hybrid(
-            query=query,
-            limit=5
-        )
+        if tag_filter_value:
+            search_results = await collection.query.hybrid(
+                query=query,
+                filter=Filter.by_property("tags").contains_any([tag_filter_value]),
+                limit=5
+            )
+        else:
+            search_results = await collection.query.hybrid(
+                query=query,
+                limit=5
+            )
         
         object_ids = []
         if search_results.objects:
