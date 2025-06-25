@@ -5,7 +5,7 @@ import asyncio
 
 import dspy
 import weaviate
-from weaviate.classes.query import Filter
+from weaviate.classes.query import Filter, Metrics
 from weaviate.outputs.query import QueryReturn
 
 from benchmarker.src.dspy_rag.rag_signatures import Source
@@ -186,6 +186,23 @@ def _dictify_search_results(search_results: QueryReturn, view_properties=None) -
         result_dict[result_id] = result_str
     
     return result_dict
+
+def get_tag_values(collection_name: str) -> list[str]:
+    weaviate_client = weaviate.connect_to_weaviate_cloud(
+        cluster_url=os.getenv("WEAVIATE_URL"),
+        auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
+    )
+
+    collection = weaviate_client.collections.get(collection_name)
+
+    response = collection.aggregate.over_all(
+        return_metrics=Metrics("yourTextArrayProperty").text(
+            top_occurrences_count=True,
+            top_occurrences_value=True,
+            min_occurrences=5  # Optional: threshold minimum count
+        )
+    )
+    print(response.properties["yourTextArrayProperty"].top_occurrences)
 
 def load_optimization_config(config_path: str) -> Dict[str, Any]:
     """
