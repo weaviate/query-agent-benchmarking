@@ -196,13 +196,19 @@ def get_tag_values(collection_name: str) -> list[str]:
     collection = weaviate_client.collections.get(collection_name)
 
     response = collection.aggregate.over_all(
-        return_metrics=Metrics("yourTextArrayProperty").text(
+        return_metrics=Metrics("tags").text(
             top_occurrences_count=True,
             top_occurrences_value=True,
-            min_occurrences=5  # Optional: threshold minimum count
+            min_occurrences=10
         )
     )
-    print(response.properties["yourTextArrayProperty"].top_occurrences)
+    
+    # Extract tag values from top occurrences
+    tag_values = [
+        occurrence.value 
+        for occurrence in response.properties["tags"].top_occurrences
+    ]
+    return tag_values
 
 def load_optimization_config(config_path: str) -> Dict[str, Any]:
     """
@@ -283,112 +289,71 @@ def print_configuration_summary(config: Dict[str, Any]):
     print("=" * 60)
 
 
-# NOTE: Vibe-coded main stub test.
-
-async def test_async_weaviate_search():
-    """Test the async_weaviate_search_tool function."""
-    print("\n" + "=" * 60)
-    print("Testing async_weaviate_search_tool")
-    print("=" * 60)
+async def test_search_functions():
+    """Simplified test for both sync and async search functions."""
+    print("\n" + "=" * 50)
+    print("Testing Search Functions")
+    print("=" * 50)
     
     # Test parameters
     test_query = "What is LangChain?"
     collection_name = "FreshstackLangchain"
-    target_property_name = "docs_text" # NOTE: UPDATE ME!
+    target_property_name = "docs_text"
     
-    print(f"\nQuery: {test_query}")
+    print(f"Query: {test_query}")
     print(f"Collection: {collection_name}")
-    print(f"Target Property: {target_property_name}")
     
-    # Test 1: String format (return_dict=False)
-    print("\n--- Test 1: String format ---")
     try:
-        start_time = asyncio.get_event_loop().time()
-        contexts, sources = await async_weaviate_search_tool(
-            query=test_query,
-            collection_name=collection_name,
-            target_property_name=target_property_name,
-            return_dict=False
-        )
-        end_time = asyncio.get_event_loop().time()
-        
-        print(f"\nSearch completed in {end_time - start_time:.2f} seconds")
-        print(f"Found {len(sources)} sources")
-        print("\nContexts preview (first 500 chars):")
-        print(contexts[:500] + "..." if len(contexts) > 500 else contexts)
-        print("\nSource IDs:")
-        for i, source in enumerate(sources):
-            print(f"  {i+1}. {source.object_id}")
-            
-    except Exception as e:
-        print(f"Error in Test 1: {type(e).__name__}: {e}")
-    
-    # Test 2: Dictionary format (return_dict=True)
-    print("\n--- Test 2: Dictionary format ---")
-    try:
-        start_time = asyncio.get_event_loop().time()
-        contexts_dict, sources = await async_weaviate_search_tool(
-            query=test_query,
-            collection_name=collection_name,
-            target_property_name=target_property_name,
-            return_dict=True
-        )
-        end_time = asyncio.get_event_loop().time()
-        
-        print(f"\nSearch completed in {end_time - start_time:.2f} seconds")
-        print(f"Found {len(sources)} sources")
-        print(f"Dictionary has {len(contexts_dict)} entries")
-        
-        # Show first entry
-        if contexts_dict:
-            first_key = next(iter(contexts_dict))
-            print(f"\nFirst entry (key={first_key}):")
-            print(contexts_dict[first_key][:300] + "..." if len(contexts_dict[first_key]) > 300 else contexts_dict[first_key])
-            
-    except Exception as e:
-        print(f"Error in Test 2: {type(e).__name__}: {e}")
-    
-    # Test 3: Compare with sync version for consistency
-    print("\n--- Test 3: Comparing async vs sync results ---")
-    try:
-        # Run sync version
+        # Test sync search
+        print("\n--- Sync Search ---")
         sync_contexts, sync_sources = weaviate_search_tool(
             query=test_query,
             collection_name=collection_name,
             target_property_name=target_property_name,
             return_dict=False
         )
+        print(f"✓ Sync search successful: {len(sync_sources)} results")
         
-        # Run async version
+        # Test async search
+        print("\n--- Async Search ---")
         async_contexts, async_sources = await async_weaviate_search_tool(
             query=test_query,
             collection_name=collection_name,
             target_property_name=target_property_name,
             return_dict=False
         )
+        print(f"✓ Async search successful: {len(async_sources)} results")
         
-        # Compare results
-        print(f"\nSync sources: {len(sync_sources)}")
-        print(f"Async sources: {len(async_sources)}")
-        
-        if len(sync_sources) == len(async_sources):
-            matching_ids = sum(1 for s1, s2 in zip(sync_sources, async_sources) if s1.object_id == s2.object_id)
-            print(f"Matching source IDs: {matching_ids}/{len(sync_sources)}")
-        
-        print(f"\nSync context length: {len(sync_contexts)}")
-        print(f"Async context length: {len(async_contexts)}")
-        print(f"Contexts match: {sync_contexts == async_contexts}")
+        # Quick comparison
+        results_match = len(sync_sources) == len(async_sources)
+        print(f"✓ Results consistency: {'PASS' if results_match else 'FAIL'}")
         
     except Exception as e:
-        print(f"Error in Test 3: {type(e).__name__}: {e}")
+        print(f"✗ Search test failed: {type(e).__name__}: {e}")
+
+
+def test_get_tag_values():
+    """Test the get_tag_values function."""
+    print("\n" + "=" * 50)
+    print("Testing get_tag_values Function")
+    print("=" * 50)
     
-    print("\n" + "=" * 60)
-    print("Testing complete!")
-    print("=" * 60)
+    collection_name = "FreshstackLangchain"  # Update this to match your collection
+    
+    print(f"Getting tag values for collection: {collection_name}")
+    
+    try:
+        print("\n--- Tag Values ---")
+        tag_values = get_tag_values(collection_name)
+        print("✓ get_tag_values function executed successfully")
+        print(tag_values)
+            
+    except Exception as e:
+        print(f"✗ get_tag_values test failed: {type(e).__name__}: {e}")
 
 
 def main():
-    """Main function to test async_weaviate_search_tool."""
+    """Main function to run simplified tests."""
     # Check if required environment variables are set
     required_env_vars = ["WEAVIATE_URL", "WEAVIATE_API_KEY"]
     missing_vars = [var for var in required_env_vars if not os.getenv(var)]
@@ -398,9 +363,16 @@ def main():
         print("Please set these environment variables before running the test.")
         return
     
-    # Run the async test
-    asyncio.run(test_async_weaviate_search())
-
+    print("Starting simplified tests...")
+    
+    test_get_tag_values()
+    
+    # Test search functions (includes async)
+    asyncio.run(test_search_functions())
+    
+    print("\n" + "=" * 50)
+    print("All tests completed!")
+    print("=" * 50)
 
 if __name__ == "__main__":
     main()
