@@ -196,7 +196,7 @@ class SearchOnlyWithFilteredQueryWriter(RAGAblation):
         )
         queries: list[SearchQueryWithFilter] = fqw_pred.search_queries_with_filters
         print(f"\033[95mWrote {len(queries)} queries!\033[0m")
-        print(f"\033[92mInspecting queries...\033[0m")
+        print("\033[92mInspecting queries...\033[0m")
         for query in queries:
             print(query)
             print("\033[95m" + "="*30 + "\033[0m")
