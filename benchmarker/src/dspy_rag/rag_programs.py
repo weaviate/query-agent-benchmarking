@@ -8,9 +8,12 @@ from benchmarker.src.dspy_rag.rag_signatures import (
     Source,
     DSPyAgentRAGResponse,
     GenerateAnswer,
-    WriteSearchQueries
+    WriteSearchQueries,
+    WriteSearchQueriesWithFilters,
+    SearchQueryWithFilter
 )
 from benchmarker.src.dspy_rag.utils import (
+    get_tag_values,
     weaviate_search_tool,
     async_weaviate_search_tool
 )
@@ -87,7 +90,7 @@ class SearchOnlyWithQueryWriter(RAGAblation):
 
     def forward(self, question: str) -> DSPyAgentRAGResponse:
         qw_pred = self.query_writer(question=question)
-        queries: list[str] = qw_pred.search_queries or [question]
+        queries: list[str] = qw_pred.search_queries
         print(f"\033[95mWrote {len(queries)} queries!\033[0m")
 
         usage_buckets = [qw_pred.get_lm_usage() or {}]
@@ -115,7 +118,7 @@ class SearchOnlyWithQueryWriter(RAGAblation):
     async def aforward(self, question: str) -> DSPyAgentRAGResponse:
         # Generate queries asynchronously
         qw_pred = await self.query_writer.acall(question=question)
-        queries: list[str] = qw_pred.search_queries or [question]
+        queries: list[str] = qw_pred.search_queries
         print(f"\033[95mWrote {len(queries)} queries!\033[0m")
 
         usage_buckets = [qw_pred.get_lm_usage() or {}]
@@ -146,7 +149,88 @@ class SearchOnlyWithQueryWriter(RAGAblation):
             aggregations=None,
             usage=self._merge_usage(*usage_buckets),
         )
+
+class SearchOnlyWithFilteredQueryWriter(RAGAblation):
+    def __init__(self, collection_name: str, target_property_name: str):
+        super().__init__(collection_name, target_property_name)
+        self.tags = get_tag_values(collection_name)
+        self.stringified_tags = "\n".join(self.tags)
+        self.filtered_query_writer = dspy.Predict(WriteSearchQueriesWithFilters)
+
+    def forward(self, question: str) -> DSPyAgentRAGResponse:
+        fqw_pred = self.filtered_query_writer(
+            question=question, 
+            filters_available=self.stringified_tags
+        )
+        queries: list[SearchQueryWithFilter] = fqw_pred.search_queries_with_filters
+        print(f"\033[95mWrote {len(queries)} queries!\033[0m")
+
+        usage_buckets = [fqw_pred.get_lm_usage() or {}]
+
+        sources: list[Source] = []
+        for q in queries:
+            _, src = weaviate_search_tool(
+                query=q.search_query,
+                collection_name=self.collection_name,
+                target_property_name=self.target_property_name,
+                return_dict=False,
+                tag_filter_value=q.filter
+            )
+            sources.extend(src)
+
+        print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
+
+        return DSPyAgentRAGResponse(
+            final_answer="",
+            sources=sources,
+            searches=queries,
+            aggregations=None,
+            usage=self._merge_usage(*usage_buckets),
+        )
     
+    async def aforward(self, question: str) -> DSPyAgentRAGResponse:
+        # Generate queries asynchronously
+        fqw_pred = await self.filtered_query_writer.acall(
+            question=question,
+            filters_available=self.stringified_tags
+        )
+        queries: list[SearchQueryWithFilter] = fqw_pred.search_queries_with_filters
+        print(f"\033[95mWrote {len(queries)} queries!\033[0m")
+        print("\033[92mInspecting queries...\033[0m")
+        for query in queries:
+            print(query)
+            print("\033[95m" + "="*30 + "\033[0m")
+
+        usage_buckets = [fqw_pred.get_lm_usage() or {}]
+
+        # Execute searches concurrently
+        search_tasks = [
+            async_weaviate_search_tool(
+                query=q.search_query,
+                collection_name=self.collection_name,
+                target_property_name=self.target_property_name,
+                return_dict=False,
+                tag_filter_value=q.filter
+            )
+            for q in queries
+        ]
+        
+        search_results = await asyncio.gather(*search_tasks)
+        
+        sources: list[Source] = []
+        for _, src in search_results:
+            sources.extend(src)
+
+        print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
+
+        return DSPyAgentRAGResponse(
+            final_answer="",
+            sources=sources,
+            searches=queries,
+            aggregations=None,
+            usage=self._merge_usage(*usage_buckets),
+        )
+
 # --- End-to-End RAG Ablations ---
 
 class VanillaRAG(RAGAblation):
@@ -285,6 +369,7 @@ RAG_VARIANTS = {
     "query-writer-rag": SearchQueryWriter,
     "search-only": SearchOnlyRAG,
     "search-only-with-query-writer": SearchOnlyWithQueryWriter,
+    "search-only-with-filtered-query-writer": SearchOnlyWithFilteredQueryWriter
 }
 
 async def async_main():
@@ -321,6 +406,14 @@ async def async_main():
     search_only_qw_response = await search_only_qw_rag.acall(test_question)
     print("\033[96mSources:\033[0m")
     print(f"\033[92m{search_only_qw_response.sources}\033[0m")
+
+    # Test SearchOnlyWithFilteredQueryWriter
+    # Test SearchOnlyWithQueryWriter
+    print("\n\033[95m=== Testing SearchOnlyWithQueryWriter (Async) ===\033[0m")
+    search_only_fqw_rag = SearchOnlyWithFilteredQueryWriter(collection_name, target_property_name)
+    search_only_fqw_response = await search_only_fqw_rag.acall(test_question)
+    print("\033[96mSources:\033[0m")
+    print(f"\033[92m{search_only_fqw_response.sources}\033[0m")
     
     # Test VanillaRAG
     print("\n\033[95m=== Testing VanillaRAG (Async) ===\033[0m")
