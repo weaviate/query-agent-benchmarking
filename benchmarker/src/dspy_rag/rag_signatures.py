@@ -77,6 +77,18 @@ class WriteSearchQueries(dspy.Signature):
     question: str = dspy.InputField()
     search_queries: list[str] = dspy.OutputField()
 
+# TODO: Maybe extend to enable multiple filters with one search query
+class SearchQueryWithFilter(BaseModel):
+    search_query: str
+    filter: Optional[str]
+
+class WriteSearchQueriesWithFilters(dspy.Signature):
+    """Write search queries with optional filters to gather information from a search engine that will help answer the question."""
+
+    question: str = dspy.InputField()
+    filters_available: str = dspy.InputField()
+    search_queries_with_filters: SearchQueryWithFilter = dspy.OutputField()
+
 class FilterIrrelevantSearchResults(dspy.Signature):
     """Filter out search results that are not relevant to answering the question."""
     
