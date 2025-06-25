@@ -154,7 +154,7 @@ class SearchOnlyWithFilteredQueryWriter(RAGAblation):
     def __init__(self, collection_name: str, target_property_name: str):
         super().__init__(collection_name, target_property_name)
         self.tags = get_tag_values(collection_name)
-        self.stringified_tags = "\n".join(f"Tag {i+1}: {tag}" for i, tag in enumerate(self.tags))
+        self.stringified_tags = "\n".join(self.tags)
         self.filtered_query_writer = dspy.Predict(WriteSearchQueriesWithFilters)
 
     def forward(self, question: str) -> DSPyAgentRAGResponse:
@@ -196,8 +196,10 @@ class SearchOnlyWithFilteredQueryWriter(RAGAblation):
         )
         queries: list[SearchQueryWithFilter] = fqw_pred.search_queries_with_filters
         print(f"\033[95mWrote {len(queries)} queries!\033[0m")
-        print(f"\033[92mInspecting first query...\033[0m")
-        print(queries[0])
+        print(f"\033[92mInspecting queries...\033[0m")
+        for query in queries:
+            print(query)
+            print("\033[95m" + "="*30 + "\033[0m")
 
         usage_buckets = [fqw_pred.get_lm_usage() or {}]
 
