@@ -87,7 +87,7 @@ class WriteSearchQueriesWithFilters(dspy.Signature):
 
     question: str = dspy.InputField()
     filters_available: str = dspy.InputField()
-    search_queries_with_filters: SearchQueryWithFilter = dspy.OutputField()
+    search_queries_with_filters: list[SearchQueryWithFilter] = dspy.OutputField()
 
 class FilterIrrelevantSearchResults(dspy.Signature):
     """Filter out search results that are not relevant to answering the question."""

@@ -28,7 +28,7 @@ def weaviate_search_tool(
     if tag_filter_value:
         search_results = collection.query.hybrid(
             query=query,
-            filter=Filter.by_property("tags").contains_any([tag_filter_value]),
+            filters=Filter.by_property("tags").contains_any([tag_filter_value]),
             limit=5
         )
     else:
@@ -74,7 +74,7 @@ async def async_weaviate_search_tool(
         if tag_filter_value:
             search_results = await collection.query.hybrid(
                 query=query,
-                filter=Filter.by_property("tags").contains_any([tag_filter_value]),
+                filters=Filter.by_property("tags").contains_any([tag_filter_value]),
                 limit=5
             )
         else:

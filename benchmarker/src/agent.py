@@ -10,14 +10,17 @@ from benchmarker.src.dspy_rag.rag_programs import (
     VanillaRAG,
     SearchOnlyRAG,
     SearchOnlyWithQueryWriter,
+    SearchOnlyWithFilteredQueryWriter,
     SearchQueryWriter
 )
 from benchmarker.src.dspy_rag.rag_signatures import DSPyAgentRAGResponse
 
+# Organized in ascending complexity of RAG system
 RAG_VARIANTS = {
-    "vanilla-rag":            VanillaRAG,
     "search-only":        SearchOnlyRAG,
     "search-only-with-qw":     SearchOnlyWithQueryWriter,
+    "search-only-with-fqw": SearchOnlyWithFilteredQueryWriter,
+    "vanilla-rag":            VanillaRAG,
     "query-writer-rag":       SearchQueryWriter
 }
 
