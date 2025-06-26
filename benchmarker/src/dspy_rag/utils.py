@@ -193,10 +193,11 @@ def get_tag_values(collection_name: str) -> list[str]:
         auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
     )
 
-    collection = weaviate_client.collections.get(collection_name)
+    catalog_collection = weaviate_client.collections.get("WeaviateCatalogAgent")
 
-    response = collection.aggregate.over_all(
-        return_metrics=Metrics("tags").text(
+    response = catalog_collection.aggregate.over_all(
+        filters=Filter.by_property("reference_collection").equal(collection_name),
+        return_metrics=Metrics("tag").text(
             top_occurrences_count=True,
             top_occurrences_value=True,
             min_occurrences=10
@@ -206,9 +207,20 @@ def get_tag_values(collection_name: str) -> list[str]:
     # Extract tag values from top occurrences
     tag_values = [
         occurrence.value 
-        for occurrence in response.properties["tags"].top_occurrences
+        for occurrence in response.properties["tag"].top_occurrences
     ]
-    return tag_values
+
+    tags_with_descriptions = {}
+
+    for tag in tag_values:
+        response = catalog_collection.query.fetch_objects(
+            filters=Filter.by_property("tag").equal(tag),
+            limit=1
+        )
+        for o in response.objects:
+            tags_with_descriptions[tag] = o.properties["tag_description"]
+
+    return tags_with_descriptions
 
 def load_optimization_config(config_path: str) -> Dict[str, Any]:
     """
@@ -332,13 +344,11 @@ async def test_search_functions():
         print(f"✗ Search test failed: {type(e).__name__}: {e}")
 
 
-def test_get_tag_values():
+def test_get_tag_values(collection_name: str):
     """Test the get_tag_values function."""
     print("\n" + "=" * 50)
     print("Testing get_tag_values Function")
     print("=" * 50)
-    
-    collection_name = "FreshstackLangchain"  # Update this to match your collection
     
     print(f"Getting tag values for collection: {collection_name}")
     
@@ -365,7 +375,7 @@ def main():
     
     print("Starting simplified tests...")
     
-    test_get_tag_values()
+    test_get_tag_values(collection_name="FreshstackLangchain")
     
     # Test search functions (includes async)
     asyncio.run(test_search_functions())

@@ -23,14 +23,10 @@ async def main():
     parser = argparse.ArgumentParser(description='Run benchmark tests')
     parser.add_argument('--agents-host', type=str, default="https://api.agents.weaviate.io",
                         help='Host URL for agents API')
-    parser.add_argument('--num-samples', type=int, default=None,
-                        help='Number of samples to test (defaults to 5)')
-    parser.add_argument('--use-async', type=bool, default=True,
-                        help='Use async query processing for better performance')
-    parser.add_argument('--run-lm-judge', type=bool, default=False,
-                        help='Run LM judge evaluation (defaults to False)')
     args = parser.parse_args()
     
+    use_async = True
+
     config_path = Path(os.path.dirname(__file__), "config.yml")
     config = load_config(config_path)
 
@@ -38,18 +34,17 @@ async def main():
     print("\033[92mFirst Query\033[0m")
     pretty_print_dict(queries[0])
 
-    # Create agent builder with async support if requested
     query_agent = AgentBuilder(
         dataset_name=config["dataset"],
         agent_name=config["agent_name"],
         agents_host=args.agents_host,
-        use_async=args.use_async,
+        use_async=use_async,
     )
 
-    num_samples = args.num_samples if args.num_samples is not None else 5
+    num_samples = config["num_samples"]
     
     # Run queries based on async flag
-    if args.use_async:        
+    if use_async:        
         print("\033[92mRunning queries async!\033[0m")
         # Initialize async agent
         await query_agent.initialize_async()
@@ -93,7 +88,7 @@ async def main():
         config["dataset"], 
         results, 
         queries,
-        run_lm_judge=args.run_lm_judge
+        run_lm_judge=config["run_lm_judge"]
     )
 
     print(metrics)

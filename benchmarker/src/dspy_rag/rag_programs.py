@@ -153,8 +153,8 @@ class SearchOnlyWithQueryWriter(RAGAblation):
 class SearchOnlyWithFilteredQueryWriter(RAGAblation):
     def __init__(self, collection_name: str, target_property_name: str):
         super().__init__(collection_name, target_property_name)
-        self.tags = get_tag_values(collection_name)
-        self.stringified_tags = "\n".join(self.tags)
+        self.tags = get_tag_values(collection_name) # -> dict[str, str]
+        self.stringified_tags = "\n".join(f"{tag}: {description}" for tag, description in self.tags.items())
         self.filtered_query_writer = dspy.Predict(WriteSearchQueriesWithFilters)
 
     def forward(self, question: str) -> DSPyAgentRAGResponse:
@@ -180,10 +180,12 @@ class SearchOnlyWithFilteredQueryWriter(RAGAblation):
 
         print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
 
+        search_queries = [q.search_query for q in queries]
+
         return DSPyAgentRAGResponse(
             final_answer="",
             sources=sources,
-            searches=queries,
+            searches=search_queries,
             aggregations=None,
             usage=self._merge_usage(*usage_buckets),
         )
@@ -198,7 +200,8 @@ class SearchOnlyWithFilteredQueryWriter(RAGAblation):
         print(f"\033[95mWrote {len(queries)} queries!\033[0m")
         print("\033[92mInspecting queries...\033[0m")
         for query in queries:
-            print(query)
+            print(f"Search Query: {query.search_query}")
+            print(f"Filter: {query.filter}")
             print("\033[95m" + "="*30 + "\033[0m")
 
         usage_buckets = [fqw_pred.get_lm_usage() or {}]
@@ -223,10 +226,12 @@ class SearchOnlyWithFilteredQueryWriter(RAGAblation):
 
         print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
 
+        search_queries = [q.search_query for q in queries]
+
         return DSPyAgentRAGResponse(
             final_answer="",
             sources=sources,
-            searches=queries,
+            searches=search_queries,
             aggregations=None,
             usage=self._merge_usage(*usage_buckets),
         )
@@ -408,8 +413,7 @@ async def async_main():
     print(f"\033[92m{search_only_qw_response.sources}\033[0m")
 
     # Test SearchOnlyWithFilteredQueryWriter
-    # Test SearchOnlyWithQueryWriter
-    print("\n\033[95m=== Testing SearchOnlyWithQueryWriter (Async) ===\033[0m")
+    print("\n\033[95m=== Testing SearchOnlyWithFilteredQueryWriter (Async) ===\033[0m")
     search_only_fqw_rag = SearchOnlyWithFilteredQueryWriter(collection_name, target_property_name)
     search_only_fqw_response = await search_only_fqw_rag.acall(test_question)
     print("\033[96mSources:\033[0m")
