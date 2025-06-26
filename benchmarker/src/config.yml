@@ -1,6 +1,8 @@
 agent_name: search-only-with-qw
 dataset: freshstack-langchain
 reload_database: True
+num_samples: 20
 batch_size: 5
 max_concurrent: 5
+run_lm_judge: False
 experiment_name: query-agent-prod
