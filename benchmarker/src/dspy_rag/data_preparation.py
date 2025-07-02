@@ -82,7 +82,7 @@ def get_collection_info(dataset_name: str) -> Tuple[str, str]:
         target_property_name = ""
     elif dataset_name.startswith("freshstack-"):
         subset = dataset_name.split("-")[1].capitalize()
-        collection_name = f"FreshStack{subset}"
+        collection_name = f"Freshstack{subset}"
         target_property_name = "docs_text"
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")

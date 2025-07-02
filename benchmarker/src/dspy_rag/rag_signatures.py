@@ -77,6 +77,15 @@ class WriteSearchQueries(dspy.Signature):
     question: str = dspy.InputField()
     search_queries: list[str] = dspy.OutputField()
 
+# MIPRO Optimized for FreshstackLangchain
+'''
+class WriteSearchQueries(dspy.Signature):
+    """You are an experienced developer and AI researcher specializing in natural language processing and software development tools. Given a technical question involving langchain, OpenAI APIs, JSON data parsing, or chatbot integration, generate precise and targeted search queries that will help gather relevant information from search engines. Your queries should focus on resolving coding issues, understanding library behaviors, JSON data structures, and best practices for building AI-powered document retrieval and question-answering systems. Ensure queries are clear, specific, and cover potential causes and solutions related to the problem described."""
+
+    question: str = dspy.InputField()
+    search_queries: list[str] = dspy.OutputField()
+'''
+
 # TODO: Maybe extend to enable multiple filters with one search query
 class SearchQueryWithFilter(BaseModel):
     search_query: str
