@@ -24,12 +24,12 @@ def get_collection(weaviate_client, dataset_name: str):
         return weaviate_client.collections.get("WixKB")
     elif dataset_name.startswith("freshstack-"):
         subset = dataset_name.split("-")[1].capitalize()
-        return weaviate_client.collections.get(f"FreshStack{subset}")
+        return weaviate_client.collections.get(f"Freshstack{subset}")
     else:
         raise ValueError(f"Unknown dataset: {dataset_name}")
 
 
-def create_recall_metric(weaviate_client, dataset_name: str, weight: float = 1.0) -> Callable:
+def create_recall_metric(weaviate_client, dataset_name: str) -> Callable:
     """
     Create a recall metric function that wraps the existing calculate_recall function.
     
@@ -54,17 +54,13 @@ def create_recall_metric(weaviate_client, dataset_name: str, weight: float = 1.0
             # Get target IDs from example
             target_ids = example.dataset_ids
             
-            # Use nugget-based evaluation if available
-            nugget_data = getattr(example, 'nugget_data', None)
-            
             # Use the existing calculate_recall function
             recall_score = calculate_recall(
                 target_ids=target_ids,
-                retrieved_ids=retrieved_ids,
-                nugget_data=nugget_data
+                retrieved_ids=retrieved_ids
             )
             
-            return recall_score * weight
+            return recall_score
             
         except Exception as e:
             print(f"Error calculating recall: {e}")
@@ -125,40 +121,6 @@ def create_lm_judge_metric(weight: float = 1.0, model: str = "openai:gpt-4o") ->
     return lm_judge_metric
 
 
-def create_composite_metric(
-    weaviate_client,
-    dataset_name: str,
-    recall_weight: float = 0.5,
-    lm_judge_weight: float = 0.5,
-    lm_judge_model: str = "openai:gpt-4o"
-) -> Callable:
-    """
-    Create a composite metric function combining recall and LM judge metrics.
-    
-    Args:
-        weaviate_client: Weaviate client instance
-        dataset_name: Name of the dataset
-        recall_weight: Weight for recall score
-        lm_judge_weight: Weight for LM judge score
-        lm_judge_model: Model to use for judging
-        
-    Returns:
-        Function that calculates composite score for a single example
-    """
-    recall_metric = create_recall_metric(weaviate_client, dataset_name, recall_weight)
-    lm_judge_metric = create_lm_judge_metric(lm_judge_weight, lm_judge_model)
-    total_weight = recall_weight + lm_judge_weight
-    
-    def composite_metric(example: Example, prediction, trace=None) -> float:
-        recall_score = recall_metric(example, prediction, trace)
-        lm_judge_score = lm_judge_metric(example, prediction, trace)
-        
-        composite_score = (recall_score + lm_judge_score) / total_weight
-        return composite_score
-        
-    return composite_metric
-
-
 def create_metric(
     metric_type: str,
     weaviate_client,
@@ -181,7 +143,5 @@ def create_metric(
         return create_recall_metric(weaviate_client, dataset_name, **kwargs)
     elif metric_type == "lm_judge":
         return create_lm_judge_metric(**kwargs)
-    elif metric_type == "composite":
-        return create_composite_metric(weaviate_client, dataset_name, **kwargs)
     else:
         raise ValueError(f"Unknown metric type: {metric_type}")

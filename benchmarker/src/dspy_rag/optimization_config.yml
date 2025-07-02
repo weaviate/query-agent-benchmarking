@@ -1,14 +1,14 @@
 dataset_name: "freshstack-langchain"                    # Dataset to use for optimization
-agent_name: "search-only-with-query-writer"         # RAG agent to optimize
+agent_name: "search-only-with-qw"         # RAG agent to optimize
 experiment_name: null                               # Name for this optimization experiment (null = auto-generate)
 output_dir: "optimization_results"                  # Directory to save optimization results
 save_optimized_program: false                       # Whether to save optimized program and results
 
 train_ratio: 0.8                    # Ratio of data to use for training (0.0-1.0)
-max_train: 5             # Maximum number of training samples (null = use all)
-max_test: 10               # Maximum number of development samples (null = use all)
+max_train: 10             # Maximum number of training samples (null = use all)
+max_test: 5               # Maximum number of development samples (null = use all)
 
-optimizer_type: "copro"  # Options: bootstrap_few_shot, bootstrap_random_search, copro, mipro
+optimizer_type: "mipro"  # Options: bootstrap_few_shot, bootstrap_random_search, copro, mipro
 
 # BootstrapFewShot Parameters
 max_bootstrapped_demos: 4           # Maximum number of bootstrapped demonstrations
@@ -21,9 +21,9 @@ depth: 2                            # Number of optimization rounds
 init_temperature: 1.4               # Initial temperature
   
 # MIPRO Parameters
-auto: "medium"                       # Auto mode: light, medium, heavy, or null for manual
+auto: "heavy"                       # Auto mode: light, medium, heavy, or null for manual
 # TODO: add these to MIPRO init
-teacher_settings: "gpt4o"
-prompt_model: "gpt4o_mini"
+teacher_settings: "gpt-4.1"
+prompt_model: "gpt-4.1"
 
-metric_type: "recall"                        # Options: recall, lm_judge, composite
+metric_type: "recall"                        # Options: recall, coverage, lm_judge

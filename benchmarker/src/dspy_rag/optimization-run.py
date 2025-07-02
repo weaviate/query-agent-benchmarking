@@ -1,7 +1,6 @@
 import time
 
 import dspy
-import mlflow
 
 from benchmarker.src.dataset import in_memory_dataset_loader
 from benchmarker.src.dspy_rag.rag_programs import RAG_VARIANTS
@@ -22,8 +21,8 @@ import logging
 logging.disable(logging.CRITICAL)
 
 # mlflow ui --port 5000
-mlflow.set_experiment("DSPy")
-mlflow.dspy.autolog()
+#mlflow.set_experiment("DSPy")
+#mlflow.dspy.autolog()
 
 opt_config = load_optimization_config("./optimization_config.yml")
 print_configuration_summary(opt_config)
@@ -63,10 +62,13 @@ eval_kwargs = dict(
 evaluator = dspy.Evaluate(
     devset=test_examples, 
     metric=metric, 
-    display_progress=True
+    num_threads=1,
+    display_progress=True,
+    max_errors=1,
+    provide_traceback=True
 )
 
-score = evaluator(rag_program)
+score = evaluator(rag_program, **eval_kwargs)
 print("\033[92m" + "="*50 + "\033[0m")
 print(f"Uncompiled score: {score}")
 print("\033[92m" + "="*50 + "\033[0m")
@@ -88,9 +90,11 @@ else:
         trainset=train_examples
     )
 
+compiled_program.save("optimized.json")
+
 print(f"Optimization ran in {time.time() - optimization_start}")
 
-score = evaluator(compiled_program)
+score = evaluator(compiled_program, **eval_kwargs)
 print("\033[92m" + "="*50 + "\033[0m")
 print(f"Compiled score: {score}")
 print("\033[92m" + "="*50 + "\033[0m")

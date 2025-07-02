@@ -86,6 +86,7 @@ class SearchOnlyRAG(RAGAblation):
 class SearchOnlyWithQueryWriter(RAGAblation):
     def __init__(self, collection_name: str, target_property_name: str):
         super().__init__(collection_name, target_property_name)
+        #self.query_writer = dspy.ChainOfThought(WriteSearchQueries)
         self.query_writer = dspy.Predict(WriteSearchQueries)
 
     def forward(self, question: str) -> DSPyAgentRAGResponse:
@@ -149,7 +150,7 @@ class SearchOnlyWithQueryWriter(RAGAblation):
             aggregations=None,
             usage=self._merge_usage(*usage_buckets),
         )
-
+        
 class SearchOnlyWithFilteredQueryWriter(RAGAblation):
     def __init__(self, collection_name: str, target_property_name: str):
         super().__init__(collection_name, target_property_name)
@@ -370,11 +371,11 @@ class SearchQueryWriter(RAGAblation):
         )
 
 RAG_VARIANTS = {
-    "vanilla-rag": VanillaRAG,
-    "query-writer-rag": SearchQueryWriter,
-    "search-only": SearchOnlyRAG,
-    "search-only-with-query-writer": SearchOnlyWithQueryWriter,
-    "search-only-with-filtered-query-writer": SearchOnlyWithFilteredQueryWriter
+    "search-only":        SearchOnlyRAG,
+    "search-only-with-qw":     SearchOnlyWithQueryWriter,
+    "search-only-with-fqw": SearchOnlyWithFilteredQueryWriter,
+    "vanilla-rag":            VanillaRAG,
+    "query-writer-rag":       SearchQueryWriter
 }
 
 async def async_main():
