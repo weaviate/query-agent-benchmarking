@@ -1,7 +1,6 @@
 import time
 
 import dspy
-import mlflow
 
 from benchmarker.src.dataset import in_memory_dataset_loader
 from benchmarker.src.dspy_rag.rag_programs import RAG_VARIANTS
@@ -54,24 +53,6 @@ metric = create_metric(
     dataset_name=opt_config["dataset_name"],
 )
 
-import traceback
-
-example = test_examples[0]
-print("▶️  Debugging example:", example)
-
-try:
-    # 1. run your RAG program on it
-    rag_out = rag_program(example)
-    print("RAG output:", rag_out)
-
-    # 2. compute the metric on that output
-    metric_val = metric(example, rag_out)
-    print("Metric value:", metric_val)
-
-    # if you get here, that example worked—try the next one or skip to Evaluate
-except Exception:
-    traceback.print_exc()
-
 eval_kwargs = dict(
     num_threads=1,
     display_progress=True, 
@@ -109,7 +90,7 @@ else:
         trainset=train_examples
     )
 
-compiled_program.save(f"optimized.json")
+compiled_program.save("optimized.json")
 
 print(f"Optimization ran in {time.time() - optimization_start}")
 

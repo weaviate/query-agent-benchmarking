@@ -5,7 +5,6 @@ import asyncio
 
 import dspy
 import weaviate
-from weaviate.classes.init import Auth
 from weaviate.classes.query import Filter, Metrics
 from weaviate.outputs.query import QueryReturn
 
