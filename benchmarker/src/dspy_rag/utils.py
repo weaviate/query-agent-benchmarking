@@ -39,7 +39,7 @@ def weaviate_search_tool(
     else:
         search_results = collection.query.hybrid(
             query=query,
-            target_vector=target_vector_name
+            target_vector=target_vector_name,
             limit=5
         )
 
