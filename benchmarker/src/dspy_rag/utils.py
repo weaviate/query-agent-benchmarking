@@ -26,15 +26,20 @@ def weaviate_search_tool(
 
     collection = weaviate_client.collections.get(collection_name)
 
+    if not target_vector_name:
+        target_vector_name = "snowflake-arctic-embed-l-v2_0"
+
     if tag_filter_value:
         search_results = collection.query.hybrid(
             query=query,
+            target_vector=target_vector_name,
             filters=Filter.by_property("tags").contains_any([tag_filter_value]),
             limit=5
         )
     else:
         search_results = collection.query.hybrid(
             query=query,
+            target_vector=target_vector_name
             limit=5
         )
 
