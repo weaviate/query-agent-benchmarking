@@ -10,7 +10,7 @@ from weaviate.outputs.query import QueryReturn
 
 from benchmarker.src.dspy_rag.rag_signatures import Source
 
-
+# NOTE [Named Vectors]: `target_property_name` is misleading, should be `view_properties` here 
 def weaviate_search_tool(
         query: str,
         collection_name: str,
