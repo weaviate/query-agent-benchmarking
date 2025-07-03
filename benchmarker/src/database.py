@@ -89,6 +89,7 @@ def database_loader(
         if weaviate_client.collections.exists(collection_name):
             weaviate_client.collections.delete(collection_name)
         
+        # NOTE [Named Vectors] refactor this to be optional /feature-flagged
         weaviate_client.collections.create(
             name=collection_name,
             vectorizer_config=[
