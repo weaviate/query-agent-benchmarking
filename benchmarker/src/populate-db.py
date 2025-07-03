@@ -25,6 +25,8 @@ documents, _ = in_memory_dataset_loader(config["dataset"])
 print("\033[92mFirst Document:\033[0m")
 pretty_print_dict(documents[0])
 
+# NOTE [Named Vectors]: Update this to pass in the vectorizers that will be used, e.g.
+# `database_loader(..., vectorizers=[arctic-2.0, arctic-1.5, embedv4, colbert-gte, ...])`
 database_loader(weaviate_client, config["dataset"], documents)
 
 weaviate_client.close()
