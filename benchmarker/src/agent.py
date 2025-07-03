@@ -99,9 +99,7 @@ class AgentBuilder:
                             name=self.collection,
                             target_vector="snowflake-arctic-embed-l-v2_0"
                         )
-                    ]
-
-                    collections=[self.collection],
+                    ],
                     agents_host=self.agents_host,
                 )
             elif agent_name in RAG_VARIANTS:
