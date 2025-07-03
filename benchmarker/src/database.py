@@ -1,5 +1,17 @@
 import time
+
+from pylate import models
 import weaviate.collections.classes.config as wvcc
+
+# NOTE [Named Vectors] Move this
+class LocalEmbedder():
+    def __init__(self):
+        self.model = models.ColBERT(
+            model_name_or_path="lightonai/GTE-ModernColBERT-v1"
+        )
+
+    def forward(self, text):
+        self.model.encode(text, is_query=False)
 
 # NOTE [Named Vectors]: Maybe pass in the vectorizers to be used here as an argument
 # NOTE [Named Vectors]: Only changing FreshstackX for now, breaking change for EnronQA, WixQA
@@ -97,14 +109,6 @@ def database_loader(
                 wvcc.Property(name="docs_text", data_type=wvcc.DataType.TEXT),
                 wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT),
             ],
-        )
-
-        # NOTE [Named Vectors] Refactor this
-        from pylate import models
-
-        # Load the ModernColBERT model
-        model = models.ColBERT(
-            model_name_or_path="lightonai/GTE-ModernColBERT-v1",
         )
 
         start_time = time.time()
