@@ -79,7 +79,20 @@ def database_loader(
         
         weaviate_client.collections.create(
             name=collection_name,
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            vectorizer_config=[
+                wvcc.Configure.NamedVectors.none(
+                    name="GTE-ModernColBERT-v1",
+                    vector_index_config=wvcc.Configure.VectorIndex.hnsw(
+                        # Enable multi-vector index with default settings
+                        multi_vector=wvcc.Configure.VectorIndex.MultiVector.multi_vector()
+                    )
+                ),
+                wvcc.Configure.NamedVectors.text2vec_weaviate(
+                    name="snowflake-arctic-embed-l-v2_0",
+                    source_properties=["docs_text"],
+                    model="Snowflake/snowflake-arctic-embed-l-v2.0"
+                )
+            ],
             properties=[
                 wvcc.Property(name="docs_text", data_type=wvcc.DataType.TEXT),
                 wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT),
