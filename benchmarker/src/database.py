@@ -112,15 +112,20 @@ def database_loader(
             ],
         )
 
+        local_ColBERT = LocalEmbedder()
         start_time = time.time()
         with weaviate_client.batch.fixed_size(batch_size=100, concurrent_requests=4) as batch:
             for i, doc in enumerate(objects):
                 # NOTE [Named Vectors] need to add local vectorizer for ColBERT
+                locally_encoded_multi_vector = local_ColBERT.forward(doc["text"])
                 batch.add_object(
                     collection=collection_name,
                     properties={
                         "docs_text": doc["text"],
                         "dataset_id": str(doc["dataset_id"])
+                    },
+                    vector={
+                        "GTE_ModernColBERT_v1": locally_encoded_multi_vector
                     }
                 )
                 if i % 1000 == 999:
