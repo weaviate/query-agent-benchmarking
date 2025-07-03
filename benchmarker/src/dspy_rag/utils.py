@@ -16,6 +16,7 @@ def weaviate_search_tool(
         collection_name: str,
         target_property_name: str,
         return_dict: bool = False,
+        target_vector_name: Optional[str] | None = None,
         tag_filter_value: Optional[str] | None = None
 ):
     weaviate_client = weaviate.connect_to_weaviate_cloud(
