@@ -99,6 +99,14 @@ def database_loader(
             ],
         )
 
+        # NOTE [Named Vectors] Refactor this
+        from pylate import models
+
+        # Load the ModernColBERT model
+        model = models.ColBERT(
+            model_name_or_path="lightonai/GTE-ModernColBERT-v1",
+        )
+
         start_time = time.time()
         with weaviate_client.batch.fixed_size(batch_size=100, concurrent_requests=4) as batch:
             for i, doc in enumerate(objects):
