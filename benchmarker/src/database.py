@@ -2,6 +2,7 @@ import time
 import weaviate.collections.classes.config as wvcc
 
 # NOTE [Named Vectors]: Maybe pass in the vectorizers to be used here as an argument
+# NOTE [Named Vectors]: Only changing FreshstackX for now, breaking change for EnronQA, WixQA
 def database_loader(
     weaviate_client,
     dataset_name: str, 
