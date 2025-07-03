@@ -102,6 +102,7 @@ def database_loader(
         start_time = time.time()
         with weaviate_client.batch.fixed_size(batch_size=100, concurrent_requests=4) as batch:
             for i, doc in enumerate(objects):
+                # NOTE [Named Vectors] need to add local vectorizer for ColBERT
                 batch.add_object(
                     collection=collection_name,
                     properties={
