@@ -97,7 +97,7 @@ class AgentBuilder:
                     collections=[
                         QueryAgentCollectionConfig(
                             name=self.collection,
-                            target_vector="snowflake-arctic-embed-l-v2_0"
+                            target_vector="snowflake_arctic_embed_l_v2_0"
                         )
                     ],
                     agents_host=self.agents_host,
