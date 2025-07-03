@@ -4,6 +4,7 @@ from typing import Optional
 import dspy
 import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
+from weaviate.agents.query.classes import QueryAgentCollectionConfig
 from weaviate.auth import Auth
 
 from benchmarker.src.dspy_rag.rag_programs import (
@@ -93,6 +94,13 @@ class AgentBuilder:
             if agent_name == "query-agent":
                 self.agent = QueryAgent(
                     client=self.weaviate_client,
+                    collections=[
+                        QueryAgentCollectionConfig(
+                            name=self.collection,
+                            target_vector="snowflake-arctic-embed-l-v2_0"
+                        )
+                    ]
+
                     collections=[self.collection],
                     agents_host=self.agents_host,
                 )
