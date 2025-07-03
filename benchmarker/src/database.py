@@ -81,14 +81,14 @@ def database_loader(
             name=collection_name,
             vectorizer_config=[
                 wvcc.Configure.NamedVectors.none(
-                    name="GTE-ModernColBERT-v1",
+                    name="GTE_ModernColBERT_v1",
                     vector_index_config=wvcc.Configure.VectorIndex.hnsw(
                         # Enable multi-vector index with default settings
                         multi_vector=wvcc.Configure.VectorIndex.MultiVector.multi_vector()
                     )
                 ),
                 wvcc.Configure.NamedVectors.text2vec_weaviate(
-                    name="snowflake-arctic-embed-l-v2_0",
+                    name="snowflake_arctic_embed_l_v2_0",
                     source_properties=["docs_text"],
                     model="Snowflake/snowflake-arctic-embed-l-v2.0"
                 )
