@@ -6,11 +6,13 @@ import dspy
 
 from benchmarker.src.dspy_rag.rag_signatures import (
     Source,
+    SearchResultWithScore,
     DSPyAgentRAGResponse,
-    GenerateAnswer,
     WriteSearchQueries,
     WriteSearchQueriesWithFilters,
-    SearchQueryWithFilter
+    SearchQueryWithFilter,
+    RerankResults,
+    GenerateAnswer
 )
 from benchmarker.src.dspy_rag.utils import (
     get_tag_values,
@@ -53,6 +55,47 @@ class SearchOnlyRAG(RAGAblation):
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
             return_dict=False,
+        )
+
+        print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
+
+        return DSPyAgentRAGResponse(
+            final_answer="",
+            sources=sources,
+            searches=[question],
+            aggregations=None,
+            usage={},
+        )
+    
+    async def aforward(self, question: str) -> DSPyAgentRAGResponse:
+        contexts, sources = await async_weaviate_search_tool(
+            query=question,
+            collection_name=self.collection_name,
+            target_property_name=self.target_property_name,
+            return_dict=False,
+        )
+
+        print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
+
+        return DSPyAgentRAGResponse(
+            final_answer="",
+            sources=sources,
+            searches=[question],
+            aggregations=None,
+            usage={},
+        )
+    
+class SearchOnlyWithReranker(RAGAblation):
+    def __init__(self, collection_name: str, target_property_name: str):
+        super().__init__(collection_name, target_property_name)
+        self.reranker = dspy.Predict(RerankResults)
+
+    def forward(self, question: str) -> DSPyAgentRAGResponse:
+        contexts, sources = weaviate_search_tool(
+            query=question,
+            collection_name=self.collection_name,
+            target_property_name=self.target_property_name,
+            return_format="rerank"
         )
 
         print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
