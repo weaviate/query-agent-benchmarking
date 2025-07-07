@@ -71,17 +71,38 @@ class GenerateAnswer(dspy.Signature):
     contexts: str = dspy.InputField()
     final_answer: str = dspy.OutputField()
 
-class RerankResults(dspy.Signature):
-    """Determine a ranking of the passages based on how relevant they are to the query. 
-If the query is a question, how relevant a passage is depends on how well it answers the question. 
-If not, try analyze the intent of the query and assess how well each passage satisfy the intent. 
-The query may have typos and passages may contain contradicting information. 
-However, we do not get into fact-checking. We just rank the passages based on they relevancy to the query.
-Sort them from the most relevant to the least."""
+# NOTE [Rerankers]: Clean up these models / signatures
+class SearchResultWithScore(BaseModel):
+    id: int
+    initial_rank: int
+    initial_score: float
+    content: str
 
-    search_query: str = dspy.InputField()
-    search_results: list[RelevanceRankedResult] = dspy.InputField()
-    reranked_search_results: list[int] = dspy.OutputField()
+class RerankResults(dspy.Signature):
+    """Rerank passages based on their relevance to the query.
+    
+    You are given passages with hybrid retrieval scores that combine:
+    - Semantic similarity (how well the meaning matches the query)
+    - Lexical matching (keyword/term overlap with the query)
+    
+    These unified scores provide a strong initial relevance signal. Use them as 
+    valuable evidence while applying your deeper understanding to assess:
+    - Answer completeness and directness (for questions)
+    - Intent satisfaction (for other queries)
+    - Information quality and specificity
+    
+    The hybrid scores already capture both semantic and lexical relevance, but
+    you may identify additional relevance factors they miss. The passages may 
+    contain contradictions or typos - focus on relevance, not fact-checking.
+    """
+    
+    query: str = dspy.InputField()
+    search_results: list[SearchResultWithScore] = dspy.InputField(
+        desc="Passages with hybrid scores and initial ranks"
+    )
+    reranked_ids: list[int] = dspy.OutputField(
+        desc="Passage IDs ordered from most to least relevant"
+    )
 
 class WriteSearchQueries(dspy.Signature):
     """Write search queries to gather information from a search engine that will help answer the question."""
