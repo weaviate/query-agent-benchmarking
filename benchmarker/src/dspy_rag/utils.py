@@ -81,7 +81,7 @@ async def async_weaviate_search_tool(
     collection_name: str,
     target_property_name: str,
     tag_filter_value: Optional[str] = None,
-    return_format: str = "rerank"
+    return_format: str = "string"
 ):
     """Async version of search tool with hybrid scores."""
     async_client = weaviate.use_async_with_weaviate_cloud(
