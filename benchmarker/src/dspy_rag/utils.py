@@ -363,7 +363,7 @@ async def test_search_functions():
             query=test_query,
             collection_name=collection_name,
             target_property_name=target_property_name,
-            return_dict=False
+            return_format="rerank"
         )
         print(f"✓ Sync search successful: {len(sync_sources)} results")
         
@@ -373,7 +373,7 @@ async def test_search_functions():
             query=test_query,
             collection_name=collection_name,
             target_property_name=target_property_name,
-            return_dict=False
+            return_format="rerank"
         )
         print(f"✓ Async search successful: {len(async_sources)} results")
         
