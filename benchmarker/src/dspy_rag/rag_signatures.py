@@ -71,6 +71,18 @@ class GenerateAnswer(dspy.Signature):
     contexts: str = dspy.InputField()
     final_answer: str = dspy.OutputField()
 
+class RerankResults(dspy.Signature):
+    """Determine a ranking of the passages based on how relevant they are to the query. 
+If the query is a question, how relevant a passage is depends on how well it answers the question. 
+If not, try analyze the intent of the query and assess how well each passage satisfy the intent. 
+The query may have typos and passages may contain contradicting information. 
+However, we do not get into fact-checking. We just rank the passages based on they relevancy to the query.
+Sort them from the most relevant to the least."""
+
+    search_query: str = dspy.InputField()
+    search_results: list[RelevanceRankedResult] = dspy.InputField()
+    reranked_search_results: list[int] = dspy.OutputField()
+
 class WriteSearchQueries(dspy.Signature):
     """Write search queries to gather information from a search engine that will help answer the question."""
 
