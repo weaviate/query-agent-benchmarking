@@ -552,7 +552,7 @@ def main():
     # Test SearchOnlyWithReranker
     print("\n\033[95m=== Testing SearchOnlyWithReranker (Async) ===\033[0m")
     search_only_rerank_rag = SearchOnlyWithReranker(collection_name, target_property_name)
-    search_only_rerank_response = search_only_rerank_rag.aforward(test_question)
+    search_only_rerank_response = search_only_rerank_rag.forward(test_question)
     print("\033[96mSources:\033[0m")
     print(f"\033[92m{search_only_rerank_response.sources}\033[0m")
     print("\033[96mUsage:\033[0m")
@@ -587,7 +587,7 @@ def main():
 
 if __name__ == "__main__":
     # Run sync version
-    # main()
+    main()
     
     # Run async version
-    asyncio.run(async_main())
+    # asyncio.run(async_main())
