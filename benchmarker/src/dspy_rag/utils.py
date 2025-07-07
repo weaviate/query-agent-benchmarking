@@ -366,6 +366,7 @@ async def test_search_functions():
             return_format="rerank"
         )
         print(f"✓ Sync search successful: {len(sync_sources)} results")
+        print(sync_contexts)
         
         # Test async search
         print("\n--- Async Search ---")
@@ -376,6 +377,7 @@ async def test_search_functions():
             return_format="rerank"
         )
         print(f"✓ Async search successful: {len(async_sources)} results")
+        print(async_contexts)
         
         # Quick comparison
         results_match = len(sync_sources) == len(async_sources)
