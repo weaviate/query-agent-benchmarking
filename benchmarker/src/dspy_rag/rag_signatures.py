@@ -81,6 +81,8 @@ class SearchResultWithScore(BaseModel):
 class RerankResults(dspy.Signature):
     """Rerank passages based on their relevance to the query.
     
+    IMPORTANT: You must return ONLY THE TOP 5 MOST RELEVANT passage IDs, even if more passages seem relevant.
+    
     You are given passages with hybrid retrieval scores that combine:
     - Semantic similarity (how well the meaning matches the query)
     - Lexical matching (keyword/term overlap with the query)
@@ -94,6 +96,9 @@ class RerankResults(dspy.Signature):
     The hybrid scores already capture both semantic and lexical relevance, but
     you may identify additional relevance factors they miss. The passages may 
     contain contradictions or typos - focus on relevance, not fact-checking.
+    
+    Remember: You must select and return ONLY the 5 most relevant passage IDs, ranked from most to least relevant.
+    Returning more than 5 IDs is not allowed.
     """
     
     query: str = dspy.InputField()
@@ -101,7 +106,7 @@ class RerankResults(dspy.Signature):
         desc="Passages with hybrid scores and initial ranks"
     )
     reranked_ids: list[int] = dspy.OutputField(
-        desc="Passage IDs ordered from most to least relevant"
+        desc="EXACTLY 5 passage IDs ordered from most to least relevant. You must return only the top 5 most relevant IDs."
     )
 
 class WriteSearchQueries(dspy.Signature):
