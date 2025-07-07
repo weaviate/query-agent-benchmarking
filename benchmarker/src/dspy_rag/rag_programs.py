@@ -89,38 +89,80 @@ class SearchOnlyWithReranker(RAGAblation):
         self.reranker = dspy.Predict(RerankResults)
 
     def forward(self, question: str) -> DSPyAgentRAGResponse:
-        contexts, sources = weaviate_search_tool(
+        # Get search results with scores for reranking
+        search_results, sources = weaviate_search_tool(
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
             return_format="rerank"
         )
-
-        print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
-
+        
+        print(f"\033[96mInitial results: {len(sources)} Sources!\033[0m")
+        
+        # Perform reranking
+        rerank_pred = self.reranker(
+            query=question,
+            search_results=search_results
+        )
+        
+        # Reorder sources based on reranking
+        reranked_sources = []
+        for rank_id in rerank_pred.reranked_ids:
+            # Find the source corresponding to this rank_id
+            # rank_id is 1-based, sources list is 0-based
+            source_index = rank_id - 1
+            if 0 <= source_index < len(sources):
+                reranked_sources.append(sources[source_index])
+        
+        print(f"\033[96mReranked: Returning {len(reranked_sources)} Sources!\033[0m")
+        
+        # Get usage from reranker
+        usage = rerank_pred.get_lm_usage() or {}
+        
         return DSPyAgentRAGResponse(
             final_answer="",
-            sources=sources,
+            sources=reranked_sources,
             searches=[question],
             aggregations=None,
-            usage={},
+            usage=usage,
         )
     
     async def aforward(self, question: str) -> DSPyAgentRAGResponse:
-        contexts, sources = await async_weaviate_search_tool(
+        # Get search results with scores for reranking
+        search_results, sources = await async_weaviate_search_tool(
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
+            return_format="rerank"
         )
-
-        print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
-
+        
+        print(f"\033[96mInitial results: {len(sources)} Sources!\033[0m")
+        
+        # Perform reranking asynchronously
+        rerank_pred = await self.reranker.acall(
+            query=question,
+            search_results=search_results
+        )
+        
+        # Reorder sources based on reranking
+        reranked_sources = []
+        for rank_id in rerank_pred.reranked_ids:
+            # Find the source corresponding to this rank_id
+            source_index = rank_id - 1
+            if 0 <= source_index < len(sources):
+                reranked_sources.append(sources[source_index])
+        
+        print(f"\033[96mReranked: Returning {len(reranked_sources)} Sources!\033[0m")
+        
+        # Get usage from reranker
+        usage = rerank_pred.get_lm_usage() or {}
+        
         return DSPyAgentRAGResponse(
             final_answer="",
-            sources=sources,
+            sources=reranked_sources,
             searches=[question],
             aggregations=None,
-            usage={},
+            usage=usage,
         )
 
 class SearchOnlyWithQueryWriter(RAGAblation):
@@ -438,6 +480,13 @@ async def async_main():
     print("\033[96mSources:\033[0m")
     print(f"\033[92m{search_only_response.sources}\033[0m")
 
+    # Test SearchOnlyWithReranker
+    print("\n\033[95m=== Testing SearchOnlyWithReranker ===\033[0m")
+    search_only_rerank_rag = SearchOnlyWithReranker(collection_name, target_property_name)
+    search_only_rerank_response = await search_only_rerank_rag.acall(test_question)
+    print("\033[96mSources:\033[0m")
+    print(f"\033[92m{search_only_rerank_response.sources}\033[0m")
+
     # Test SearchOnlyWithQueryWriter
     print("\n\033[95m=== Testing SearchOnlyWithQueryWriter (Async) ===\033[0m")
     search_only_qw_rag = SearchOnlyWithQueryWriter(collection_name, target_property_name)
@@ -499,6 +548,15 @@ def main():
     search_only_response = search_only_rag.forward(test_question)
     print("\033[96mSources:\033[0m")
     print(f"\033[92m{search_only_response.sources}\033[0m")
+
+    # Test SearchOnlyWithReranker
+    print("\n\033[95m=== Testing SearchOnlyWithReranker (Async) ===\033[0m")
+    search_only_rerank_rag = SearchOnlyWithReranker(collection_name, target_property_name)
+    search_only_rerank_response = search_only_rerank_rag.aforward(test_question)
+    print("\033[96mSources:\033[0m")
+    print(f"\033[92m{search_only_rerank_response.sources}\033[0m")
+    print("\033[96mUsage:\033[0m")
+    print(f"\033[92m{search_only_rerank_response.usage}\033[0m")
 
     # Test SearchOnlyRAG
     print("\n\033[95m=== Testing SearchOnlyWithQueryWriter ===\033[0m")
