@@ -54,7 +54,6 @@ class SearchOnlyRAG(RAGAblation):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
-            return_dict=False,
         )
 
         print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
@@ -72,7 +71,6 @@ class SearchOnlyRAG(RAGAblation):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
-            return_dict=False,
         )
 
         print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
@@ -113,7 +111,6 @@ class SearchOnlyWithReranker(RAGAblation):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
-            return_dict=False,
         )
 
         print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
@@ -145,7 +142,6 @@ class SearchOnlyWithQueryWriter(RAGAblation):
                 query=q,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
-                return_dict=False,
             )
             sources.extend(src)
 
@@ -173,7 +169,6 @@ class SearchOnlyWithQueryWriter(RAGAblation):
                 query=q,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
-                return_dict=False,
             )
             for q in queries
         ]
@@ -217,7 +212,6 @@ class SearchOnlyWithFilteredQueryWriter(RAGAblation):
                 query=q.search_query,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
-                return_dict=False,
                 tag_filter_value=q.filter
             )
             sources.extend(src)
@@ -256,7 +250,6 @@ class SearchOnlyWithFilteredQueryWriter(RAGAblation):
                 query=q.search_query,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
-                return_dict=False,
                 tag_filter_value=q.filter
             )
             for q in queries
@@ -292,7 +285,6 @@ class VanillaRAG(RAGAblation):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
-            return_dict=False,
         )
 
         ans_pred = self.generate_answer(
@@ -315,7 +307,6 @@ class VanillaRAG(RAGAblation):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
-            return_dict=False,
         )
 
         # Generate answer asynchronously
@@ -353,7 +344,6 @@ class SearchQueryWriter(RAGAblation):
                 query=q,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
-                return_dict=False,
             )
             contexts.append(ctx)
             sources.extend(src)
@@ -386,7 +376,6 @@ class SearchQueryWriter(RAGAblation):
                 query=q,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
-                return_dict=False,
             )
             for q in queries
         ]
