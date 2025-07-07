@@ -495,11 +495,11 @@ async def async_main():
     print(f"\033[92m{search_only_qw_response.sources}\033[0m")
 
     # Test SearchOnlyWithFilteredQueryWriter
-    print("\n\033[95m=== Testing SearchOnlyWithFilteredQueryWriter (Async) ===\033[0m")
-    search_only_fqw_rag = SearchOnlyWithFilteredQueryWriter(collection_name, target_property_name)
-    search_only_fqw_response = await search_only_fqw_rag.acall(test_question)
-    print("\033[96mSources:\033[0m")
-    print(f"\033[92m{search_only_fqw_response.sources}\033[0m")
+    # print("\n\033[95m=== Testing SearchOnlyWithFilteredQueryWriter (Async) ===\033[0m")
+    # search_only_fqw_rag = SearchOnlyWithFilteredQueryWriter(collection_name, target_property_name)
+    # search_only_fqw_response = await search_only_fqw_rag.acall(test_question)
+    # print("\033[96mSources:\033[0m")
+    # print(f"\033[92m{search_only_fqw_response.sources}\033[0m")
     
     # Test VanillaRAG
     print("\n\033[95m=== Testing VanillaRAG (Async) ===\033[0m")

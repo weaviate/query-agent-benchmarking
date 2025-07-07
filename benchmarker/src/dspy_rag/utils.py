@@ -15,7 +15,7 @@ def weaviate_search_tool(
         collection_name: str,
         target_property_name: str,
         tag_filter_value: Optional[str] = None,
-        return_format: str = "rerank"  # "string", "dict", or "rerank"
+        return_format: str = "string"  # "string", "dict", or "rerank"
 ):
     """Enhanced search tool that returns results with hybrid scores for reranking."""
     weaviate_client = weaviate.connect_to_weaviate_cloud(
