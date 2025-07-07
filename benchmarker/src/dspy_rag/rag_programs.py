@@ -6,7 +6,6 @@ import dspy
 
 from benchmarker.src.dspy_rag.rag_signatures import (
     Source,
-    SearchResultWithScore,
     DSPyAgentRAGResponse,
     WriteSearchQueries,
     WriteSearchQueriesWithFilters,
