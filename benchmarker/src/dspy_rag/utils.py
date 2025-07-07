@@ -10,7 +10,7 @@ from weaviate.outputs.query import QueryReturn
 
 from benchmarker.src.dspy_rag.rag_signatures import Source, SearchResultWithScore
 
-def weaviate_search_tool_with_scores(
+def weaviate_search_tool(
         query: str,
         collection_name: str,
         target_property_name: str,
@@ -76,7 +76,7 @@ def weaviate_search_tool_with_scores(
     else:
         return _stringify_search_results(search_results, view_properties=[target_property_name]), object_ids
 
-async def async_weaviate_search_tool_with_scores(
+async def async_weaviate_search_tool(
     query: str,
     collection_name: str,
     target_property_name: str,
@@ -416,7 +416,7 @@ def main():
     
     print("Starting simplified tests...")
     
-    test_get_tag_values(collection_name="FreshstackLangchain")
+    #test_get_tag_values(collection_name="FreshstackLangchain")
     
     # Test search functions (includes async)
     asyncio.run(test_search_functions())
