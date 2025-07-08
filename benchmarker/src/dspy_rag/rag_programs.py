@@ -445,6 +445,7 @@ class SearchQueryWriter(RAGAblation):
 
 RAG_VARIANTS = {
     "search-only":        SearchOnlyRAG,
+    "search-only-with-rr": SearchOnlyWithReranker,
     "search-only-with-qw":     SearchOnlyWithQueryWriter,
     "search-only-with-fqw": SearchOnlyWithFilteredQueryWriter,
     "vanilla-rag":            VanillaRAG,
