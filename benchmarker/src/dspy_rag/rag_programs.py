@@ -591,11 +591,11 @@ async def async_main():
     print(f"\033[92m{search_only_qw_response.sources}\033[0m")
 
     # Test SearchOnlyWithQueryWriter
-    print("\n\033[95m=== Testing SearchOnlyWithQueryWriter (Async) ===\033[0m")
-    search_only_qw_rag = SearchOnlyWithQueryWriter(collection_name, target_property_name)
-    search_only_qw_response = await search_only_qw_rag.acall(test_question)
+    print("\n\033[95m=== Testing SearchOnlyWithQueryWriterAndRerank (Async) ===\033[0m")
+    search_only_qwrr_rag = SearchOnlyWithQueryWriterAndRerank(collection_name, target_property_name)
+    search_only_qwrr_response = await search_only_qwrr_rag.acall(test_question)
     print("\033[96mSources:\033[0m")
-    print(f"\033[92m{search_only_qw_response.sources}\033[0m")
+    print(f"\033[92m{search_only_qwrr_response.sources}\033[0m")
 
     # Test SearchOnlyWithFilteredQueryWriter
     # print("\n\033[95m=== Testing SearchOnlyWithFilteredQueryWriter (Async) ===\033[0m")
@@ -653,7 +653,7 @@ def main():
     print(f"\033[92m{search_only_response.sources}\033[0m")
 
     # Test SearchOnlyWithReranker
-    print("\n\033[95m=== Testing SearchOnlyWithReranker (Async) ===\033[0m")
+    print("\n\033[95m=== Testing SearchOnlyWithReranker ===\033[0m")
     search_only_rerank_rag = SearchOnlyWithReranker(collection_name, target_property_name)
     search_only_rerank_response = search_only_rerank_rag.forward(test_question)
     print("\033[96mSources:\033[0m")
@@ -667,6 +667,13 @@ def main():
     search_only_response = search_only_rag.forward(test_question)
     print("\033[96mSources:\033[0m")
     print(f"\033[92m{search_only_response.sources}\033[0m")
+
+    # Test SearchOnlyWithQueryWriter
+    print("\n\033[95m=== Testing SearchOnlyWithQueryWriterAndRerank ===\033[0m")
+    search_only_qwrr_rag = SearchOnlyWithQueryWriterAndRerank(collection_name, target_property_name)
+    search_only_qwrr_response = search_only_qwrr_rag.forward(test_question)
+    print("\033[96mSources:\033[0m")
+    print(f"\033[92m{search_only_qwrr_response.sources}\033[0m")
     
     # Test VanillaRAG
     print("\n\033[95m=== Testing VanillaRAG ===\033[0m")
