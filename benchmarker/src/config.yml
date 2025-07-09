@@ -1,4 +1,4 @@
-agent_name: search-only-with-qw
+agent_name: search-only
 dataset: freshstack-langchain
 reload_database: True
 num_samples: 20

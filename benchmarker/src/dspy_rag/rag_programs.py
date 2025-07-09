@@ -167,8 +167,8 @@ class SearchOnlyWithReranker(RAGAblation):
 class SearchOnlyWithQueryWriter(RAGAblation):
     def __init__(self, collection_name: str, target_property_name: str):
         super().__init__(collection_name, target_property_name)
-        #self.query_writer = dspy.ChainOfThought(WriteSearchQueries)
-        self.query_writer = dspy.Predict(WriteSearchQueries)
+        self.query_writer = dspy.ChainOfThought(WriteSearchQueries)
+        #self.query_writer = dspy.Predict(WriteSearchQueries)
 
     def forward(self, question: str) -> DSPyAgentRAGResponse:
         qw_pred = self.query_writer(question=question)
@@ -203,9 +203,9 @@ class SearchOnlyWithQueryWriter(RAGAblation):
         # Generate queries asynchronously
         qw_pred = await self.query_writer.acall(question=question)
         queries: list[str] = qw_pred.search_queries
-        #reasoning = qw_pred.reasoning
-        #print(f"\033[95mReasoning:\n{reasoning}\033[0m")
-        #queries.append(reasoning)
+        reasoning = qw_pred.reasoning
+        print(f"\033[95mReasoning:\n{reasoning}\033[0m")
+        queries.append(reasoning)
         print(f"\033[95mWrote {len(queries)} queries!\033[0m")
 
         usage_buckets = [qw_pred.get_lm_usage() or {}]

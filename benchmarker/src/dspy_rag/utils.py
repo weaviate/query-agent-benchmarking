@@ -106,7 +106,7 @@ async def async_weaviate_search_tool(
             search_results = await collection.query.hybrid(
                 query=query,
                 return_metadata=MetadataQuery(score=True),
-                limit=10
+                limit=200
             )
         
         object_ids = []
