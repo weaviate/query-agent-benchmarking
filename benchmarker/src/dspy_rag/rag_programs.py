@@ -173,6 +173,9 @@ class SearchOnlyWithQueryWriter(RAGAblation):
     def forward(self, question: str) -> DSPyAgentRAGResponse:
         qw_pred = self.query_writer(question=question)
         queries: list[str] = qw_pred.search_queries
+        #reasoning = qw_pred.reasoning
+        #print(f"\033[97mReasoning:\n{reasoning}\033[0m")
+        #queries.append(reasoning)
         print(f"\033[95mWrote {len(queries)} queries!\033[0m")
 
         usage_buckets = [qw_pred.get_lm_usage() or {}]
@@ -200,6 +203,9 @@ class SearchOnlyWithQueryWriter(RAGAblation):
         # Generate queries asynchronously
         qw_pred = await self.query_writer.acall(question=question)
         queries: list[str] = qw_pred.search_queries
+        #reasoning = qw_pred.reasoning
+        #print(f"\033[95mReasoning:\n{reasoning}\033[0m")
+        #queries.append(reasoning)
         print(f"\033[95mWrote {len(queries)} queries!\033[0m")
 
         usage_buckets = [qw_pred.get_lm_usage() or {}]

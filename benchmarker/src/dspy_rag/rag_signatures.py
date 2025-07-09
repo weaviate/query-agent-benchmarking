@@ -110,7 +110,8 @@ class RerankResults(dspy.Signature):
     )
 
 class WriteSearchQueries(dspy.Signature):
-    """Write search queries to gather information from a search engine that will help answer the question."""
+    """Write search queries to gather information from a search engine that will help answer the question.
+Consider both exploration and result diversity to capture multiple interpretations and facets of a query."""
 
     question: str = dspy.InputField()
     search_queries: list[str] = dspy.OutputField()
