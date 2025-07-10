@@ -76,3 +76,58 @@ class SummarizeSearchResults(dspy.Signature):
     question: str = dspy.InputField()
     search_results: dict[int, str] = dspy.InputField()
     summary: str = dspy.OutputField() # add citations to the ids in the summary
+
+# SearchOnlyWithRerankAndSummarize
+
+class SummarizeSearchRelevance(dspy.Signature):
+    """Analyze and summarize how a search result addresses the given query.
+    
+    Evaluate the passage's relevance by considering:
+    - How directly it answers or addresses the query
+    - The completeness of information provided
+    - The specificity and quality of content
+    - Whether it contains actionable information
+    
+    Provide a concise summary (2-3 sentences) explaining:
+    1. What relevant information the passage contains
+    2. How well it addresses the query's intent
+    3. Any limitations or gaps in the information
+    """
+    
+    query: str = dspy.InputField()
+    passage: str = dspy.InputField()
+    passage_id: int = dspy.InputField(desc="The ID of this passage for reference")
+    
+    relevance_summary: str = dspy.OutputField(
+        desc="A 2-3 sentence summary of how this passage relates to the query and its relevance"
+    )
+    relevance_score: float = dspy.OutputField(
+        desc="A relevance score from 0.0 to 1.0, where 1.0 is perfectly relevant"
+    )
+
+
+class RerankWithSummaries(dspy.Signature):
+    """Rerank passages based on their relevance summaries.
+    
+    You are provided with relevance summaries and scores for each passage.
+    Use these summaries to make a final ranking decision.
+    
+    IMPORTANT: You must return ONLY THE TOP 5 MOST RELEVANT passage IDs.
+    
+    Consider:
+    - The quality and directness of information in each summary
+    - The relevance scores as initial guidance
+    - How well each passage would satisfy the user's query
+    - Prioritize passages that provide complete, actionable answers
+    
+    Remember: Return EXACTLY 5 passage IDs, ranked from most to least relevant.
+    """
+    
+    query: str = dspy.InputField()
+    passage_summaries: list[dict] = dspy.InputField(
+        desc="List of dicts with keys: passage_id, relevance_summary, relevance_score"
+    )
+    
+    reranked_ids: list[int] = dspy.OutputField(
+        desc="EXACTLY 5 passage IDs ordered from most to least relevant"
+    )
