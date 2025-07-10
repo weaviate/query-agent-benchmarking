@@ -7,10 +7,11 @@ import dspy
 from benchmarker.src.dspy_rag.rag_signatures import (
     Source,
     DSPyAgentRAGResponse,
-    GenerateAnswer,
     WriteSearchQueries,
     WriteSearchQueriesWithFilters,
-    SearchQueryWithFilter
+    SearchQueryWithFilter,
+    RerankResults,
+    GenerateAnswer
 )
 from benchmarker.src.dspy_rag.utils import (
     get_tag_values,
@@ -52,7 +53,6 @@ class SearchOnlyRAG(RAGAblation):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
-            return_dict=False,
         )
 
         print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
@@ -70,7 +70,6 @@ class SearchOnlyRAG(RAGAblation):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
-            return_dict=False,
         )
 
         print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
@@ -82,16 +81,101 @@ class SearchOnlyRAG(RAGAblation):
             aggregations=None,
             usage={},
         )
+    
+class SearchOnlyWithReranker(RAGAblation):
+    def __init__(self, collection_name: str, target_property_name: str):
+        super().__init__(collection_name, target_property_name)
+        self.reranker = dspy.Predict(RerankResults)
+
+    def forward(self, question: str) -> DSPyAgentRAGResponse:
+        # Get search results with scores for reranking
+        search_results, sources = weaviate_search_tool(
+            query=question,
+            collection_name=self.collection_name,
+            target_property_name=self.target_property_name,
+            return_format="rerank"
+        )
+        
+        print(f"\033[96mInitial results: {len(sources)} Sources!\033[0m")
+        
+        # Perform reranking
+        rerank_pred = self.reranker(
+            query=question,
+            search_results=search_results
+        )
+        
+        # Reorder sources based on reranking
+        reranked_sources = []
+        for rank_id in rerank_pred.reranked_ids:
+            # Find the source corresponding to this rank_id
+            # rank_id is 1-based, sources list is 0-based
+            source_index = rank_id - 1
+            if 0 <= source_index < len(sources):
+                reranked_sources.append(sources[source_index])
+        
+        print(f"\033[96mReranked: Returning {len(reranked_sources)} Sources!\033[0m")
+        
+        # Get usage from reranker
+        usage = rerank_pred.get_lm_usage() or {}
+        
+        return DSPyAgentRAGResponse(
+            final_answer="",
+            sources=reranked_sources,
+            searches=[question],
+            aggregations=None,
+            usage=usage,
+        )
+    
+    async def aforward(self, question: str) -> DSPyAgentRAGResponse:
+        # Get search results with scores for reranking
+        search_results, sources = await async_weaviate_search_tool(
+            query=question,
+            collection_name=self.collection_name,
+            target_property_name=self.target_property_name,
+            return_format="rerank"
+        )
+        
+        print(f"\033[96mInitial results: {len(sources)} Sources!\033[0m")
+        
+        # Perform reranking asynchronously
+        rerank_pred = await self.reranker.acall(
+            query=question,
+            search_results=search_results
+        )
+        
+        # Reorder sources based on reranking
+        reranked_sources = []
+        for rank_id in rerank_pred.reranked_ids:
+            # Find the source corresponding to this rank_id
+            source_index = rank_id - 1
+            if 0 <= source_index < len(sources):
+                reranked_sources.append(sources[source_index])
+        
+        print(f"\033[96mReranked: Returning {len(reranked_sources)} Sources!\033[0m")
+        
+        # Get usage from reranker
+        usage = rerank_pred.get_lm_usage() or {}
+        
+        return DSPyAgentRAGResponse(
+            final_answer="",
+            sources=reranked_sources,
+            searches=[question],
+            aggregations=None,
+            usage=usage,
+        )
 
 class SearchOnlyWithQueryWriter(RAGAblation):
     def __init__(self, collection_name: str, target_property_name: str):
         super().__init__(collection_name, target_property_name)
-        #self.query_writer = dspy.ChainOfThought(WriteSearchQueries)
-        self.query_writer = dspy.Predict(WriteSearchQueries)
+        self.query_writer = dspy.ChainOfThought(WriteSearchQueries)
+        #self.query_writer = dspy.Predict(WriteSearchQueries)
 
     def forward(self, question: str) -> DSPyAgentRAGResponse:
         qw_pred = self.query_writer(question=question)
         queries: list[str] = qw_pred.search_queries
+        #reasoning = qw_pred.reasoning
+        #print(f"\033[97mReasoning:\n{reasoning}\033[0m")
+        #queries.append(reasoning)
         print(f"\033[95mWrote {len(queries)} queries!\033[0m")
 
         usage_buckets = [qw_pred.get_lm_usage() or {}]
@@ -102,7 +186,6 @@ class SearchOnlyWithQueryWriter(RAGAblation):
                 query=q,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
-                return_dict=False,
             )
             sources.extend(src)
 
@@ -120,6 +203,9 @@ class SearchOnlyWithQueryWriter(RAGAblation):
         # Generate queries asynchronously
         qw_pred = await self.query_writer.acall(question=question)
         queries: list[str] = qw_pred.search_queries
+        reasoning = qw_pred.reasoning
+        print(f"\033[95mReasoning:\n{reasoning}\033[0m")
+        queries.append(reasoning)
         print(f"\033[95mWrote {len(queries)} queries!\033[0m")
 
         usage_buckets = [qw_pred.get_lm_usage() or {}]
@@ -130,7 +216,6 @@ class SearchOnlyWithQueryWriter(RAGAblation):
                 query=q,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
-                return_dict=False,
             )
             for q in queries
         ]
@@ -150,7 +235,103 @@ class SearchOnlyWithQueryWriter(RAGAblation):
             aggregations=None,
             usage=self._merge_usage(*usage_buckets),
         )
-        
+
+class SearchOnlyWithQueryWriterAndRerank(RAGAblation):
+    def __init__(self, collection_name: str, target_property_name: str):
+        super().__init__(collection_name, target_property_name)
+        self.query_writer = dspy.Predict(WriteSearchQueries)
+        self.reranker = dspy.Predict(RerankResults)
+
+    def forward(self, question: str) -> DSPyAgentRAGResponse:
+        qw_pred = self.query_writer(question=question)
+        queries: list[str] = qw_pred.search_queries
+        print(f"\033[95mWrote {len(queries)} queries!\033[0m")
+
+        usage_buckets = [qw_pred.get_lm_usage() or {}]
+
+        all_search_results = []
+        all_sources: list[Source] = []
+        for q in queries:
+            search_results, sources = weaviate_search_tool(
+                query=q,
+                collection_name=self.collection_name,
+                target_property_name=self.target_property_name,
+                return_format="rerank"
+            )
+            all_search_results.extend(search_results)
+            all_sources.extend(sources)
+
+        print(f"\033[96mCollected {len(all_sources)} candidates from {len(queries)} queries\033[0m")
+
+        rerank_pred = self.reranker(
+            query=question,
+            search_results=all_search_results
+        )
+        reranked_sources = []
+        for rank_id in rerank_pred.reranked_ids:
+            idx = rank_id - 1
+            if 0 <= idx < len(all_sources):
+                reranked_sources.append(all_sources[idx])
+
+        print(f"\033[96mAfter reranking: {len(reranked_sources)} sources\033[0m")
+
+        usage_buckets.append(rerank_pred.get_lm_usage() or {})
+
+        return DSPyAgentRAGResponse(
+            final_answer="",
+            sources=reranked_sources,
+            searches=queries,
+            aggregations=None,
+            usage=self._merge_usage(*usage_buckets),
+        )
+
+    async def aforward(self, question: str) -> DSPyAgentRAGResponse:
+        qw_pred = await self.query_writer.acall(question=question)
+        queries: list[str] = qw_pred.search_queries
+        print(f"\033[95mWrote {len(queries)} queries!\033[0m")
+        usage_buckets = [qw_pred.get_lm_usage() or {}]
+
+        tasks = [
+            async_weaviate_search_tool(
+                query=q,
+                collection_name=self.collection_name,
+                target_property_name=self.target_property_name,
+                return_format="rerank"
+            )
+            for q in queries
+        ]
+        results = await asyncio.gather(*tasks)
+        all_search_results = []
+        all_sources: list[Source] = []
+        for search_results, sources in results:
+            all_search_results.extend(search_results)
+            all_sources.extend(sources)
+
+        print(f"\033[96mCollected {len(all_sources)} candidates from {len(queries)} queries\033[0m")
+
+        rerank_pred = await self.reranker.acall(
+            query=question,
+            search_results=all_search_results
+        )
+        reranked_sources = []
+        for rank_id in rerank_pred.reranked_ids:
+            idx = rank_id - 1
+            if 0 <= idx < len(all_sources):
+                reranked_sources.append(all_sources[idx])
+
+        print(f"\033[96mAfter reranking: {len(reranked_sources)} sources\033[0m")
+        usage_buckets.append(rerank_pred.get_lm_usage() or {})
+
+        return DSPyAgentRAGResponse(
+            final_answer="",
+            sources=reranked_sources,
+            searches=queries,
+            aggregations=None,
+            usage=self._merge_usage(*usage_buckets),
+        )
+
+# ----- Topic Modeling Experiments -----   
+
 class SearchOnlyWithFilteredQueryWriter(RAGAblation):
     def __init__(self, collection_name: str, target_property_name: str):
         super().__init__(collection_name, target_property_name)
@@ -174,7 +355,6 @@ class SearchOnlyWithFilteredQueryWriter(RAGAblation):
                 query=q.search_query,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
-                return_dict=False,
                 tag_filter_value=q.filter
             )
             sources.extend(src)
@@ -213,7 +393,6 @@ class SearchOnlyWithFilteredQueryWriter(RAGAblation):
                 query=q.search_query,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
-                return_dict=False,
                 tag_filter_value=q.filter
             )
             for q in queries
@@ -249,7 +428,6 @@ class VanillaRAG(RAGAblation):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
-            return_dict=False,
         )
 
         ans_pred = self.generate_answer(
@@ -272,7 +450,6 @@ class VanillaRAG(RAGAblation):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
-            return_dict=False,
         )
 
         # Generate answer asynchronously
@@ -310,7 +487,6 @@ class SearchQueryWriter(RAGAblation):
                 query=q,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
-                return_dict=False,
             )
             contexts.append(ctx)
             sources.extend(src)
@@ -343,7 +519,6 @@ class SearchQueryWriter(RAGAblation):
                 query=q,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
-                return_dict=False,
             )
             for q in queries
         ]
@@ -372,6 +547,7 @@ class SearchQueryWriter(RAGAblation):
 
 RAG_VARIANTS = {
     "search-only":        SearchOnlyRAG,
+    "search-only-with-rr": SearchOnlyWithReranker,
     "search-only-with-qw":     SearchOnlyWithQueryWriter,
     "search-only-with-fqw": SearchOnlyWithFilteredQueryWriter,
     "vanilla-rag":            VanillaRAG,
@@ -406,6 +582,13 @@ async def async_main():
     print("\033[96mSources:\033[0m")
     print(f"\033[92m{search_only_response.sources}\033[0m")
 
+    # Test SearchOnlyWithReranker
+    print("\n\033[95m=== Testing SearchOnlyWithReranker ===\033[0m")
+    search_only_rerank_rag = SearchOnlyWithReranker(collection_name, target_property_name)
+    search_only_rerank_response = await search_only_rerank_rag.acall(test_question)
+    print("\033[96mSources:\033[0m")
+    print(f"\033[92m{search_only_rerank_response.sources}\033[0m")
+
     # Test SearchOnlyWithQueryWriter
     print("\n\033[95m=== Testing SearchOnlyWithQueryWriter (Async) ===\033[0m")
     search_only_qw_rag = SearchOnlyWithQueryWriter(collection_name, target_property_name)
@@ -413,12 +596,19 @@ async def async_main():
     print("\033[96mSources:\033[0m")
     print(f"\033[92m{search_only_qw_response.sources}\033[0m")
 
-    # Test SearchOnlyWithFilteredQueryWriter
-    print("\n\033[95m=== Testing SearchOnlyWithFilteredQueryWriter (Async) ===\033[0m")
-    search_only_fqw_rag = SearchOnlyWithFilteredQueryWriter(collection_name, target_property_name)
-    search_only_fqw_response = await search_only_fqw_rag.acall(test_question)
+    # Test SearchOnlyWithQueryWriter
+    print("\n\033[95m=== Testing SearchOnlyWithQueryWriterAndRerank (Async) ===\033[0m")
+    search_only_qwrr_rag = SearchOnlyWithQueryWriterAndRerank(collection_name, target_property_name)
+    search_only_qwrr_response = await search_only_qwrr_rag.acall(test_question)
     print("\033[96mSources:\033[0m")
-    print(f"\033[92m{search_only_fqw_response.sources}\033[0m")
+    print(f"\033[92m{search_only_qwrr_response.sources}\033[0m")
+
+    # Test SearchOnlyWithFilteredQueryWriter
+    # print("\n\033[95m=== Testing SearchOnlyWithFilteredQueryWriter (Async) ===\033[0m")
+    # search_only_fqw_rag = SearchOnlyWithFilteredQueryWriter(collection_name, target_property_name)
+    # search_only_fqw_response = await search_only_fqw_rag.acall(test_question)
+    # print("\033[96mSources:\033[0m")
+    # print(f"\033[92m{search_only_fqw_response.sources}\033[0m")
     
     # Test VanillaRAG
     print("\n\033[95m=== Testing VanillaRAG (Async) ===\033[0m")
@@ -468,12 +658,28 @@ def main():
     print("\033[96mSources:\033[0m")
     print(f"\033[92m{search_only_response.sources}\033[0m")
 
+    # Test SearchOnlyWithReranker
+    print("\n\033[95m=== Testing SearchOnlyWithReranker ===\033[0m")
+    search_only_rerank_rag = SearchOnlyWithReranker(collection_name, target_property_name)
+    search_only_rerank_response = search_only_rerank_rag.forward(test_question)
+    print("\033[96mSources:\033[0m")
+    print(f"\033[92m{search_only_rerank_response.sources}\033[0m")
+    print("\033[96mUsage:\033[0m")
+    print(f"\033[92m{search_only_rerank_response.usage}\033[0m")
+
     # Test SearchOnlyRAG
     print("\n\033[95m=== Testing SearchOnlyWithQueryWriter ===\033[0m")
     search_only_rag = SearchOnlyWithQueryWriter(collection_name, target_property_name)
     search_only_response = search_only_rag.forward(test_question)
     print("\033[96mSources:\033[0m")
     print(f"\033[92m{search_only_response.sources}\033[0m")
+
+    # Test SearchOnlyWithQueryWriter
+    print("\n\033[95m=== Testing SearchOnlyWithQueryWriterAndRerank ===\033[0m")
+    search_only_qwrr_rag = SearchOnlyWithQueryWriterAndRerank(collection_name, target_property_name)
+    search_only_qwrr_response = search_only_qwrr_rag.forward(test_question)
+    print("\033[96mSources:\033[0m")
+    print(f"\033[92m{search_only_qwrr_response.sources}\033[0m")
     
     # Test VanillaRAG
     print("\n\033[95m=== Testing VanillaRAG ===\033[0m")
@@ -497,7 +703,7 @@ def main():
 
 if __name__ == "__main__":
     # Run sync version
-    # main()
+    main()
     
     # Run async version
-    asyncio.run(async_main())
+    # asyncio.run(async_main())

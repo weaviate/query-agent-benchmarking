@@ -30,7 +30,7 @@ def calculate_recall(target_ids: list[str], retrieved_ids: list[str]):
     return recall
 
 
-def calculate_coverage(retrieved_ids: list[str], nugget_data: list[dict], k: int = 20):
+def calculate_coverage(retrieved_ids: list[str], nugget_data: list[dict], k: int = 100):
     """Calculate Coverage@k metric from FreshStack.
     
     Measures the proportion of nuggets covered by the top-k retrieved documents.

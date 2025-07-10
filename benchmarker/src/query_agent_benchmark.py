@@ -267,7 +267,7 @@ async def analyze_results(
                             nugget['id'] = f"nugget_{idx}"
                 
                 if metric.__name__ == "calculate_coverage":
-                    score = metric(retrieved_ids, ground_truth["nugget_data"], k=20)
+                    score = metric(retrieved_ids, ground_truth["nugget_data"], k=1000)
                 else:  # calculate_alpha_ndcg
                     score = metric(retrieved_ids, ground_truth["nugget_data"], alpha=0.5, k=10)
             

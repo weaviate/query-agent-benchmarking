@@ -5,19 +5,19 @@ import asyncio
 
 import dspy
 import weaviate
-from weaviate.classes.query import Filter, Metrics
+from weaviate.classes.query import Filter, Metrics, MetadataQuery
 from weaviate.outputs.query import QueryReturn
 
-from benchmarker.src.dspy_rag.rag_signatures import Source
-
+from benchmarker.src.dspy_rag.rag_signatures import Source, SearchResultWithScore
 
 def weaviate_search_tool(
         query: str,
         collection_name: str,
         target_property_name: str,
-        return_dict: bool = False,
-        tag_filter_value: Optional[str] | None = None
+        tag_filter_value: Optional[str] = None,
+        return_format: str = "string"  # "string", "dict", or "rerank"
 ):
+    """Enhanced search tool that returns results with hybrid scores for reranking."""
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
         auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
@@ -25,21 +25,24 @@ def weaviate_search_tool(
 
     collection = weaviate_client.collections.get(collection_name)
 
+    # Request hybrid score metadata
     if tag_filter_value:
         search_results = collection.query.hybrid(
             query=query,
             filters=Filter.by_property("tags").contains_any([tag_filter_value]),
+            return_metadata=MetadataQuery(score=True),
             limit=5
         )
     else:
         search_results = collection.query.hybrid(
             query=query,
+            return_metadata=MetadataQuery(score=True),
             limit=5
         )
 
-
     weaviate_client.close()
 
+    # Build source mapping
     object_ids = []
     if search_results.objects:
         for obj in search_results.objects:
@@ -47,20 +50,40 @@ def weaviate_search_tool(
                 object_id=str(obj.uuid)
             ))
 
-    if return_dict:
-        # Return dictionary with numeric IDs (1-based) and maintain mapping to UUIDs
+    if return_format == "rerank":
+        # Format for RerankResults signature
+        search_results_for_rerank = []
+        for i, obj in enumerate(search_results.objects):
+            # Extract the main content
+            content = ""
+            if obj.properties and target_property_name in obj.properties:
+                content = obj.properties[target_property_name]
+            
+            # Get the hybrid score from metadata
+            score = obj.metadata.score if obj.metadata.score is not None else 0.0
+            
+            search_results_for_rerank.append(SearchResultWithScore(
+                id=i + 1,  # 1-based indexing
+                initial_rank=i + 1,  # Rank based on order returned by Weaviate
+                initial_score=float(score),
+                content=content
+            ))
+        
+        return search_results_for_rerank, object_ids
+    
+    elif return_format == "dict":
         return _dictify_search_results(search_results, view_properties=[target_property_name]), object_ids
     else:
-        # Return traditional string format
         return _stringify_search_results(search_results, view_properties=[target_property_name]), object_ids
 
 async def async_weaviate_search_tool(
     query: str,
     collection_name: str,
     target_property_name: str,
-    return_dict: bool = False,
-    tag_filter_value: Optional[str] | None = None
+    tag_filter_value: Optional[str] = None,
+    return_format: str = "string"
 ):
+    """Async version of search tool with hybrid scores."""
     async_client = weaviate.use_async_with_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
         auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
@@ -71,16 +94,19 @@ async def async_weaviate_search_tool(
     try:
         collection = async_client.collections.get(collection_name)
         
+        # Request hybrid score metadata
         if tag_filter_value:
             search_results = await collection.query.hybrid(
                 query=query,
                 filters=Filter.by_property("tags").contains_any([tag_filter_value]),
+                return_metadata=MetadataQuery(score=True),
                 limit=5
             )
         else:
             search_results = await collection.query.hybrid(
                 query=query,
-                limit=5
+                return_metadata=MetadataQuery(score=True),
+                limit=200
             )
         
         object_ids = []
@@ -90,15 +116,30 @@ async def async_weaviate_search_tool(
                     object_id=str(obj.uuid)
                 ))
         
-        if return_dict:
-            # Return dictionary with numeric IDs (1-based) and maintain mapping to UUIDs
+        if return_format == "rerank":
+            search_results_for_rerank = []
+            for i, obj in enumerate(search_results.objects):
+                content = ""
+                if obj.properties and target_property_name in obj.properties:
+                    content = obj.properties[target_property_name]
+                
+                score = obj.metadata.score if obj.metadata.score is not None else 0.0
+                
+                search_results_for_rerank.append(SearchResultWithScore(
+                    id=i + 1,
+                    initial_rank=i + 1,
+                    initial_score=float(score),
+                    content=content
+                ))
+            
+            return search_results_for_rerank, object_ids
+        
+        elif return_format == "dict":
             return _dictify_search_results(search_results, view_properties=[target_property_name]), object_ids
         else:
-            # Return traditional string format
             return _stringify_search_results(search_results, view_properties=[target_property_name]), object_ids
     
     finally:
-        # Always close the connection
         await async_client.close()
 
 def _stringify_search_results(search_results: QueryReturn, view_properties=None) -> str:
@@ -322,9 +363,10 @@ async def test_search_functions():
             query=test_query,
             collection_name=collection_name,
             target_property_name=target_property_name,
-            return_dict=False
+            return_format="rerank"
         )
         print(f"✓ Sync search successful: {len(sync_sources)} results")
+        print(sync_contexts)
         
         # Test async search
         print("\n--- Async Search ---")
@@ -332,9 +374,10 @@ async def test_search_functions():
             query=test_query,
             collection_name=collection_name,
             target_property_name=target_property_name,
-            return_dict=False
+            return_format="rerank"
         )
         print(f"✓ Async search successful: {len(async_sources)} results")
+        print(async_contexts)
         
         # Quick comparison
         results_match = len(sync_sources) == len(async_sources)
@@ -375,7 +418,7 @@ def main():
     
     print("Starting simplified tests...")
     
-    test_get_tag_values(collection_name="FreshstackLangchain")
+    #test_get_tag_values(collection_name="FreshstackLangchain")
     
     # Test search functions (includes async)
     asyncio.run(test_search_functions())
