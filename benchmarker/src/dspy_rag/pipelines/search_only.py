@@ -46,16 +46,16 @@ class SearchOnlyRAG(BaseRAG):
         )
 
 async def main():
-    search_rag = SearchOnlyRAG(
+    test_pipeline = SearchOnlyRAG(
         collection_name="FreshstackLangchain",
         target_property_name="docs_text",
         retrieved_k=5
     )
     test_q = "How do I integrate Weaviate and Langchain?"
-    search_rag_response = search_rag.forward(test_q)
-    print(search_rag_response)
-    search_rag_async_response = await search_rag.aforward(test_q)
-    print(search_rag_async_response)
+    response = test_pipeline.forward(test_q)
+    print(response)
+    async_response = await test_pipeline.aforward(test_q)
+    print(async_response)
 
 if __name__ == "__main__":
     import asyncio

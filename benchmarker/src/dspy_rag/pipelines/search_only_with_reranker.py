@@ -11,8 +11,8 @@ from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse
 from benchmarker.src.dspy_rag.signatures import RerankResults
 
 class SearchOnlyWithReranker(BaseRAG):
-    def __init__(self, collection_name: str, target_property_name: str):
-        super().__init__(collection_name, target_property_name)
+    def __init__(self, collection_name: str, target_property_name: str, retrieved_k: int):
+        super().__init__(collection_name, target_property_name, retrieved_k=retrieved_k)
         self.reranker = dspy.Predict(RerankResults)
 
     def forward(self, question: str) -> DSPyAgentRAGResponse:
@@ -91,3 +91,30 @@ class SearchOnlyWithReranker(BaseRAG):
             aggregations=None,
             usage=usage,
         )
+
+async def main():
+    import os
+    import dspy
+    
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is required")
+    
+    lm = dspy.LM("openai/gpt-4.1-mini", api_key=openai_api_key)
+    dspy.configure(lm=lm, track_usage=True)
+    print(f"DSPy configured with: {lm}")
+
+    test_pipeline = SearchOnlyWithReranker(
+        collection_name="FreshstackLangchain",
+        target_property_name="docs_text",
+        retrieved_k=5
+    )
+    test_q = "How do I integrate Weaviate and Langchain?"
+    response = test_pipeline.forward(test_q)
+    print(response)
+    async_response = await test_pipeline.aforward(test_q)
+    print(async_response)
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
