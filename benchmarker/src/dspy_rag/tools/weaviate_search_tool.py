@@ -5,7 +5,8 @@ import weaviate
 from weaviate.classes.query import Filter, Metrics, MetadataQuery
 from weaviate.outputs.query import QueryReturn
 
-from benchmarker.src.dspy_rag.rag_signatures import Source, SearchResultWithScore
+from benchmarker.src.dspy_rag.models import Source
+from benchmarker.src.dspy_rag.signatures import SearchResultWithScore
 
 def weaviate_search_tool(
         query: str,
