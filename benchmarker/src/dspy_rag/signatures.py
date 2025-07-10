@@ -1,5 +1,3 @@
-from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
 import dspy
 
 from benchmarker.src.dspy_rag.models import SearchResultWithScore, SearchQueryWithFilter

@@ -1,9 +1,6 @@
 import os
-import yaml
-from typing import Optional, Dict, Any
-import asyncio
+from typing import Optional
 
-import dspy
 import weaviate
 from weaviate.classes.query import Filter, Metrics, MetadataQuery
 from weaviate.outputs.query import QueryReturn

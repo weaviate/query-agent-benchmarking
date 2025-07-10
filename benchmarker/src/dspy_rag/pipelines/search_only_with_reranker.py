@@ -1,15 +1,13 @@
-import asyncio
 import dspy
 
 from benchmarker.src.dspy_rag.tools.weaviate_search_tool import (
-    get_tag_values,
     weaviate_search_tool,
     async_weaviate_search_tool
 )
 
 from benchmarker.src.dspy_rag.pipelines.base_rag import BaseRAG
 
-from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse, Source
+from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse
 from benchmarker.src.dspy_rag.signatures import RerankResults
 
 class SearchOnlyWithReranker(BaseRAG):
