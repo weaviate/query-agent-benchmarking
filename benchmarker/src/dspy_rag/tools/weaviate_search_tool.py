@@ -12,6 +12,7 @@ def weaviate_search_tool(
         query: str,
         collection_name: str,
         target_property_name: str,
+        retrieved_k: Optional[int] = 5,
         tag_filter_value: Optional[str] = None,
         return_format: str = "string"  # "string", "dict", or "rerank"
 ):
@@ -29,13 +30,13 @@ def weaviate_search_tool(
             query=query,
             filters=Filter.by_property("tags").contains_any([tag_filter_value]),
             return_metadata=MetadataQuery(score=True),
-            limit=5
+            limit=retrieved_k
         )
     else:
         search_results = collection.query.hybrid(
             query=query,
             return_metadata=MetadataQuery(score=True),
-            limit=5
+            limit=retrieved_k
         )
 
     weaviate_client.close()
@@ -78,6 +79,7 @@ async def async_weaviate_search_tool(
     query: str,
     collection_name: str,
     target_property_name: str,
+    retrieved_k: Optional[int] = 5,
     tag_filter_value: Optional[str] = None,
     return_format: str = "string"
 ):
@@ -98,13 +100,13 @@ async def async_weaviate_search_tool(
                 query=query,
                 filters=Filter.by_property("tags").contains_any([tag_filter_value]),
                 return_metadata=MetadataQuery(score=True),
-                limit=5
+                limit=retrieved_k
             )
         else:
             search_results = await collection.query.hybrid(
                 query=query,
                 return_metadata=MetadataQuery(score=True),
-                limit=200
+                limit=retrieved_k
             )
         
         object_ids = []

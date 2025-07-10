@@ -14,6 +14,7 @@ class SearchOnlyRAG(BaseRAG):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
+            retrieved_k=self.retrieved_k,
         )
 
         print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
@@ -31,6 +32,7 @@ class SearchOnlyRAG(BaseRAG):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
+            retrieved_k=self.retrieved_k,
         )
 
         print(f"\033[96m Returning {len(sources)} Sources!\033[0m")
@@ -46,7 +48,8 @@ class SearchOnlyRAG(BaseRAG):
 async def main():
     search_rag = SearchOnlyRAG(
         collection_name="FreshstackLangchain",
-        target_property_name="docs_text"
+        target_property_name="docs_text",
+        retrieved_k=5
     )
     test_q = "How do I integrate Weaviate and Langchain?"
     search_rag_response = search_rag.forward(test_q)

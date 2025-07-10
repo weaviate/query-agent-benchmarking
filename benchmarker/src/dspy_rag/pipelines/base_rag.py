@@ -5,9 +5,10 @@ import dspy
 from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse
 
 class BaseRAG(dspy.Module):
-    def __init__(self, collection_name: str, target_property_name: str) -> None:
+    def __init__(self, collection_name: str, target_property_name: str, retrieved_k: int) -> None:
         self.collection_name = collection_name
         self.target_property_name = target_property_name
+        self.retrieved_k = retrieved_k
 
     @staticmethod
     def _merge_usage(*usages: dict[str, dict[str, int]]) -> dict[str, dict[str, int]]:
