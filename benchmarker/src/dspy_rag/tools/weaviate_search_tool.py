@@ -2,7 +2,7 @@ import os
 from typing import Optional
 
 import weaviate
-from weaviate.classes.query import Filter, Metrics, MetadataQuery
+from weaviate.classes.query import Filter, Metrics
 from weaviate.outputs.query import QueryReturn
 
 from benchmarker.src.dspy_rag.models import Source, SearchResult

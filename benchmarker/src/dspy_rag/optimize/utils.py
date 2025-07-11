@@ -1,3 +1,9 @@
+from typing import Dict, Any
+import os
+import yaml
+import dspy
+import weaviate
+
 def load_optimization_config(config_path: str) -> Dict[str, Any]:
     """
     Load and process configuration from YAML file.
