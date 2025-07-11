@@ -6,16 +6,14 @@ import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
 
-from benchmarker.src.dspy_rag.rag_programs import (
-    VanillaRAG,
+from benchmarker.src.dspy_rag.pipelines import (
     SearchOnlyRAG,
     SearchOnlyWithReranker,
     SearchOnlyWithQueryWriter,
     SearchOnlyWithQueryWriterAndRerank,
     SearchOnlyWithFilteredQueryWriter,
-    SearchQueryWriter
 )
-from benchmarker.src.dspy_rag.rag_signatures import DSPyAgentRAGResponse
+from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse
 
 # Organized in ascending complexity of RAG system
 RAG_VARIANTS = {
@@ -24,8 +22,6 @@ RAG_VARIANTS = {
     "search-only-with-qw":     SearchOnlyWithQueryWriter,
     "search-only-with-qwrr": SearchOnlyWithQueryWriterAndRerank,
     "search-only-with-fqw": SearchOnlyWithFilteredQueryWriter,
-    "vanilla-rag":            VanillaRAG,
-    "query-writer-rag":       SearchQueryWriter
 }
 
 
