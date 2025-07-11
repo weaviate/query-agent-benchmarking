@@ -18,7 +18,7 @@ class SearchOnlyWithQueryWriter(BaseRAG):
         self, 
         collection_name: str, 
         target_property_name: str, 
-        retrieved_k: Optional[int] = 5
+        retrieved_k: Optional[int] = 10
     ):
         super().__init__(collection_name, target_property_name, retrieved_k)
         self.query_writer = dspy.ChainOfThought(WriteSearchQueries)
@@ -40,6 +40,7 @@ class SearchOnlyWithQueryWriter(BaseRAG):
                 query=q,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
+                retrieved_k=self.retrieved_k
             )
             sources.extend(src)
 
@@ -70,6 +71,7 @@ class SearchOnlyWithQueryWriter(BaseRAG):
                 query=q,
                 collection_name=self.collection_name,
                 target_property_name=self.target_property_name,
+                retrieved_k=self.retrieved_k
             )
             for q in queries
         ]

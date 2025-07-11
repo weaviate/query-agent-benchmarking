@@ -1,3 +1,5 @@
+import asyncio
+from typing import Optional
 
 from benchmarker.src.dspy_rag.tools.weaviate_search_tool import (
     weaviate_search_tool,
@@ -9,6 +11,14 @@ from benchmarker.src.dspy_rag.pipelines.base_rag import BaseRAG
 from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse
 
 class SearchOnlyRAG(BaseRAG):
+    def __init__(
+        self, 
+        collection_name: str, 
+        target_property_name: str, 
+        retrieved_k: Optional[int] = 20
+    ):
+        super().__init__(collection_name, target_property_name, retrieved_k=retrieved_k)
+
     def forward(self, question: str) -> DSPyAgentRAGResponse:
         contexts, sources = weaviate_search_tool(
             query=question,
@@ -58,5 +68,4 @@ async def main():
     print(async_response)
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
