@@ -11,8 +11,15 @@ from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse
 from benchmarker.src.dspy_rag.signatures import RerankResults
 
 class SearchOnlyWithReranker(BaseRAG):
-    def __init__(self, collection_name: str, target_property_name: str, retrieved_k: int):
+    def __init__(
+        self, 
+        collection_name: str, 
+        target_property_name: str, 
+        retrieved_k: int,
+        reranked_k: int
+    ):
         super().__init__(collection_name, target_property_name, retrieved_k=retrieved_k)
+        self.reranked_k = reranked_k
         self.reranker = dspy.Predict(RerankResults)
 
     def forward(self, question: str) -> DSPyAgentRAGResponse:
@@ -21,6 +28,7 @@ class SearchOnlyWithReranker(BaseRAG):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
+            retrieved_k=self.retrieved_k,
             return_format="rerank"
         )
         
@@ -29,7 +37,8 @@ class SearchOnlyWithReranker(BaseRAG):
         # Perform reranking
         rerank_pred = self.reranker(
             query=question,
-            search_results=search_results
+            search_results=search_results,
+            top_k=self.reranked_k,
         )
         
         # Reorder sources based on reranking
@@ -60,15 +69,16 @@ class SearchOnlyWithReranker(BaseRAG):
             query=question,
             collection_name=self.collection_name,
             target_property_name=self.target_property_name,
+            retrieved_k=self.retrieved_k,
             return_format="rerank"
         )
         
         print(f"\033[96mInitial results: {len(sources)} Sources!\033[0m")
         
-        # Perform reranking asynchronously
         rerank_pred = await self.reranker.acall(
             query=question,
-            search_results=search_results
+            search_results=search_results,
+            top_k=self.reranked_k,
         )
         
         # Reorder sources based on reranking
@@ -107,7 +117,8 @@ async def main():
     test_pipeline = SearchOnlyWithReranker(
         collection_name="FreshstackLangchain",
         target_property_name="docs_text",
-        retrieved_k=5
+        retrieved_k=20,
+        reranked_k=5
     )
     test_q = "How do I integrate Weaviate and Langchain?"
     response = test_pipeline.forward(test_q)

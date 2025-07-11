@@ -12,10 +12,9 @@ class AgentRAGResponse(BaseModel):
     aggregations: Optional[list] = None
     usage: Optional[Dict[str, Any]] = None
 
-class SearchResultWithScore(BaseModel):
+class SearchResult(BaseModel):
     id: int
     initial_rank: int
-    initial_score: float
     content: str
 
 # TODO: Maybe extend to enable multiple filters with one search query

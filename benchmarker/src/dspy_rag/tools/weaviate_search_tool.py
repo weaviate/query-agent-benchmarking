@@ -5,8 +5,7 @@ import weaviate
 from weaviate.classes.query import Filter, Metrics, MetadataQuery
 from weaviate.outputs.query import QueryReturn
 
-from benchmarker.src.dspy_rag.models import Source
-from benchmarker.src.dspy_rag.signatures import SearchResultWithScore
+from benchmarker.src.dspy_rag.models import Source, SearchResult
 
 def weaviate_search_tool(
         query: str,
@@ -29,13 +28,13 @@ def weaviate_search_tool(
         search_results = collection.query.hybrid(
             query=query,
             filters=Filter.by_property("tags").contains_any([tag_filter_value]),
-            return_metadata=MetadataQuery(score=True),
+            # return_metadata=MetadataQuery(score=True),
             limit=retrieved_k
         )
     else:
         search_results = collection.query.hybrid(
             query=query,
-            return_metadata=MetadataQuery(score=True),
+            # return_metadata=MetadataQuery(score=True),
             limit=retrieved_k
         )
 
@@ -59,12 +58,12 @@ def weaviate_search_tool(
                 content = obj.properties[target_property_name]
             
             # Get the hybrid score from metadata
-            score = obj.metadata.score if obj.metadata.score is not None else 0.0
+            # score = obj.metadata.score
             
-            search_results_for_rerank.append(SearchResultWithScore(
+            search_results_for_rerank.append(SearchResult(
                 id=i + 1,  # 1-based indexing
                 initial_rank=i + 1,  # Rank based on order returned by Weaviate
-                initial_score=float(score),
+                # initial_score=float(score),
                 content=content
             ))
         
@@ -99,13 +98,13 @@ async def async_weaviate_search_tool(
             search_results = await collection.query.hybrid(
                 query=query,
                 filters=Filter.by_property("tags").contains_any([tag_filter_value]),
-                return_metadata=MetadataQuery(score=True),
+                # return_metadata=MetadataQuery(score=True),
                 limit=retrieved_k
             )
         else:
             search_results = await collection.query.hybrid(
                 query=query,
-                return_metadata=MetadataQuery(score=True),
+                # return_metadata=MetadataQuery(score=True),
                 limit=retrieved_k
             )
         
@@ -123,12 +122,12 @@ async def async_weaviate_search_tool(
                 if obj.properties and target_property_name in obj.properties:
                     content = obj.properties[target_property_name]
                 
-                score = obj.metadata.score if obj.metadata.score is not None else 0.0
+                # score = obj.metadata.score
                 
-                search_results_for_rerank.append(SearchResultWithScore(
+                search_results_for_rerank.append(SearchResult(
                     id=i + 1,
                     initial_rank=i + 1,
-                    initial_score=float(score),
+                    # initial_score=float(score),
                     content=content
                 ))
             

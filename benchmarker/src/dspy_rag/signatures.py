@@ -1,6 +1,6 @@
 import dspy
 
-from benchmarker.src.dspy_rag.models import SearchResultWithScore, SearchQueryWithFilter
+from benchmarker.src.dspy_rag.models import SearchResult, SearchQueryWithFilter
 
 class GenerateAnswer(dspy.Signature):
     """Assess the context and answer the question."""
@@ -33,8 +33,11 @@ class RerankResults(dspy.Signature):
     """
     
     query: str = dspy.InputField()
-    search_results: list[SearchResultWithScore] = dspy.InputField(
+    search_results: list[SearchResult] = dspy.InputField(
         desc="Passages with hybrid scores and initial ranks"
+    )
+    top_k: int = dspy.InputField(
+        desc="Number of passages to return in the reranked list"
     )
     reranked_ids: list[int] = dspy.OutputField(
         desc="EXACTLY 5 passage IDs ordered from most to least relevant. You must return only the top 5 most relevant IDs."
@@ -127,7 +130,9 @@ class RerankWithSummaries(dspy.Signature):
     passage_summaries: list[dict] = dspy.InputField(
         desc="List of dicts with keys: passage_id, relevance_summary, relevance_score"
     )
-    
+    top_k: int = dspy.InputField(
+        desc="Number of passages to return in the reranked list"
+    )
     reranked_ids: list[int] = dspy.OutputField(
         desc="EXACTLY 5 passage IDs ordered from most to least relevant"
     )
