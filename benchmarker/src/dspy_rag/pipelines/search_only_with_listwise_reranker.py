@@ -13,7 +13,7 @@ from benchmarker.src.dspy_rag.pipelines.base_rag import BaseRAG
 from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse
 from benchmarker.src.dspy_rag.signatures import RerankResults
 
-class SearchOnlyWithReranker(BaseRAG):
+class SearchOnlyWithListwiseReranker(BaseRAG):
     def __init__(
         self, 
         collection_name: str, 
