@@ -85,8 +85,7 @@ class AgentBuilder:
                 )
                 self.agent = rag_cls(
                     collection_name=self.collection,
-                    target_property_name=self.target_property_name,
-                    retrieved_k=5 # [NOTE] Get this from the config -- or somewhere else generally
+                    target_property_name=self.target_property_name
                 )
             else:
                 raise ValueError(f"Unknown agent_name: {agent_name}. Must be 'query-agent' or one of {list(RAG_VARIANTS.keys())}")
@@ -128,8 +127,7 @@ class AgentBuilder:
                 )
                 self.agent = rag_cls(
                     collection_name=self.collection,
-                    target_property_name=self.target_property_name,
-                    retrieved_k=5 # [NOTE] Get this from the config -- or somewhere else generally
+                    target_property_name=self.target_property_name
                 )
             else:
                 raise ValueError(f"Unknown agent_name: {self.agent_name}. Must be 'query-agent' or one of {list(RAG_VARIANTS.keys())}")

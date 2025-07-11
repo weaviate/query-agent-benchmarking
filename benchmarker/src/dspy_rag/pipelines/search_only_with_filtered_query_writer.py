@@ -1,4 +1,6 @@
 import asyncio
+from typing import Optional
+
 import dspy
 
 from benchmarker.src.dspy_rag.tools.weaviate_search_tool import (
@@ -13,7 +15,12 @@ from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse, Source
 from benchmarker.src.dspy_rag.signatures import SearchQueryWithFilter, WriteSearchQueriesWithFilters
 
 class SearchOnlyWithFilteredQueryWriter(BaseRAG):
-    def __init__(self, collection_name: str, target_property_name: str, retrieved_k: int):
+    def __init__(
+        self, 
+        collection_name: str, 
+        target_property_name: str, 
+        retrieved_k: Optional[int] = 5,
+    ):
         super().__init__(collection_name, target_property_name, retrieved_k)
         self.tags = get_tag_values(collection_name) # -> dict[str, str]
         self.stringified_tags = "\n".join(f"{tag}: {description}" for tag, description in self.tags.items())

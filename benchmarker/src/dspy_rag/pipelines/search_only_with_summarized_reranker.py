@@ -1,5 +1,7 @@
-import dspy
 import asyncio
+from typing import Optional
+
+import dspy
 
 from benchmarker.src.dspy_rag.tools.weaviate_search_tool import (
     weaviate_search_tool,
@@ -11,7 +13,12 @@ from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse
 from benchmarker.src.dspy_rag.signatures import SummarizeSearchRelevance, RerankWithSummaries
 
 class SearchOnlyWithSummarizedReranker(BaseRAG):
-    def __init__(self, collection_name: str, target_property_name: str, retrieved_k: int):
+    def __init__(
+        self, 
+        collection_name: str, 
+        target_property_name: str, 
+        retrieved_k: Optional[int] = 5
+    ):
         super().__init__(collection_name, target_property_name, retrieved_k=retrieved_k)
         self.summarizer = dspy.Predict(SummarizeSearchRelevance)
         self.reranker = dspy.Predict(RerankWithSummaries)

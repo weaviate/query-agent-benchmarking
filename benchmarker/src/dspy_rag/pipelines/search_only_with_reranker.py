@@ -1,3 +1,6 @@
+import asyncio
+from typing import Optional
+
 import dspy
 
 from benchmarker.src.dspy_rag.tools.weaviate_search_tool import (
@@ -15,8 +18,8 @@ class SearchOnlyWithReranker(BaseRAG):
         self, 
         collection_name: str, 
         target_property_name: str, 
-        retrieved_k: int,
-        reranked_k: int
+        retrieved_k: Optional[int] = 20,
+        reranked_k: Optional[int] = 5
     ):
         super().__init__(collection_name, target_property_name, retrieved_k=retrieved_k)
         self.reranked_k = reranked_k
@@ -127,5 +130,4 @@ async def main():
     print(async_response)
 
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
