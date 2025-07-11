@@ -1,19 +1,17 @@
 import os
-import yaml
-from typing import Optional, Dict, Any
-import asyncio
+from typing import Optional
 
-import dspy
 import weaviate
-from weaviate.classes.query import Filter, Metrics, MetadataQuery
+from weaviate.classes.query import Filter, Metrics
 from weaviate.outputs.query import QueryReturn
 
-from benchmarker.src.dspy_rag.rag_signatures import Source, SearchResultWithScore
+from benchmarker.src.dspy_rag.models import Source, SearchResult
 
 def weaviate_search_tool(
         query: str,
         collection_name: str,
         target_property_name: str,
+        retrieved_k: Optional[int] = 5,
         tag_filter_value: Optional[str] = None,
         return_format: str = "string"  # "string", "dict", or "rerank"
 ):
@@ -30,14 +28,14 @@ def weaviate_search_tool(
         search_results = collection.query.hybrid(
             query=query,
             filters=Filter.by_property("tags").contains_any([tag_filter_value]),
-            return_metadata=MetadataQuery(score=True),
-            limit=5
+            # return_metadata=MetadataQuery(score=True),
+            limit=retrieved_k
         )
     else:
         search_results = collection.query.hybrid(
             query=query,
-            return_metadata=MetadataQuery(score=True),
-            limit=5
+            # return_metadata=MetadataQuery(score=True),
+            limit=retrieved_k
         )
 
     weaviate_client.close()
@@ -60,12 +58,12 @@ def weaviate_search_tool(
                 content = obj.properties[target_property_name]
             
             # Get the hybrid score from metadata
-            score = obj.metadata.score if obj.metadata.score is not None else 0.0
+            # score = obj.metadata.score
             
-            search_results_for_rerank.append(SearchResultWithScore(
+            search_results_for_rerank.append(SearchResult(
                 id=i + 1,  # 1-based indexing
                 initial_rank=i + 1,  # Rank based on order returned by Weaviate
-                initial_score=float(score),
+                # initial_score=float(score),
                 content=content
             ))
         
@@ -80,6 +78,7 @@ async def async_weaviate_search_tool(
     query: str,
     collection_name: str,
     target_property_name: str,
+    retrieved_k: Optional[int] = 5,
     tag_filter_value: Optional[str] = None,
     return_format: str = "string"
 ):
@@ -99,14 +98,14 @@ async def async_weaviate_search_tool(
             search_results = await collection.query.hybrid(
                 query=query,
                 filters=Filter.by_property("tags").contains_any([tag_filter_value]),
-                return_metadata=MetadataQuery(score=True),
-                limit=5
+                # return_metadata=MetadataQuery(score=True),
+                limit=retrieved_k
             )
         else:
             search_results = await collection.query.hybrid(
                 query=query,
-                return_metadata=MetadataQuery(score=True),
-                limit=200
+                # return_metadata=MetadataQuery(score=True),
+                limit=retrieved_k
             )
         
         object_ids = []
@@ -123,12 +122,12 @@ async def async_weaviate_search_tool(
                 if obj.properties and target_property_name in obj.properties:
                     content = obj.properties[target_property_name]
                 
-                score = obj.metadata.score if obj.metadata.score is not None else 0.0
+                # score = obj.metadata.score
                 
-                search_results_for_rerank.append(SearchResultWithScore(
+                search_results_for_rerank.append(SearchResult(
                     id=i + 1,
                     initial_rank=i + 1,
-                    initial_score=float(score),
+                    # initial_score=float(score),
                     content=content
                 ))
             
@@ -262,170 +261,3 @@ def get_tag_values(collection_name: str) -> list[str]:
             tags_with_descriptions[tag] = o.properties["tag_description"]
 
     return tags_with_descriptions
-
-def load_optimization_config(config_path: str) -> Dict[str, Any]:
-    """
-    Load and process configuration from YAML file.
-    
-    Args:
-        config_path: Path to the YAML configuration file
-        
-    Returns:
-        Dictionary with processed configuration
-        
-    Raises:
-        ValueError: If file not found or YAML parsing fails
-    """
-    try:
-        # Load YAML configuration
-        with open(config_path) as f:
-            config = yaml.safe_load(f)
-            
-        # Apply quick test configuration if enabled
-        if config.get("quick_test", {}).get("enabled", False):
-            quick_config = config["quick_test"]
-            for key, value in quick_config.items():
-                if key != "enabled":
-                    config[key] = value
-            print("Applied quick test configuration")
-            
-        return config
-        
-    except FileNotFoundError:
-        raise ValueError(f"Configuration file not found: {config_path}")
-    except yaml.YAMLError as e:
-        raise ValueError(f"Error parsing YAML configuration: {e}")
-
-
-def setup_dspy():
-    """Configure DSPy."""
-    openai_api_key = os.getenv("OPENAI_API_KEY")
-    if not openai_api_key:
-        raise ValueError("OPENAI_API_KEY environment variable is required")
-    
-    lm = dspy.LM("openai/gpt-4.1-mini", api_key=openai_api_key)
-    dspy.configure(lm=lm, track_usage=True)
-    print(f"DSPy configured with: {lm}")
-
-
-def setup_weaviate():
-    """Set up Weaviate client connection."""
-    cluster_url = os.getenv("WEAVIATE_URL")
-    api_key = os.getenv("WEAVIATE_API_KEY")
-    
-    if not cluster_url or not api_key:
-        raise ValueError("WEAVIATE_URL and WEAVIATE_API_KEY environment variables are required")
-    
-    client = weaviate.connect_to_weaviate_cloud(
-        cluster_url=cluster_url,
-        auth_credentials=weaviate.auth.AuthApiKey(api_key),
-    )
-    
-    print(f"Connected to Weaviate cluster: {cluster_url}")
-    return client
-
-
-def print_configuration_summary(config: Dict[str, Any]):
-    """Print a summary of the optimization configuration."""
-    print("=" * 60)
-    print("DSPy Optimization Configuration")
-    print("=" * 60)
-    print(f"Dataset: {config['dataset_name']}")
-    print(f"Agent: {config['agent_name']}")
-    print(f"Optimizer: {config['optimizer_type']}")
-    print(f"Metric: {config['metric_type']}")
-    print(f"Output Directory: {config['output_dir']}")
-    
-    if config.get("quick_test", {}).get("enabled"):
-        print("Quick Test Mode: ENABLED")
-    
-    print("=" * 60)
-
-
-async def test_search_functions():
-    """Simplified test for both sync and async search functions."""
-    print("\n" + "=" * 50)
-    print("Testing Search Functions")
-    print("=" * 50)
-    
-    # Test parameters
-    test_query = "What is LangChain?"
-    collection_name = "FreshstackLangchain"
-    target_property_name = "docs_text"
-    
-    print(f"Query: {test_query}")
-    print(f"Collection: {collection_name}")
-    
-    try:
-        # Test sync search
-        print("\n--- Sync Search ---")
-        sync_contexts, sync_sources = weaviate_search_tool(
-            query=test_query,
-            collection_name=collection_name,
-            target_property_name=target_property_name,
-            return_format="rerank"
-        )
-        print(f"✓ Sync search successful: {len(sync_sources)} results")
-        print(sync_contexts)
-        
-        # Test async search
-        print("\n--- Async Search ---")
-        async_contexts, async_sources = await async_weaviate_search_tool(
-            query=test_query,
-            collection_name=collection_name,
-            target_property_name=target_property_name,
-            return_format="rerank"
-        )
-        print(f"✓ Async search successful: {len(async_sources)} results")
-        print(async_contexts)
-        
-        # Quick comparison
-        results_match = len(sync_sources) == len(async_sources)
-        print(f"✓ Results consistency: {'PASS' if results_match else 'FAIL'}")
-        
-    except Exception as e:
-        print(f"✗ Search test failed: {type(e).__name__}: {e}")
-
-
-def test_get_tag_values(collection_name: str):
-    """Test the get_tag_values function."""
-    print("\n" + "=" * 50)
-    print("Testing get_tag_values Function")
-    print("=" * 50)
-    
-    print(f"Getting tag values for collection: {collection_name}")
-    
-    try:
-        print("\n--- Tag Values ---")
-        tag_values = get_tag_values(collection_name)
-        print("✓ get_tag_values function executed successfully")
-        print(tag_values)
-            
-    except Exception as e:
-        print(f"✗ get_tag_values test failed: {type(e).__name__}: {e}")
-
-
-def main():
-    """Main function to run simplified tests."""
-    # Check if required environment variables are set
-    required_env_vars = ["WEAVIATE_URL", "WEAVIATE_API_KEY"]
-    missing_vars = [var for var in required_env_vars if not os.getenv(var)]
-    
-    if missing_vars:
-        print(f"Error: Missing required environment variables: {', '.join(missing_vars)}")
-        print("Please set these environment variables before running the test.")
-        return
-    
-    print("Starting simplified tests...")
-    
-    #test_get_tag_values(collection_name="FreshstackLangchain")
-    
-    # Test search functions (includes async)
-    asyncio.run(test_search_functions())
-    
-    print("\n" + "=" * 50)
-    print("All tests completed!")
-    print("=" * 50)
-
-if __name__ == "__main__":
-    main()

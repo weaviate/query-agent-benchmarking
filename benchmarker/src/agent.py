@@ -6,16 +6,14 @@ import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
 
-from benchmarker.src.dspy_rag.rag_programs import (
-    VanillaRAG,
+from benchmarker.src.dspy_rag.pipelines import (
     SearchOnlyRAG,
     SearchOnlyWithReranker,
     SearchOnlyWithQueryWriter,
     SearchOnlyWithQueryWriterAndRerank,
     SearchOnlyWithFilteredQueryWriter,
-    SearchQueryWriter
 )
-from benchmarker.src.dspy_rag.rag_signatures import DSPyAgentRAGResponse
+from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse
 
 # Organized in ascending complexity of RAG system
 RAG_VARIANTS = {
@@ -24,8 +22,6 @@ RAG_VARIANTS = {
     "search-only-with-qw":     SearchOnlyWithQueryWriter,
     "search-only-with-qwrr": SearchOnlyWithQueryWriterAndRerank,
     "search-only-with-fqw": SearchOnlyWithFilteredQueryWriter,
-    "vanilla-rag":            VanillaRAG,
-    "query-writer-rag":       SearchQueryWriter
 }
 
 
@@ -89,7 +85,7 @@ class AgentBuilder:
                 )
                 self.agent = rag_cls(
                     collection_name=self.collection,
-                    target_property_name=self.target_property_name,
+                    target_property_name=self.target_property_name
                 )
             else:
                 raise ValueError(f"Unknown agent_name: {agent_name}. Must be 'query-agent' or one of {list(RAG_VARIANTS.keys())}")
@@ -131,7 +127,7 @@ class AgentBuilder:
                 )
                 self.agent = rag_cls(
                     collection_name=self.collection,
-                    target_property_name=self.target_property_name,
+                    target_property_name=self.target_property_name
                 )
             else:
                 raise ValueError(f"Unknown agent_name: {self.agent_name}. Must be 'query-agent' or one of {list(RAG_VARIANTS.keys())}")
