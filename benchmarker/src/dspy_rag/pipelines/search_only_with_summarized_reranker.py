@@ -56,7 +56,7 @@ class SearchOnlyWithSummarizedListwiseReranker(BaseRAG):
             })
             
             # Aggregate usage
-            usage = summary_pred.get_lm_usage() or {}
+            total_usage = summary_pred.get_lm_usage() or {}
         
         print(f"\033[96mGenerated {len(summaries)} relevance summaries\033[0m")
         
@@ -68,7 +68,7 @@ class SearchOnlyWithSummarizedListwiseReranker(BaseRAG):
         )
         
         # Aggregate reranker usage
-        usage = rerank_pred.get_lm_usage() or {}
+        total_usage = rerank_pred.get_lm_usage() or {}
         
         # Reorder sources based on reranking
         reranked_sources = []
@@ -128,7 +128,7 @@ class SearchOnlyWithSummarizedListwiseReranker(BaseRAG):
             })
             
             # Aggregate usage
-            usage = summary_pred.get_lm_usage() or {}
+            total_usage = summary_pred.get_lm_usage() or {}
         
         print(f"\033[96mGenerated {len(summaries)} relevance summaries in parallel\033[0m")
         
@@ -140,7 +140,7 @@ class SearchOnlyWithSummarizedListwiseReranker(BaseRAG):
         )
         
         # Aggregate reranker usage
-        usage = rerank_pred.get_lm_usage() or {}
+        total_usage = rerank_pred.get_lm_usage() or {}
         
         # Reorder sources based on reranking
         reranked_sources = []

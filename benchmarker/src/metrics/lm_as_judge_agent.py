@@ -1,6 +1,5 @@
 import dspy
 from pydantic import BaseModel, ValidationError
-from typing import Optional
 
 class LMJudgeResult(BaseModel):
     reasoning: str
