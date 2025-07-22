@@ -13,13 +13,13 @@ from benchmarker.src.dspy_rag.pipelines.base_rag import BaseRAG
 from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse
 from benchmarker.src.dspy_rag.signatures import RerankResults
 
-class SearchOnlyWithReranker(BaseRAG):
+class SearchOnlyWithListwiseReranker(BaseRAG):
     def __init__(
         self, 
         collection_name: str, 
         target_property_name: str, 
-        retrieved_k: Optional[int] = 20,
-        reranked_k: Optional[int] = 5
+        retrieved_k: Optional[int] = 50,
+        reranked_k: Optional[int] = 20
     ):
         super().__init__(collection_name, target_property_name, retrieved_k=retrieved_k)
         self.reranked_k = reranked_k
@@ -35,8 +35,6 @@ class SearchOnlyWithReranker(BaseRAG):
             return_format="rerank"
         )
         
-        print(f"\033[96mInitial results: {len(sources)} Sources!\033[0m")
-        
         # Perform reranking
         rerank_pred = self.reranker(
             query=question,
@@ -46,14 +44,19 @@ class SearchOnlyWithReranker(BaseRAG):
         
         # Reorder sources based on reranking
         reranked_sources = []
+        reranked_results = []
         for rank_id in rerank_pred.reranked_ids:
             # Find the source corresponding to this rank_id
             # rank_id is 1-based, sources list is 0-based
             source_index = rank_id - 1
             if 0 <= source_index < len(sources):
                 reranked_sources.append(sources[source_index])
+                reranked_results.append(search_results[source_index])
         
         print(f"\033[96mReranked: Returning {len(reranked_sources)} Sources!\033[0m")
+        print("\nTop 5 reranked results:")
+        for i, result in enumerate(reranked_results[:5], 1):
+            print(f"New Rank {i} (was {result.initial_rank}).")
         
         # Get usage from reranker
         usage = rerank_pred.get_lm_usage() or {}
@@ -86,13 +89,18 @@ class SearchOnlyWithReranker(BaseRAG):
         
         # Reorder sources based on reranking
         reranked_sources = []
+        reranked_results = []
         for rank_id in rerank_pred.reranked_ids:
             # Find the source corresponding to this rank_id
             source_index = rank_id - 1
             if 0 <= source_index < len(sources):
                 reranked_sources.append(sources[source_index])
+                reranked_results.append(search_results[source_index])
         
         print(f"\033[96mReranked: Returning {len(reranked_sources)} Sources!\033[0m")
+        print("\nTop 5 reranked results:")
+        for i, result in enumerate(reranked_results[:5], 1):
+            print(f"New Rank {i} (was {result.initial_rank}).")
         
         # Get usage from reranker
         usage = rerank_pred.get_lm_usage() or {}
@@ -117,11 +125,11 @@ async def main():
     dspy.configure(lm=lm, track_usage=True)
     print(f"DSPy configured with: {lm}")
 
-    test_pipeline = SearchOnlyWithReranker(
+    test_pipeline = SearchOnlyWithListwiseReranker(
         collection_name="FreshstackLangchain",
         target_property_name="docs_text",
         retrieved_k=20,
-        reranked_k=5
+        reranked_k=10
     )
     test_q = "How do I integrate Weaviate and Langchain?"
     response = test_pipeline.forward(test_q)

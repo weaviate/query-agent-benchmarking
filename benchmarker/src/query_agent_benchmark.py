@@ -3,7 +3,6 @@ import asyncio
 from typing import Any
 from tqdm import tqdm
 import numpy as np
-from benchmarker.src.metrics.lm_as_judge_agent import lm_as_judge_agent, LMJudgeAgentDeps
 from benchmarker.src.metrics.ir_metrics import calculate_recall, calculate_coverage, calculate_alpha_ndcg
 from benchmarker.src.utils import qa_source_parser
 
@@ -174,8 +173,6 @@ async def analyze_results(
     dataset_name: str,
     results: list,
     ground_truths: list[dict],
-    judge_inferences: int = 3,
-    run_lm_judge: bool = False,
 ):
     """Analyze results with dataset-specific metrics."""
     
@@ -193,9 +190,6 @@ async def analyze_results(
         raise Exception("Enter a valid dataset_name!")
     
     # Initialize result storage
-    lm_judge_average_scores = []
-    lm_judge_score_ranges = []
-    lm_judge_score_variances = []
     query_times = []
     num_searches_list = []
     num_aggregations_list = []
@@ -208,44 +202,12 @@ async def analyze_results(
         # Skip if there was an error
         if "error" in result:
             print(f"\n\033[91mSkipping analysis for query {i} due to error: {result['error']}\033[0m")
-            if run_lm_judge:
-                lm_judge_average_scores.append(0.0)
-                lm_judge_score_ranges.append(0.0)
-                lm_judge_score_variances.append(0.0)
             for metric in metrics:
                 metric_results[metric.__name__].append(0.0)
             query_times.append(result["time_taken"])
             num_searches_list.append(0)
             num_aggregations_list.append(0)
             continue
-            
-        # LM Judge evaluation (unchanged)
-        if run_lm_judge:
-            if result["answer"] == "":
-                lm_judge_average_scores.append(1.0)
-                lm_judge_score_ranges.append(0.0)
-                lm_judge_score_variances.append(0.0)
-            else:
-                deps = LMJudgeAgentDeps(
-                    question=ground_truth["question"],
-                    system_response=result["answer"]
-                )
-
-                current_scores = []
-                for _ in range(judge_inferences):
-                    judge_response = await lm_as_judge_agent.run(
-                        deps=deps,
-                        model="openai:gpt-4.1"
-                    )
-                    current_scores.append(judge_response.data.rating)
-                
-                avg_score = sum(current_scores) / len(current_scores)
-                score_range = max(current_scores) - min(current_scores)
-                score_variance = np.var(current_scores)
-                
-                lm_judge_average_scores.append(avg_score)
-                lm_judge_score_ranges.append(score_range)
-                lm_judge_score_variances.append(score_variance)
 
         retrieved_ids = qa_source_parser(
             result["sources"],
@@ -287,11 +249,6 @@ async def analyze_results(
                     display_name = metric_name.replace("calculate_", "").replace("_", " ").title()
                     print(f"Current average {display_name}: {np.mean(scores):.2f}")
             
-            if run_lm_judge:
-                print(f"Current average LM Judge score: {np.mean(lm_judge_average_scores):.2f}")
-                print(f"Current average LM Judge score range: {np.mean(lm_judge_score_ranges):.2f}")
-                print(f"Current average LM Judge score variance: {np.mean(lm_judge_score_variances):.4f}")
-            
             print(f"Current average query time: {np.mean(query_times):.2f} seconds")
             print(f"Current average searches: {np.mean(num_searches_list):.2f}")
             print(f"Current average aggregations: {np.mean(num_aggregations_list):.2f}")
@@ -304,28 +261,7 @@ async def analyze_results(
         "query_times": query_times,
         "num_searches_list": num_searches_list,
         "num_aggregations_list": num_aggregations_list,
-        "run_lm_judge": run_lm_judge
     }
-    
-    # Add LM judge results if enabled
-    if run_lm_judge:
-        results_dict.update({
-            "avg_lm_judge_score": np.mean(lm_judge_average_scores) if lm_judge_average_scores else 0,
-            "avg_lm_judge_range": np.mean(lm_judge_score_ranges) if lm_judge_score_ranges else 0,
-            "avg_lm_judge_variance": np.mean(lm_judge_score_variances) if lm_judge_score_variances else 0,
-            "lm_judge_average_scores": lm_judge_average_scores,
-            "lm_judge_score_ranges": lm_judge_score_ranges,
-            "lm_judge_score_variances": lm_judge_score_variances,
-        })
-    else:
-        results_dict.update({
-            "avg_lm_judge_score": None,
-            "avg_lm_judge_range": None,
-            "avg_lm_judge_variance": None,
-            "lm_judge_average_scores": [],
-            "lm_judge_score_ranges": [],
-            "lm_judge_score_variances": [],
-        })
     
     # Add metric-specific results
     for metric_name, scores in metric_results.items():
@@ -337,13 +273,6 @@ async def analyze_results(
     print("\n\033[92m===== Benchmark Results =====\033[0m")
     print(f"Dataset: {dataset_name}")
     print(f"Number of queries: {len(results)}")
-    
-    if run_lm_judge:
-        print(f"Average LM Judge Score: {results_dict['avg_lm_judge_score']:.2f}")
-        print(f"Average LM Judge Score Range: {results_dict['avg_lm_judge_range']:.2f}")
-        print(f"Average LM Judge Score Variance: {results_dict['avg_lm_judge_variance']:.4f}")
-    else:
-        print("LM Judge evaluation: Disabled")
     
     # Print metric results
     for metric_name, scores in metric_results.items():

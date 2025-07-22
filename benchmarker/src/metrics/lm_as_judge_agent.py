@@ -1,71 +1,87 @@
-from __future__ import annotations
-
-import asyncio
-
-from pydantic import BaseModel
-from pydantic_ai import Agent, ModelRetry, RunContext
-
-RETRIES = 3
-
-class LMJudgeAgentDeps:
-    def __init__(
-            self,
-            question: str,
-            system_response: str
-    ):
-        self.question = question
-        self.system_response = system_response
-
-    def build_prompt(self) -> str:
-        return f"""
-        Please evaluate how well the `system_response` answers the question.
-        Please report your assessment as a rating on a scale of 1 to 5, with 1 denoting a terrible answer and 5 denoting a fantastic answer.
-
-        `question`
-        {self.question}
-
-        `system_response`
-        {self.system_response}
-        """
+import dspy
+from pydantic import BaseModel, ValidationError
 
 class LMJudgeResult(BaseModel):
     reasoning: str
     rating: float
+
+class LMJudgeSignature(dspy.Signature):
+    """Evaluate how well a system response answers a given question on a scale of 1-5."""
     
-lm_as_judge_agent = Agent(
-    deps_type=LMJudgeAgentDeps,
-    result_type=LMJudgeResult,
-    retries=RETRIES,
-    result_tool_name="lm_as_judge_result",
-)
+    question = dspy.InputField(desc="The question that was asked")
+    system_response = dspy.InputField(desc="The system's response to evaluate")
+    reasoning = dspy.OutputField(desc="Detailed reasoning for the rating")
+    rating = dspy.OutputField(desc="Rating from 1 (terrible) to 5 (fantastic)")
 
-@lm_as_judge_agent.system_prompt
-async def system_prompt(ctx: RunContext[LMJudgeAgentDeps]) -> str:
-    return ctx.deps.build_prompt()
+class LMJudgeAgent(dspy.Module):
+    def __init__(self, retries: int = 3):
+        super().__init__()
+        self.retries = retries
+        self.judge = dspy.ChainOfThought(LMJudgeSignature)
+    
+    def validate_rating(self, rating_str: str) -> float:
+        """Validate that the rating is between 1 and 5."""
+        try:
+            rating = float(rating_str)
+            if rating < 1 or rating > 5:
+                raise ValueError(f"Rating must be between 1 and 5, got {rating}")
+            return rating
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Invalid rating format: {rating_str}") from e
+    
+    def forward(self, question: str, system_response: str) -> LMJudgeResult:
+        """Run the LM judge evaluation with retries."""
+        
+        for attempt in range(self.retries):
+            try:
+                # Run the judge
+                prediction = self.judge(
+                    question=question,
+                    system_response=system_response
+                )
+                
+                # Validate and convert rating
+                rating = self.validate_rating(prediction.rating)
+                
+                # Create and validate result
+                result = LMJudgeResult(
+                    reasoning=prediction.reasoning,
+                    rating=rating
+                )
+                
+                return result
+                
+            except (ValueError, ValidationError) as e:
+                if attempt == self.retries - 1:
+                    raise RuntimeError(f"Failed after {self.retries} attempts. Last error: {e}")
+                print(f"Attempt {attempt + 1} failed: {e}. Retrying...")
+                continue
+        
+        raise RuntimeError(f"Failed after {self.retries} attempts")
 
-@lm_as_judge_agent.result_validator
-async def validate_rating(
-    ctx: RunContext[LMJudgeAgentDeps], result: LMJudgeResult
-):
-    """Validate that the rating is in between 1 and 5."""
-    if result.rating < 1 or result.rating > 5:
-        raise ModelRetry(f"Rating must be between 1 and 5, got {result.rating}")
-    return result
+lm_as_judge_agent = LMJudgeAgent()
 
-async def main():
-    deps = LMJudgeAgentDeps(
-        question="What is the capital of France?",
-        system_response="Paris is the capital of France."
-    )
-
-    result = await lm_as_judge_agent.run(
-        deps=deps,
-        model="openai:gpt-4o",
-    )
-
-    print("LMJudge Agent Result:")
-    print(result.data)
-
+def main():
+    # Configure DSPy with OpenAI GPT-4
+    lm = dspy.OpenAI(model="gpt-4o")
+    dspy.settings.configure(lm=lm)
+    
+    # Create the agent
+    agent = LMJudgeAgent(retries=3)
+    
+    # Example usage
+    question = "What is the capital of France?"
+    system_response = "Paris is the capital of France."
+    
+    try:
+        result = agent(question=question, system_response=system_response)
+        
+        print("LMJudge Agent Result:")
+        print(f"Reasoning: {result.reasoning}")
+        print(f"Rating: {result.rating}")
+        
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

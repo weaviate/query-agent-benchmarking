@@ -88,7 +88,6 @@ async def main():
         config["dataset"], 
         results, 
         queries,
-        run_lm_judge=config["run_lm_judge"]
     )
 
     print(metrics)
