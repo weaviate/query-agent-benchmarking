@@ -10,39 +10,37 @@ class GenerateAnswer(dspy.Signature):
     final_answer: str = dspy.OutputField()
 
 class RerankResults(dspy.Signature):
-    """Rerank passages based on their relevance to the query.
+    """Rerank passages based on their relevance to the query using listwise comparison.
     
-    IMPORTANT: You must return ONLY THE TOP 5 MOST RELEVANT passage IDs, even if more passages seem relevant.
+    Your task is to analyze ALL passages simultaneously and produce a single ranked list 
+    of the most relevant passages for answering the query.
     
-    You are given passages with hybrid retrieval scores that combine:
-    - Semantic similarity (how well the meaning matches the query)
-    - Lexical matching (keyword/term overlap with the query)
+    Instructions:
+    1. Read the query carefully and understand the information need
+    2. Evaluate each passage for:
+       - Direct relevance to answering the query
+       - Factual accuracy and completeness
+       - Information quality and clarity
+    3. Compare passages against each other (not just individually)
+    4. Return EXACTLY `top_k` passage IDs in descending order of relevance
     
-    These unified scores provide a strong initial relevance signal. Use them as 
-    valuable evidence while applying your deeper understanding to assess:
-    - Answer completeness and directness (for questions)
-    - Intent satisfaction (for other queries)
-    - Information quality and specificity
-    
-    The hybrid scores already capture both semantic and lexical relevance, but
-    you may identify additional relevance factors they miss. The passages may 
-    contain contradictions or typos - focus on relevance, not fact-checking.
-    
-    Remember: You must select and return ONLY the 5 most relevant passage IDs, ranked from most to least relevant.
-    Returning more than 5 IDs is not allowed.
+    CRITICAL: You must return exactly `top_k` IDs - no more, no less.
     """
     
-    query: str = dspy.InputField()
+    query: str = dspy.InputField(
+        desc="The user's question or information need"
+    )
     search_results: list[SearchResult] = dspy.InputField(
-        desc="Passages with hybrid scores and initial ranks"
+        desc="List of passages to rerank. Each contains: id, text, initial_rank, and hybrid_score"
     )
     top_k: int = dspy.InputField(
-        desc="Number of passages to return in the reranked list"
+        desc="Exact number of passage IDs to return (strict requirement)"
     )
     reranked_ids: list[int] = dspy.OutputField(
-        desc="EXACTLY 5 passage IDs ordered from most to least relevant. You must return only the top 5 most relevant IDs."
+        desc="List of exactly `top_k` passage IDs ordered by relevance (most relevant first). Must match IDs from search_results."
     )
 
+    
 class WriteSearchQueries(dspy.Signature):
     """Write search queries to gather information from a search engine that will help answer the question.
 Consider both exploration and result diversity to capture multiple interpretations and facets of a query."""
@@ -115,7 +113,7 @@ class RerankWithSummaries(dspy.Signature):
     You are provided with relevance summaries and scores for each passage.
     Use these summaries to make a final ranking decision.
     
-    IMPORTANT: You must return ONLY THE TOP 5 MOST RELEVANT passage IDs.
+    IMPORTANT: You must return ONLY THE `top_k` MOST RELEVANT passage IDs.
     
     Consider:
     - The quality and directness of information in each summary
@@ -123,7 +121,7 @@ class RerankWithSummaries(dspy.Signature):
     - How well each passage would satisfy the user's query
     - Prioritize passages that provide complete, actionable answers
     
-    Remember: Return EXACTLY 5 passage IDs, ranked from most to least relevant.
+    Remember: Return EXACTLY `top_k` passage IDs, ranked from most to least relevant.
     """
     
     query: str = dspy.InputField()
@@ -134,5 +132,5 @@ class RerankWithSummaries(dspy.Signature):
         desc="Number of passages to return in the reranked list"
     )
     reranked_ids: list[int] = dspy.OutputField(
-        desc="EXACTLY 5 passage IDs ordered from most to least relevant"
+        desc="EXACTLY `top_k` passage IDs ordered from most to least relevant"
     )

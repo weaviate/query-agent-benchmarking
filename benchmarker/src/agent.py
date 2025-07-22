@@ -8,7 +8,9 @@ from weaviate.auth import Auth
 
 from benchmarker.src.dspy_rag.pipelines import (
     SearchOnlyRAG,
-    SearchOnlyWithReranker,
+    SearchOnlyWithCrossEncoder,
+    SearchOnlyWithListwiseReranker,
+    SearchOnlyWithSummarizedListwiseReranker,
     SearchOnlyWithQueryWriter,
     SearchOnlyWithQueryWriterAndRerank,
     SearchOnlyWithFilteredQueryWriter,
@@ -18,7 +20,9 @@ from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse
 # Organized in ascending complexity of RAG system
 RAG_VARIANTS = {
     "search-only":        SearchOnlyRAG,
-    "search-only-with-rr": SearchOnlyWithReranker,
+    "search-only-with-ce": SearchOnlyWithCrossEncoder,
+    "search-only-with-lwrr": SearchOnlyWithListwiseReranker,
+    "search-only-with-slwrr": SearchOnlyWithSummarizedListwiseReranker,
     "search-only-with-qw":     SearchOnlyWithQueryWriter,
     "search-only-with-qwrr": SearchOnlyWithQueryWriterAndRerank,
     "search-only-with-fqw": SearchOnlyWithFilteredQueryWriter,

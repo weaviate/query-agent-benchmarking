@@ -1,0 +1,11 @@
+[project]
+name = "query-agent-benchmarking"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "dspy>=2.6.27",
+    "sentence-transformers>=5.0.0",
+    "weaviate-client[agents]>=4.15.4",
+]

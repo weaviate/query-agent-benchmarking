@@ -2,6 +2,7 @@ from .search_only import SearchOnlyRAG
 from .search_only_with_query_writer import SearchOnlyWithQueryWriter
 from .search_only_with_cross_encoder import SearchOnlyWithCrossEncoder
 from .search_only_with_listwise_reranker import SearchOnlyWithListwiseReranker
+from .search_only_with_summarized_reranker import SearchOnlyWithSummarizedListwiseReranker
 from .search_only_with_query_writer_and_reranker import SearchOnlyWithQueryWriterAndRerank
 from .search_only_with_filtered_query_writer import SearchOnlyWithFilteredQueryWriter
 
@@ -10,6 +11,7 @@ __all__ = [
     "SearchOnlyWithQueryWriter",
     "SearchOnlyWithCrossEncoder",
     "SearchOnlyWithListwiseReranker",
+    "SearchOnlyWithSummarizedListwiseReranker",
     "SearchOnlyWithQueryWriterAndRerank",
     "SearchOnlyWithFilteredQueryWriter"
 ]
