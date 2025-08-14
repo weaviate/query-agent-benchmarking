@@ -2,7 +2,7 @@
 
 This repo contains a tool for benchmarking the performance of the Weaviate Query Agent.
 
-Run eval with: (See `benchmarker/config.yml` to setup experiment)
+Run eval:
 ```
 uv run python benchmarker/benchmark-run.py
 ```
