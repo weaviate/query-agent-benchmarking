@@ -6,33 +6,10 @@ import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
 
-from benchmarker.src.dspy_rag.pipelines import (
-    SearchOnlyRAG,
-    SearchOnlyWithCrossEncoder,
-    SearchOnlyWithListwiseReranker,
-    SearchOnlyWithSummarizedListwiseReranker,
-    SearchOnlyWithQueryWriter,
-    SearchOnlyWithQueryWriterAndRerank,
-    SearchOnlyWithFilteredQueryWriter,
-)
-from benchmarker.src.dspy_rag.models import DSPyAgentRAGResponse
-
-# Organized in ascending complexity of RAG system
-RAG_VARIANTS = {
-    "search-only":        SearchOnlyRAG,
-    "search-only-with-ce": SearchOnlyWithCrossEncoder,
-    "search-only-with-lwrr": SearchOnlyWithListwiseReranker,
-    "search-only-with-slwrr": SearchOnlyWithSummarizedListwiseReranker,
-    "search-only-with-qw":     SearchOnlyWithQueryWriter,
-    "search-only-with-qwrr": SearchOnlyWithQueryWriterAndRerank,
-    "search-only-with-fqw": SearchOnlyWithFilteredQueryWriter,
-}
-
-
 class AgentBuilder:
     """
-    * `agent_name == "query-agent"`  ➜  wraps Weaviate's hosted QueryAgent.
-    * `agent_name in RAG_VARIANTS`   ➜  instantiates one of our RAG variants.
+    * `agent_name == "query-agent-search-only"`  ➜  wraps Weaviate's hosted QueryAgent in Search Only Mode.
+    * `agent_name == "hybrid-search"` ➜  wraps Weaviate Hybrid Search.
     """
 
     def __init__(

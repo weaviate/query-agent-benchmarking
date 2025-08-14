@@ -4,15 +4,15 @@ import weaviate
 import asyncio
 import argparse
 from pathlib import Path
-from benchmarker.src.agent import AgentBuilder
-from benchmarker.src.dataset import in_memory_dataset_loader
+from benchmarker.agent import AgentBuilder
+from benchmarker.dataset import in_memory_dataset_loader
 
-from benchmarker.src.query_agent_benchmark import (
+from benchmarker.query_agent_benchmark import (
     run_queries,
     run_queries_async,
     analyze_results
 )
-from benchmarker.src.utils import pretty_print_dict
+from benchmarker.utils import pretty_print_dict
 
 def load_config(config_path: str):
     with open(config_path) as f:
