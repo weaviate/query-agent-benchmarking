@@ -4,9 +4,9 @@ import yaml
 
 import weaviate
 
-from benchmarker.src.dataset import in_memory_dataset_loader
-from benchmarker.src.database import database_loader
-from benchmarker.src.utils import pretty_print_dict
+from benchmarker.dataset import in_memory_dataset_loader
+from benchmarker.database import database_loader
+from benchmarker.utils import pretty_print_dict
 
 def load_config(config_path: str):
     with open(config_path) as f:
@@ -28,3 +28,4 @@ pretty_print_dict(documents[0])
 database_loader(weaviate_client, config["dataset"], documents)
 
 weaviate_client.close()
+
