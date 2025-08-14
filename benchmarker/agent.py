@@ -58,6 +58,8 @@ class AgentBuilder:
                     collections=[self.collection],
                     agents_host=self.agents_host,
                 )
+            elif agent_name == "hybrid-search":
+                print("No internal configuration needed for hybrid-search.")
             else:
                 raise ValueError(f"Unknown agent_name: {agent_name}. Must be 'query-agent-search-only' or 'hybrid-search'")
 

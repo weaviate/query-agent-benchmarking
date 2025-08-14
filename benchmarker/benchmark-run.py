@@ -20,15 +20,11 @@ def load_config(config_path: str):
     return config
 
 async def main():
-    parser = argparse.ArgumentParser(description='Run benchmark tests')
-    parser.add_argument('--agents-host', type=str, default="https://api.agents.weaviate.io",
-                        help='Host URL for agents API')
-    args = parser.parse_args()
-    
-    use_async = True
-
     config_path = Path(os.path.dirname(__file__), "config.yml")
     config = load_config(config_path)
+    
+    agents_host = config.get("agents_host", "https://api.agents.weaviate.io")
+    use_async = config.get("use_async", True)
 
     _, queries = in_memory_dataset_loader(config["dataset"])
     print("\033[92mFirst Query\033[0m")
@@ -37,7 +33,7 @@ async def main():
     query_agent = AgentBuilder(
         dataset_name=config["dataset"],
         agent_name=config["agent_name"],
-        agents_host=args.agents_host,
+        agents_host=agents_host,
         use_async=use_async,
     )
 

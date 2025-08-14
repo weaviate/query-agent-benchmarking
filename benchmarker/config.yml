@@ -1,8 +1,9 @@
-agent_name: search-only-with-slwrr
+agent_name: hybrid-search
+agents_host: https://dev-agents.labs.weaviate.io
 dataset: freshstack-langchain
-reload_database: True
+use_async: False
+reload_database: False
 num_samples: 20
 batch_size: 5
 max_concurrent: 5
-run_lm_judge: False
-experiment_name: query-agent-prod
+experiment_name: hybrid-search
