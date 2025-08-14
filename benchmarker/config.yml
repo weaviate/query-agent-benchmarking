@@ -1,4 +1,4 @@
-agent_name: hybrid-search
+agent_name: query-agent-search-only
 agents_host: https://dev-agents.labs.weaviate.io
 dataset: freshstack-langchain
 use_async: False

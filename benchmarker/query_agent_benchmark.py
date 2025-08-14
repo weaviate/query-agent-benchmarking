@@ -188,21 +188,21 @@ async def analyze_results(
     metric_results = {metric.__name__: [] for metric in metrics}
     
     for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths))):
-        # Skip if there was an error
-        # TODO: Pretty sure this isn't setup
         if "error" in result:
             print(f"\n\033[91mSkipping analysis for query {i} due to error: {result['error']}\033[0m")
             for metric in metrics:
                 metric_results[metric.__name__].append(0.0)
             query_times.append(result["time_taken"])
             continue
+
+        retrieved_ids = [result.object_id for result in result["retrieved_ids"]]
         
         for metric in metrics:
             if metric.__name__ == "calculate_recall":
                 # Traditional recall - just use target IDs
                 score = metric(
                     ground_truth["dataset_ids"],
-                    result["retrieved_ids"]
+                    retrieved_ids
                 )
             elif metric.__name__ in ["calculate_coverage", "calculate_alpha_ndcg"]:
                 # Ensure nuggets have IDs
@@ -212,9 +212,9 @@ async def analyze_results(
                             nugget['id'] = f"nugget_{idx}"
                 
                 if metric.__name__ == "calculate_coverage":
-                    score = metric(result["retrieved_ids"], ground_truth["nugget_data"], k=1000)
+                    score = metric(retrieved_ids, ground_truth["nugget_data"], k=1000)
                 else:  # calculate_alpha_ndcg
-                    score = metric(result["retrieved_ids"], ground_truth["nugget_data"], alpha=0.5, k=10)
+                    score = metric(retrieved_ids, ground_truth["nugget_data"], alpha=0.5, k=10)
             
             metric_results[metric.__name__].append(score)
         
