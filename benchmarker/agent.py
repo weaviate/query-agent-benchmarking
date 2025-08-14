@@ -52,24 +52,17 @@ class AgentBuilder:
                 auth_credentials=weaviate.auth.AuthApiKey(self.api_key),
             )
             
-            if agent_name == "query-agent":
+            if agent_name == "query-agent-search-only":
                 self.agent = QueryAgent(
                     client=self.weaviate_client,
                     collections=[self.collection],
                     agents_host=self.agents_host,
                 )
-            elif agent_name in RAG_VARIANTS:
-                rag_cls = RAG_VARIANTS[agent_name]
-                dspy.configure(
-                    lm=dspy.LM("openai/gpt-4.1-mini", api_key=self.openai_api_key, cache=False),
-                    track_usage=True,
-                )
-                self.agent = rag_cls(
-                    collection_name=self.collection,
-                    target_property_name=self.target_property_name
-                )
+            if agent_name == "hybrid-search":
+                self.collection = self.weaviate_client.collections.get(self.collection)
+                
             else:
-                raise ValueError(f"Unknown agent_name: {agent_name}. Must be 'query-agent' or one of {list(RAG_VARIANTS.keys())}")
+                raise ValueError(f"Unknown agent_name: {agent_name}. Must be 'query-agent-search-only' or 'hybrid-search'")
 
     async def initialize_async(self):
         if not self.use_async:
@@ -99,19 +92,8 @@ class AgentBuilder:
                 print("Testing AsyncQueryAgent with a simple query...")
                 test_response = await self.agent.run("What is this collection about?")
                 print(f"Test query successful: {test_response.final_answer[:100]}...")
-            elif self.agent_name in RAG_VARIANTS:
-                # `dspy_rag` keeps the client use encapsulated in the `async_weaviate_search_tool`
-                rag_cls = RAG_VARIANTS[self.agent_name]
-                dspy.configure(
-                    lm=dspy.LM("openai/gpt-4.1-mini", api_key=self.openai_api_key, cache=False),
-                    track_usage=True,
-                )
-                self.agent = rag_cls(
-                    collection_name=self.collection,
-                    target_property_name=self.target_property_name
-                )
             else:
-                raise ValueError(f"Unknown agent_name: {self.agent_name}. Must be 'query-agent' or one of {list(RAG_VARIANTS.keys())}")
+                raise ValueError(f"Unknown agent_name: {self.agent_name}. Must be 'query-agent-search-only' or 'hybrid-search'")
                 
         except Exception as e:
             print(f"Failed to initialize async agent: {str(e)}")
@@ -131,14 +113,12 @@ class AgentBuilder:
         if self.use_async:
             raise RuntimeError("Use run_async() for async agents")
         
-        if self.agent_name == "query-agent":
+        if self.agent_name == "query-agent-search-only":
             return self.agent.run(query)
         
-        # For DSPy RAG variants, convert DSPyAgentRAGResponse to AgentRAGResponse
-        dspy_response = self.agent.forward(query)
-        if isinstance(dspy_response, DSPyAgentRAGResponse):
-            return dspy_response.to_agent_rag_response()
-        return dspy_response
+        if self.agent_name == "hybrid-search":
+            return self.
+        return self.agent.forward(query)
     
     async def run_async(self, query: str):            
         try:
