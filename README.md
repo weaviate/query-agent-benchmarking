@@ -2,6 +2,13 @@
 
 This repo contains a tool for benchmarking the performance of the Weaviate Query Agent.
 
-Run eval with `uv run python benchmarker/benchmark-run.py`. (See `benchmarker/config.yml` to setup experimental details).
+Run eval with: (See `benchmarker/config.yml` to setup experiment)
+```
+uv run python benchmarker/benchmark-run.py
+```
 
-Populate Weaviate with benchmark data: `uv run python benchmarker/populate-db.py`.
+
+Populate Weaviate with benchmark data:
+```
+uv run python benchmarker/populate-db.py
+```
