@@ -2,7 +2,11 @@ import time
 from typing import Any
 from tqdm import tqdm
 import numpy as np
-from benchmarker.metrics.ir_metrics import calculate_recall, calculate_coverage, calculate_alpha_ndcg
+from benchmarker.metrics.ir_metrics import (
+    calculate_recall_at_k, 
+    calculate_coverage, 
+    calculate_alpha_ndcg
+)
 
 def run_queries(
     queries: list[dict],
@@ -168,64 +172,86 @@ async def analyze_results(
 ):
     """Analyze results with dataset-specific metrics."""
     
-    # Get collection and determine which metrics to use
+    # Define metrics with their specific parameters for each dataset
     if dataset_name == "enron":
-        metrics = [calculate_recall]
+        metrics = [
+            {"func": calculate_recall_at_k, "params": {"k": 1}},
+            {"func": calculate_recall_at_k, "params": {"k": 5}},
+            {"func": calculate_recall_at_k, "params": {"k": 20}},
+        ]
     elif dataset_name == "wixqa":
-        metrics = [calculate_recall]
+        # Use a large k to effectively calculate recall over all results
+        metrics = [{"func": calculate_recall_at_k, "params": {"k": 1000}}]
     elif dataset_name.startswith("freshstack-"):
-        metrics = [calculate_recall, calculate_coverage, calculate_alpha_ndcg]
+        metrics = [
+            {"func": calculate_coverage, "params": {"k": 1000}},
+            {"func": calculate_alpha_ndcg, "params": {"alpha": 0.5, "k": 10}},
+        ]
     else:
         raise Exception("Enter a valid dataset_name!")
     
-    # Initialize result storage
+    # Initialize result storage with descriptive keys
+    metric_results = {}
+    for config in metrics:
+        name = config["func"].__name__.replace("calculate_", "")
+        if "recall" in name and "k" in config["params"]:
+            key = f"recall_at_{config['params']['k']}"
+        else:
+            key = name
+        metric_results[key] = []
+        
     query_times = []
-    
-    # Store results for each metric
-    # TODO: Update to `ir_metric_results`....
-    metric_results = {metric.__name__: [] for metric in metrics}
     
     for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths))):
         if "error" in result:
             print(f"\n\033[91mSkipping analysis for query {i} due to error: {result['error']}\033[0m")
-            for metric in metrics:
-                metric_results[metric.__name__].append(0.0)
+            for key in metric_results:
+                metric_results[key].append(0.0)
             query_times.append(result["time_taken"])
             continue
 
-        retrieved_ids = [result.object_id for result in result["retrieved_ids"]]
+        # Corrected list comprehension
+        retrieved_ids = [res.object_id for res in result["retrieved_ids"]]
         
-        for metric in metrics:
-            if metric.__name__ == "calculate_recall":
-                # Traditional recall - just use target IDs
-                score = metric(
-                    ground_truth["dataset_ids"],
-                    retrieved_ids
+        for metric_config in metrics:
+            metric_func = metric_config["func"]
+            params = metric_config["params"]
+            func_name = metric_func.__name__
+            
+            # Determine the key for storing the result
+            key = func_name.replace("calculate_", "")
+            if "recall" in key and "k" in params:
+                key = f"recall_at_{params['k']}"
+
+            # Call metric function with the correct arguments
+            score = 0.0
+            if "recall" in func_name:
+                score = metric_func(
+                    target_ids=ground_truth["dataset_ids"],
+                    retrieved_ids=retrieved_ids,
+                    **params
                 )
-            elif metric.__name__ in ["calculate_coverage", "calculate_alpha_ndcg"]:
-                # Ensure nuggets have IDs
+            elif func_name in ["calculate_coverage", "calculate_alpha_ndcg"]:
                 if ground_truth.get("nugget_data"):
                     for idx, nugget in enumerate(ground_truth["nugget_data"]):
                         if 'id' not in nugget:
                             nugget['id'] = f"nugget_{idx}"
                 
-                if metric.__name__ == "calculate_coverage":
-                    score = metric(retrieved_ids, ground_truth["nugget_data"], k=1000)
-                else:  # calculate_alpha_ndcg
-                    score = metric(retrieved_ids, ground_truth["nugget_data"], alpha=0.5, k=10)
+                score = metric_func(
+                    retrieved_ids=retrieved_ids, 
+                    nuggets=ground_truth["nugget_data"], 
+                    **params
+                )
             
-            metric_results[metric.__name__].append(score)
+            metric_results[key].append(score)
         
-        # Store other metrics
         query_times.append(result["time_taken"])
         
-        # Print rolling update every 10 queries
         if (i + 1) % 10 == 0:
             print(f"\n\033[93m--- Analysis Progress ({i + 1}/{len(results)}) ---\033[0m")
             for metric_name, scores in metric_results.items():
                 if scores:
-                    # Clean up metric name for display
-                    display_name = metric_name.replace("calculate_", "").replace("_", " ").title()
+                    display_name = metric_name.replace("_", " ").title()
                     print(f"Current average {display_name}: {np.mean(scores):.2f}")
             
             print(f"Current average query time: {np.mean(query_times):.2f} seconds")
@@ -236,21 +262,18 @@ async def analyze_results(
         "query_times": query_times,
     }
     
-    # Add metric-specific results
     for metric_name, scores in metric_results.items():
-        clean_name = metric_name.replace("calculate_", "")
-        results_dict[f"avg_{clean_name}"] = np.mean(scores) if scores else 0
-        results_dict[f"{clean_name}_scores"] = scores
+        results_dict[f"avg_{metric_name}"] = np.mean(scores) if scores else 0
+        results_dict[f"{metric_name}_scores"] = scores
     
     # Print summary
     print("\n\033[92m===== Benchmark Results =====\033[0m")
     print(f"Dataset: {dataset_name}")
     print(f"Number of queries: {len(results)}")
     
-    # Print metric results
     for metric_name, scores in metric_results.items():
         if scores:
-            display_name = metric_name.replace("calculate_", "").replace("_", " ").title()
+            display_name = metric_name.replace("_", " ").title()
             print(f"Average {display_name}: {np.mean(scores):.2f}")
     
     print(f"Average Query Time: {results_dict['avg_query_time']:.2f} seconds")
