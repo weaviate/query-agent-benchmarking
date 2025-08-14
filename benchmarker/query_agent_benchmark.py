@@ -3,8 +3,9 @@ import asyncio
 from typing import Any
 from tqdm import tqdm
 import numpy as np
-from benchmarker.src.metrics.ir_metrics import calculate_recall, calculate_coverage, calculate_alpha_ndcg
-from benchmarker.src.utils import qa_source_parser
+from benchmarker.metrics.ir_metrics import calculate_recall, calculate_coverage, calculate_alpha_ndcg
+from benchmarker.utils import qa_source_parser
+from benchmarker.models import ObjectID
 
 def run_queries(
     queries: list[dict],
@@ -16,21 +17,13 @@ def run_queries(
     start = time.time()
     for i, query in enumerate(tqdm(queries[:num_samples], desc="Running queries")):
         query_start_time = time.time()
-        response = query_agent.run(query["question"])
+        response = query_agent.run(query["question"]) # -> list[ObjectID]
         query_time_taken = time.time() - query_start_time
-
-        # Calculate total searches and aggregations across all lists
-        total_searches = len(response.searches) if response.searches else 0
-        total_aggregations = len(response.aggregations) if response.aggregations else 0
 
         results.append({
             "query": query,
             "query_id": query["dataset_ids"],
-            "answer": response.final_answer,
-            "sources": response.sources,
-            "num_searches": total_searches,
-            "num_aggregations": total_aggregations,
-            "misc_response": response,
+            "sources": response,
             "time_taken": query_time_taken
         })
         
@@ -38,7 +31,6 @@ def run_queries(
         if (i + 1) % 10 == 0:
             print(f"\n\033[93m--- Progress Update ({i + 1}/{num_samples}) ---\033[0m")
             print(f"Latest query: {query['question']}")
-            print(f"Latest response: {response.final_answer[:200]}...")
             print(f"Time taken: {query_time_taken:.2f} seconds")
             
     print(f"\033[95mExperiment completed {len(results)} queries in {time.time() - start:.2f} seconds.\033[0m")
@@ -51,6 +43,8 @@ async def run_queries_async(
     batch_size: int = 10,
     max_concurrent: int = 3  # Reduced default to avoid rate limiting
 ):
+    pass
+    '''
     """
     Asynchronous version of run_queries with concurrent execution.
     
@@ -167,6 +161,7 @@ async def run_queries_async(
     print(f"\033[95mAverage time per query: {total_time/len(results):.2f} seconds\033[0m")
     
     return results
+    '''
 
 async def analyze_results(
     weaviate_client: Any,

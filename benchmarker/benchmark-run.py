@@ -68,20 +68,11 @@ async def main():
             num_samples=num_samples
         )
 
-    # Re-open sync client for analysis
+    # Open sync client for analysis
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
         auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
     )
-
-    # Save all results to JSON file
-    # save_all_results(
-    #     results=results, 
-    #     config=config,
-    #     agent_name=config["experiment_name"],
-    #     agents_host=args.agents_host,
-    #     num_samples=num_samples
-    # )
 
     metrics = await analyze_results(
         weaviate_client, 

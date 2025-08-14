@@ -51,7 +51,6 @@ class AgentBuilder:
                 cluster_url=self.cluster_url,
                 auth_credentials=weaviate.auth.AuthApiKey(self.api_key),
             )
-            
             if agent_name == "query-agent-search-only":
                 self.agent = QueryAgent(
                     client=self.weaviate_client,
