@@ -106,27 +106,27 @@ class AgentBuilder:
             except Exception as e:
                 print(f"Warning: Error closing async connection: {str(e)}")
 
-    def run(self, query: str):
+    def run(self, query: str) -> list[]:
         if self.use_async:
             raise RuntimeError("Use run_async() for async agents")
         
         if self.agent_name == "query-agent-search-only":
-            return self.agent.run(query)
+            searcher = self.agent.prepare_search(query)
+            # TODO: Interface `retrieved_k` instead of hardcoding `20`
+            results = searcher.execute(limit=20, offset=0)
         
         if self.agent_name == "hybrid-search":
-            return self.
-        return self.agent.forward(query)
-    
+            results = self.collection.query.hybrid(
+                query=query,
+                limit=20
+            )
+        
     async def run_async(self, query: str):            
         try:
             if self.agent_name == "query-agent":
                 response = await self.agent.run(query)
                 return response
-            else:
-                dspy_response = await self.agent.aforward(query)
-                if isinstance(dspy_response, DSPyAgentRAGResponse):
-                    return dspy_response.to_agent_rag_response()
-                return dspy_response
+            
         except Exception as e:
             print(f"Query '{query[:50]}...' failed with error: {str(e)}")
             raise
