@@ -4,7 +4,6 @@ from typing import Any
 from tqdm import tqdm
 import numpy as np
 from benchmarker.metrics.ir_metrics import calculate_recall, calculate_coverage, calculate_alpha_ndcg
-from benchmarker.utils import qa_source_parser
 from benchmarker.models import ObjectID
 
 def run_queries(
@@ -166,48 +165,37 @@ async def run_queries_async(
 async def analyze_results(
     weaviate_client: Any,
     dataset_name: str,
-    results: list,
+    retrieved_ids: list[ObjectID], # Will neded to extend this for testing multi-collection search
     ground_truths: list[dict],
 ):
     """Analyze results with dataset-specific metrics."""
     
     # Get collection and determine which metrics to use
     if dataset_name == "enron":
-        collection = weaviate_client.collections.get("EnronEmails")
         metrics = [calculate_recall]
     elif dataset_name == "wixqa":
-        collection = weaviate_client.collections.get("WixKB")
         metrics = [calculate_recall]
     elif dataset_name.startswith("freshstack-"):
-        collection = weaviate_client.collections.get(f"Freshstack{dataset_name.split('-')[1].capitalize()}")
         metrics = [calculate_recall, calculate_coverage, calculate_alpha_ndcg]
     else:
         raise Exception("Enter a valid dataset_name!")
     
     # Initialize result storage
     query_times = []
-    num_searches_list = []
-    num_aggregations_list = []
     
     # Store results for each metric
     # TODO: Update to `ir_metric_results`....
     metric_results = {metric.__name__: [] for metric in metrics}
     
-    for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths), desc="Analyzing results", total=len(results))):
+    for i, (result, ground_truth) in enumerate(tqdm(zip(retrieved_ids, ground_truths), desc="Analyzing results", total=len(results))):
         # Skip if there was an error
+        # TODO: Pretty sure this isn't setup
         if "error" in result:
             print(f"\n\033[91mSkipping analysis for query {i} due to error: {result['error']}\033[0m")
             for metric in metrics:
                 metric_results[metric.__name__].append(0.0)
             query_times.append(result["time_taken"])
-            num_searches_list.append(0)
-            num_aggregations_list.append(0)
             continue
-
-        retrieved_ids = qa_source_parser(
-            result["sources"],
-            collection
-        )
         
         for metric in metrics:
             if metric.__name__ == "calculate_recall":
@@ -232,12 +220,10 @@ async def analyze_results(
         
         # Store other metrics
         query_times.append(result["time_taken"])
-        num_searches_list.append(result["num_searches"])
-        num_aggregations_list.append(result["num_aggregations"])
         
         # Print rolling update every 10 queries
         if (i + 1) % 10 == 0:
-            print(f"\n\033[93m--- Analysis Progress ({i + 1}/{len(results)}) ---\033[0m")
+            print(f"\n\033[93m--- Analysis Progress ({i + 1}/{len(retrieved_ids)}) ---\033[0m")
             for metric_name, scores in metric_results.items():
                 if scores:
                     # Clean up metric name for display
@@ -245,17 +231,11 @@ async def analyze_results(
                     print(f"Current average {display_name}: {np.mean(scores):.2f}")
             
             print(f"Current average query time: {np.mean(query_times):.2f} seconds")
-            print(f"Current average searches: {np.mean(num_searches_list):.2f}")
-            print(f"Current average aggregations: {np.mean(num_aggregations_list):.2f}")
     
     # Build results dictionary
     results_dict = {
         "avg_query_time": np.mean(query_times) if query_times else 0,
-        "avg_num_searches": np.mean(num_searches_list) if num_searches_list else 0,
-        "avg_num_aggregations": np.mean(num_aggregations_list) if num_aggregations_list else 0,
         "query_times": query_times,
-        "num_searches_list": num_searches_list,
-        "num_aggregations_list": num_aggregations_list,
     }
     
     # Add metric-specific results
@@ -267,7 +247,7 @@ async def analyze_results(
     # Print summary
     print("\n\033[92m===== Benchmark Results =====\033[0m")
     print(f"Dataset: {dataset_name}")
-    print(f"Number of queries: {len(results)}")
+    print(f"Number of queries: {len(retrieved_ids)}")
     
     # Print metric results
     for metric_name, scores in metric_results.items():
@@ -276,7 +256,5 @@ async def analyze_results(
             print(f"Average {display_name}: {np.mean(scores):.2f}")
     
     print(f"Average Query Time: {results_dict['avg_query_time']:.2f} seconds")
-    print(f"Average Number of Searches: {results_dict['avg_num_searches']:.2f}")
-    print(f"Average Number of Aggregations: {results_dict['avg_num_aggregations']:.2f}")
     
     return results_dict

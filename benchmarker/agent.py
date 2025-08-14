@@ -5,6 +5,7 @@ import dspy
 import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
+from benchmarker.models import ObjectID
 
 class AgentBuilder:
     """
@@ -105,22 +106,32 @@ class AgentBuilder:
             except Exception as e:
                 print(f"Warning: Error closing async connection: {str(e)}")
 
-    def run(self, query: str) -> list[]:
+    def run(self, query: str) -> list[ObjectID]:
         if self.use_async:
             raise RuntimeError("Use run_async() for async agents")
         
         if self.agent_name == "query-agent-search-only":
             searcher = self.agent.prepare_search(query)
             # TODO: Interface `retrieved_k` instead of hardcoding `20`
-            results = searcher.execute(limit=20, offset=0)
+            response = searcher.execute(limit=20, offset=0)
+            results = []
+            for obj in response.search_results.objects:
+                results.append(ObjectID(object_id=obj.properties["dataset_id"]))
+            return results
         
         if self.agent_name == "hybrid-search":
-            results = self.collection.query.hybrid(
+            response = self.collection.query.hybrid(
                 query=query,
                 limit=20
             )
+            results = []
+            for obj in response.objects:
+                results.append(ObjectID(object_id=obj.properties["dataset_id"]))
+            return results
         
-    async def run_async(self, query: str):            
+    async def run_async(self, query: str):
+        pass
+        '''            
         try:
             if self.agent_name == "query-agent":
                 response = await self.agent.run(query)
@@ -129,3 +140,4 @@ class AgentBuilder:
         except Exception as e:
             print(f"Query '{query[:50]}...' failed with error: {str(e)}")
             raise
+        '''
