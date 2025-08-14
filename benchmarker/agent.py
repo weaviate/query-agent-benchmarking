@@ -119,6 +119,8 @@ class AgentBuilder:
             results = []
             for obj in response.search_results.objects:
                 results.append(ObjectID(object_id=obj.properties["dataset_id"]))
+            print("HERE!")
+            print(len(results))
             return results
         
         if self.agent_name == "hybrid-search":
