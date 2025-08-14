@@ -58,9 +58,6 @@ class AgentBuilder:
                     collections=[self.collection],
                     agents_host=self.agents_host,
                 )
-            if agent_name == "hybrid-search":
-                self.collection = self.weaviate_client.collections.get(self.collection)
-                
             else:
                 raise ValueError(f"Unknown agent_name: {agent_name}. Must be 'query-agent-search-only' or 'hybrid-search'")
 
