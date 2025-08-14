@@ -1,4 +1,5 @@
 import os
+import asyncio
 from typing import Optional
 
 import dspy
@@ -143,3 +144,16 @@ class AgentBuilder:
             print(f"Query '{query[:50]}...' failed with error: {str(e)}")
             raise
         '''
+
+async def main():
+    agent = AgentBuilder(
+        dataset_name="freshstack-langchain",
+        agent_name="hybrid-search",
+        agents_host="https://dev-agents.labs.weaviate.io",
+        use_async=False,
+    )
+    response = agent.run("What is this collection about?")
+    print(response)
+
+if __name__ == "__main__":
+    asyncio.run(main())

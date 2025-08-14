@@ -73,7 +73,7 @@ async def main():
     metrics = await analyze_results(
         weaviate_client, 
         config["dataset"], 
-        results, 
+        results["retrieved_ids"], 
         queries,
     )
 

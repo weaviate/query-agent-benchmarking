@@ -10,7 +10,7 @@ def run_queries(
     queries: list[dict],
     query_agent: Any,
     num_samples: int
-):
+) -> list[dict]:
     """Synchronous version of run_queries"""
     results = []
     start = time.time()
@@ -22,7 +22,7 @@ def run_queries(
         results.append({
             "query": query,
             "query_id": query["dataset_ids"],
-            "sources": response,
+            "retrieved_ids": response,
             "time_taken": query_time_taken
         })
         
@@ -165,7 +165,7 @@ async def run_queries_async(
 async def analyze_results(
     weaviate_client: Any,
     dataset_name: str,
-    retrieved_ids: list[ObjectID], # Will neded to extend this for testing multi-collection search
+    retrieved_ids: list[list[ObjectID]], # Will neded to extend this for testing multi-collection search
     ground_truths: list[dict],
 ):
     """Analyze results with dataset-specific metrics."""
@@ -187,7 +187,7 @@ async def analyze_results(
     # TODO: Update to `ir_metric_results`....
     metric_results = {metric.__name__: [] for metric in metrics}
     
-    for i, (result, ground_truth) in enumerate(tqdm(zip(retrieved_ids, ground_truths), desc="Analyzing results", total=len(results))):
+    for i, (result, ground_truth) in enumerate(tqdm(zip(retrieved_ids, ground_truths))):
         # Skip if there was an error
         # TODO: Pretty sure this isn't setup
         if "error" in result:
