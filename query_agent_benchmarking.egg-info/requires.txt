@@ -1,0 +1,6 @@
+dspy>=2.6.27
+sentence-transformers>=5.0.0
+weaviate-client>=4.15.4
+weaviate-agents
+pandas>=2.3.1
+datasets>=4.0.0

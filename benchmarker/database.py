@@ -77,7 +77,9 @@ def database_loader(
         
         weaviate_client.collections.create(
             name=collection_name,
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(
+                base_url="https://dev-embedding.labs.weaviate.io"
+            ),
             properties=[
                 wvcc.Property(name="docs_text", data_type=wvcc.DataType.TEXT),
                 wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT),

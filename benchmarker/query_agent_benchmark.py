@@ -1,36 +1,26 @@
 import time
-import asyncio
 from typing import Any
 from tqdm import tqdm
 import numpy as np
-from benchmarker.src.metrics.ir_metrics import calculate_recall, calculate_coverage, calculate_alpha_ndcg
-from benchmarker.src.utils import qa_source_parser
+from benchmarker.metrics.ir_metrics import calculate_recall, calculate_coverage, calculate_alpha_ndcg
 
 def run_queries(
     queries: list[dict],
     query_agent: Any,
     num_samples: int
-):
+) -> list[dict]:
     """Synchronous version of run_queries"""
     results = []
     start = time.time()
     for i, query in enumerate(tqdm(queries[:num_samples], desc="Running queries")):
         query_start_time = time.time()
-        response = query_agent.run(query["question"])
+        response = query_agent.run(query["question"]) # -> list[ObjectID]
         query_time_taken = time.time() - query_start_time
-
-        # Calculate total searches and aggregations across all lists
-        total_searches = len(response.searches) if response.searches else 0
-        total_aggregations = len(response.aggregations) if response.aggregations else 0
 
         results.append({
             "query": query,
             "query_id": query["dataset_ids"],
-            "answer": response.final_answer,
-            "sources": response.sources,
-            "num_searches": total_searches,
-            "num_aggregations": total_aggregations,
-            "misc_response": response,
+            "retrieved_ids": response,
             "time_taken": query_time_taken
         })
         
@@ -38,7 +28,6 @@ def run_queries(
         if (i + 1) % 10 == 0:
             print(f"\n\033[93m--- Progress Update ({i + 1}/{num_samples}) ---\033[0m")
             print(f"Latest query: {query['question']}")
-            print(f"Latest response: {response.final_answer[:200]}...")
             print(f"Time taken: {query_time_taken:.2f} seconds")
             
     print(f"\033[95mExperiment completed {len(results)} queries in {time.time() - start:.2f} seconds.\033[0m")
@@ -51,6 +40,8 @@ async def run_queries_async(
     batch_size: int = 10,
     max_concurrent: int = 3  # Reduced default to avoid rate limiting
 ):
+    pass
+    '''
     """
     Asynchronous version of run_queries with concurrent execution.
     
@@ -167,52 +158,42 @@ async def run_queries_async(
     print(f"\033[95mAverage time per query: {total_time/len(results):.2f} seconds\033[0m")
     
     return results
+    '''
 
 async def analyze_results(
     weaviate_client: Any,
     dataset_name: str,
-    results: list,
+    results: list[dict],
     ground_truths: list[dict],
 ):
     """Analyze results with dataset-specific metrics."""
     
     # Get collection and determine which metrics to use
     if dataset_name == "enron":
-        collection = weaviate_client.collections.get("EnronEmails")
         metrics = [calculate_recall]
     elif dataset_name == "wixqa":
-        collection = weaviate_client.collections.get("WixKB")
         metrics = [calculate_recall]
     elif dataset_name.startswith("freshstack-"):
-        collection = weaviate_client.collections.get(f"Freshstack{dataset_name.split('-')[1].capitalize()}")
         metrics = [calculate_recall, calculate_coverage, calculate_alpha_ndcg]
     else:
         raise Exception("Enter a valid dataset_name!")
     
     # Initialize result storage
     query_times = []
-    num_searches_list = []
-    num_aggregations_list = []
     
     # Store results for each metric
     # TODO: Update to `ir_metric_results`....
     metric_results = {metric.__name__: [] for metric in metrics}
     
-    for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths), desc="Analyzing results", total=len(results))):
-        # Skip if there was an error
+    for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths))):
         if "error" in result:
             print(f"\n\033[91mSkipping analysis for query {i} due to error: {result['error']}\033[0m")
             for metric in metrics:
                 metric_results[metric.__name__].append(0.0)
             query_times.append(result["time_taken"])
-            num_searches_list.append(0)
-            num_aggregations_list.append(0)
             continue
 
-        retrieved_ids = qa_source_parser(
-            result["sources"],
-            collection
-        )
+        retrieved_ids = [result.object_id for result in result["retrieved_ids"]]
         
         for metric in metrics:
             if metric.__name__ == "calculate_recall":
@@ -237,8 +218,6 @@ async def analyze_results(
         
         # Store other metrics
         query_times.append(result["time_taken"])
-        num_searches_list.append(result["num_searches"])
-        num_aggregations_list.append(result["num_aggregations"])
         
         # Print rolling update every 10 queries
         if (i + 1) % 10 == 0:
@@ -250,17 +229,11 @@ async def analyze_results(
                     print(f"Current average {display_name}: {np.mean(scores):.2f}")
             
             print(f"Current average query time: {np.mean(query_times):.2f} seconds")
-            print(f"Current average searches: {np.mean(num_searches_list):.2f}")
-            print(f"Current average aggregations: {np.mean(num_aggregations_list):.2f}")
     
     # Build results dictionary
     results_dict = {
         "avg_query_time": np.mean(query_times) if query_times else 0,
-        "avg_num_searches": np.mean(num_searches_list) if num_searches_list else 0,
-        "avg_num_aggregations": np.mean(num_aggregations_list) if num_aggregations_list else 0,
         "query_times": query_times,
-        "num_searches_list": num_searches_list,
-        "num_aggregations_list": num_aggregations_list,
     }
     
     # Add metric-specific results
@@ -281,7 +254,5 @@ async def analyze_results(
             print(f"Average {display_name}: {np.mean(scores):.2f}")
     
     print(f"Average Query Time: {results_dict['avg_query_time']:.2f} seconds")
-    print(f"Average Number of Searches: {results_dict['avg_num_searches']:.2f}")
-    print(f"Average Number of Aggregations: {results_dict['avg_num_aggregations']:.2f}")
     
     return results_dict

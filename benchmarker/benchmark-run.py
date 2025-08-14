@@ -2,17 +2,16 @@ import os
 import yaml
 import weaviate
 import asyncio
-import argparse
 from pathlib import Path
-from benchmarker.src.agent import AgentBuilder
-from benchmarker.src.dataset import in_memory_dataset_loader
+from benchmarker.agent import AgentBuilder
+from benchmarker.dataset import in_memory_dataset_loader
 
-from benchmarker.src.query_agent_benchmark import (
+from benchmarker.query_agent_benchmark import (
     run_queries,
     run_queries_async,
     analyze_results
 )
-from benchmarker.src.utils import pretty_print_dict
+from benchmarker.utils import pretty_print_dict
 
 def load_config(config_path: str):
     with open(config_path) as f:
@@ -20,15 +19,11 @@ def load_config(config_path: str):
     return config
 
 async def main():
-    parser = argparse.ArgumentParser(description='Run benchmark tests')
-    parser.add_argument('--agents-host', type=str, default="https://api.agents.weaviate.io",
-                        help='Host URL for agents API')
-    args = parser.parse_args()
-    
-    use_async = True
-
     config_path = Path(os.path.dirname(__file__), "config.yml")
     config = load_config(config_path)
+    
+    agents_host = config.get("agents_host", "https://api.agents.weaviate.io")
+    use_async = config.get("use_async", True)
 
     _, queries = in_memory_dataset_loader(config["dataset"])
     print("\033[92mFirst Query\033[0m")
@@ -37,7 +32,7 @@ async def main():
     query_agent = AgentBuilder(
         dataset_name=config["dataset"],
         agent_name=config["agent_name"],
-        agents_host=args.agents_host,
+        agents_host=agents_host,
         use_async=use_async,
     )
 
@@ -68,25 +63,16 @@ async def main():
             num_samples=num_samples
         )
 
-    # Re-open sync client for analysis
+    # Open sync client for analysis
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
         auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
     )
 
-    # Save all results to JSON file
-    # save_all_results(
-    #     results=results, 
-    #     config=config,
-    #     agent_name=config["experiment_name"],
-    #     agents_host=args.agents_host,
-    #     num_samples=num_samples
-    # )
-
     metrics = await analyze_results(
         weaviate_client, 
         config["dataset"], 
-        results, 
+        results,
         queries,
     )
 
