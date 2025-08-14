@@ -1,10 +1,8 @@
 import time
-import asyncio
 from typing import Any
 from tqdm import tqdm
 import numpy as np
 from benchmarker.metrics.ir_metrics import calculate_recall, calculate_coverage, calculate_alpha_ndcg
-from benchmarker.models import ObjectID
 
 def run_queries(
     queries: list[dict],

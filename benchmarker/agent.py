@@ -2,7 +2,6 @@ import os
 import asyncio
 from typing import Optional
 
-import dspy
 import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth

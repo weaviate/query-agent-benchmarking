@@ -2,7 +2,6 @@ import os
 import yaml
 import weaviate
 import asyncio
-import argparse
 from pathlib import Path
 from benchmarker.agent import AgentBuilder
 from benchmarker.dataset import in_memory_dataset_loader

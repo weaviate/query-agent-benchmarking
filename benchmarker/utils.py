@@ -1,4 +1,3 @@
-from weaviate.collections.classes.filters import Filter
 
 def get_object_by_dataset_id(dataset_id, objects_list):
     """Retrieve an object by its dataset_id from the objects list."""

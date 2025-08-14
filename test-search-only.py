@@ -1,5 +1,4 @@
 import weaviate
-from weaviate.auth import Auth
 from weaviate.agents.query import QueryAgent
 import os
 
