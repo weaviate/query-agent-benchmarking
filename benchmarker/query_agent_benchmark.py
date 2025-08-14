@@ -165,7 +165,7 @@ async def run_queries_async(
 async def analyze_results(
     weaviate_client: Any,
     dataset_name: str,
-    retrieved_ids: list[list[ObjectID]], # Will neded to extend this for testing multi-collection search
+    results: list[dict],
     ground_truths: list[dict],
 ):
     """Analyze results with dataset-specific metrics."""
@@ -187,7 +187,7 @@ async def analyze_results(
     # TODO: Update to `ir_metric_results`....
     metric_results = {metric.__name__: [] for metric in metrics}
     
-    for i, (result, ground_truth) in enumerate(tqdm(zip(retrieved_ids, ground_truths))):
+    for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths))):
         # Skip if there was an error
         # TODO: Pretty sure this isn't setup
         if "error" in result:
@@ -202,7 +202,7 @@ async def analyze_results(
                 # Traditional recall - just use target IDs
                 score = metric(
                     ground_truth["dataset_ids"],
-                    retrieved_ids
+                    result["retrieved_ids"]
                 )
             elif metric.__name__ in ["calculate_coverage", "calculate_alpha_ndcg"]:
                 # Ensure nuggets have IDs
@@ -212,9 +212,9 @@ async def analyze_results(
                             nugget['id'] = f"nugget_{idx}"
                 
                 if metric.__name__ == "calculate_coverage":
-                    score = metric(retrieved_ids, ground_truth["nugget_data"], k=1000)
+                    score = metric(result["retrieved_ids"], ground_truth["nugget_data"], k=1000)
                 else:  # calculate_alpha_ndcg
-                    score = metric(retrieved_ids, ground_truth["nugget_data"], alpha=0.5, k=10)
+                    score = metric(result["retrieved_ids"], ground_truth["nugget_data"], alpha=0.5, k=10)
             
             metric_results[metric.__name__].append(score)
         
@@ -223,7 +223,7 @@ async def analyze_results(
         
         # Print rolling update every 10 queries
         if (i + 1) % 10 == 0:
-            print(f"\n\033[93m--- Analysis Progress ({i + 1}/{len(retrieved_ids)}) ---\033[0m")
+            print(f"\n\033[93m--- Analysis Progress ({i + 1}/{len(results)}) ---\033[0m")
             for metric_name, scores in metric_results.items():
                 if scores:
                     # Clean up metric name for display
@@ -247,7 +247,7 @@ async def analyze_results(
     # Print summary
     print("\n\033[92m===== Benchmark Results =====\033[0m")
     print(f"Dataset: {dataset_name}")
-    print(f"Number of queries: {len(retrieved_ids)}")
+    print(f"Number of queries: {len(results)}")
     
     # Print metric results
     for metric_name, scores in metric_results.items():
