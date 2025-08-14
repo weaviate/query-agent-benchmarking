@@ -59,7 +59,7 @@ class AgentBuilder:
                     agents_host=self.agents_host,
                 )
             elif agent_name == "hybrid-search":
-                print("No internal configuration needed for hybrid-search.")
+                self.weaviate_collection = self.weaviate_client.collections.get(self.collection)
             else:
                 raise ValueError(f"Unknown agent_name: {agent_name}. Must be 'query-agent-search-only' or 'hybrid-search'")
 
@@ -122,7 +122,7 @@ class AgentBuilder:
             return results
         
         if self.agent_name == "hybrid-search":
-            response = self.collection.query.hybrid(
+            response = self.weaviate_collection.query.hybrid(
                 query=query,
                 limit=20
             )
