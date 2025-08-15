@@ -28,4 +28,3 @@ pretty_print_dict(documents[0])
 database_loader(weaviate_client, config["dataset"], documents)
 
 weaviate_client.close()
-

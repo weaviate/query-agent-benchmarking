@@ -126,7 +126,7 @@ class AgentBuilder:
         if self.agent_name == "hybrid-search":
             response = self.weaviate_collection.query.hybrid(
                 query=query,
-                limit=20
+                limit=20 # update this
             )
             results = []
             for obj in response.objects:

@@ -1,9 +1,9 @@
-agent_name: query-agent-search-only
+agent_name: hybrid-search
 agents_host: https://dev-agents.labs.weaviate.io
 dataset: enron
 use_async: False
 reload_database: False
-num_samples: 20
+num_samples: 50
 batch_size: 5
 max_concurrent: 5
 experiment_name: hybrid-search

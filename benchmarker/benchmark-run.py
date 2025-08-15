@@ -2,6 +2,7 @@ import os
 import yaml
 import weaviate
 import asyncio
+import random
 from pathlib import Path
 from benchmarker.agent import AgentBuilder
 from benchmarker.dataset import in_memory_dataset_loader
@@ -28,6 +29,11 @@ async def main():
     _, queries = in_memory_dataset_loader(config["dataset"])
     print("\033[92mFirst Query\033[0m")
     pretty_print_dict(queries[0])
+
+    # <-- 2. Shuffle the list of queries in place -->
+    num_samples = config["num_samples"]
+    print(f"\n\033[93mShuffling queries to select a random subset of {num_samples}...\033[0m")
+    random.shuffle(queries)
 
     query_agent = AgentBuilder(
         dataset_name=config["dataset"],
