@@ -72,16 +72,15 @@ class AgentBuilder:
         print(f"Initializing async connection to {self.cluster_url}")
         
         try:
-            if self.agent_name == "query-agent-search-only":
-                self.weaviate_client = weaviate.use_async_with_weaviate_cloud(
+            self.weaviate_client = weaviate.use_async_with_weaviate_cloud(
                     cluster_url=self.cluster_url,
                     auth_credentials=Auth.api_key(self.api_key),
                 )
                 
-                await self.weaviate_client.connect()
-                print("Async Weaviate client connected successfully")
+            await self.weaviate_client.connect()
+            print("Async Weaviate client connected successfully")
             
-            
+            if self.agent_name == "query-agent-search-only":
                 self.agent = AsyncQueryAgent(
                     client=self.weaviate_client,
                     collections=[self.collection],
@@ -89,10 +88,8 @@ class AgentBuilder:
                 )
                 print(f"AsyncQueryAgent initialized for collection: {self.collection}")
                 print(f"Using agents host: {self.agents_host}")
-                
-                print("Testing AsyncQueryAgent with a simple query...")
-                test_response = await self.agent.run("What is this collection about?")
-                print(f"Test query successful: {test_response.final_answer[:100]}...")
+            elif self.agent_name == "hybrid-search":
+                self.weaviate_collection = self.weaviate_client.collections.get(self.collection)
             else:
                 raise ValueError(f"Unknown agent_name: {self.agent_name}. Must be 'query-agent-search-only' or 'hybrid-search'")
                 
@@ -111,9 +108,6 @@ class AgentBuilder:
                 print(f"Warning: Error closing async connection: {str(e)}")
 
     def run(self, query: str) -> list[ObjectID]:
-        if self.use_async:
-            raise RuntimeError("Use run_async() for async agents")
-        
         if self.agent_name == "query-agent-search-only":
             searcher = self.agent.prepare_search(query)
             # TODO: Interface `retrieved_k` instead of hardcoding `20`
@@ -121,8 +115,6 @@ class AgentBuilder:
             results = []
             for obj in response.search_results.objects:
                 results.append(ObjectID(object_id=obj.properties["dataset_id"]))
-            print("HERE!")
-            print(len(results))
             return results
         
         if self.agent_name == "hybrid-search":
@@ -136,17 +128,26 @@ class AgentBuilder:
             return results
         
     async def run_async(self, query: str):
-        pass
-        '''            
         try:
-            if self.agent_name == "query-agent":
-                response = await self.agent.run(query)
-                return response
-            
+            if self.agent_name == "query-agent-search-only":
+                searcher = await self.agent.prepare_search(query)
+                response = await searcher.execute(limit=20, offset=0)
+                results = []
+                for obj in response.search_results.objects:
+                    results.append(ObjectID(object_id=obj.properties["dataset_id"]))
+                return results
+            elif self.agent_name == "hybrid-search":
+                response = await self.weaviate_collection.query.hybrid(
+                    query=query,
+                    limit=20
+                )
+                results = []
+                for obj in response.objects:
+                    results.append(ObjectID(object_id=obj.properties["dataset_id"]))
+                return results
         except Exception as e:
             print(f"Query '{query[:50]}...' failed with error: {str(e)}")
             raise
-        '''
 
 async def main():
     agent = AgentBuilder(

@@ -1,3 +1,4 @@
+import asyncio
 import time
 from typing import Any
 from tqdm import tqdm
@@ -7,12 +8,13 @@ from benchmarker.metrics.ir_metrics import (
     calculate_coverage, 
     calculate_alpha_ndcg
 )
+from benchmarker.models import QueryResult
 
 def run_queries(
     queries: list[dict],
     query_agent: Any,
     num_samples: int
-) -> list[dict]:
+) -> list[QueryResult]:
     """Synchronous version of run_queries"""
     results = []
     start = time.time()
@@ -21,12 +23,12 @@ def run_queries(
         response = query_agent.run(query["question"]) # -> list[ObjectID]
         query_time_taken = time.time() - query_start_time
 
-        results.append({
-            "query": query,
-            "query_id": query["dataset_ids"],
-            "retrieved_ids": response,
-            "time_taken": query_time_taken
-        })
+        results.append(QueryResult(
+            query=query,
+            query_id=query["dataset_ids"],
+            retrieved_ids=response,
+            time_taken=query_time_taken
+        ))
         
         # Print rolling update every 10 queries
         if (i + 1) % 10 == 0:
@@ -43,9 +45,7 @@ async def run_queries_async(
     num_samples: int,
     batch_size: int = 10,
     max_concurrent: int = 3  # Reduced default to avoid rate limiting
-):
-    pass
-    '''
+) -> list[QueryResult]:
     """
     Asynchronous version of run_queries with concurrent execution.
     
@@ -75,38 +75,26 @@ async def run_queries_async(
                 
                 response = await query_agent.run_async(query["question"])
                 query_time_taken = time.time() - query_start_time
-                
-                total_searches = len(response.searches) if response.searches else 0
-                total_aggregations = len(response.aggregations) if response.aggregations else 0
-                
-                return {
-                    "query": query,
-                    "query_id": query["dataset_ids"],
-                    "answer": response.final_answer,
-                    "sources": response.sources,
-                    "num_searches": total_searches,
-                    "num_aggregations": total_aggregations,
-                    "misc_response": response,
-                    "time_taken": query_time_taken,
-                    "index": index  # Keep track of original order
-                }
+
+                results = QueryResult(
+                    query=query,
+                    query_id=query["dataset_ids"],
+                    retrieved_ids=response,
+                    time_taken=query_time_taken
+                )
+
+                return results
             except Exception as e:
                 error_msg = str(e)
                 query_time_taken = time.time() - query_start_time
                 
                 print(f"\n\033[91mError processing query {index}: {error_msg}\033[0m")
-                return {
-                    "query": query,
-                    "query_id": query["dataset_ids"],
-                    "answer": "",
-                    "sources": [],
-                    "num_searches": 0,
-                    "num_aggregations": 0,
-                    "misc_response": None,
-                    "time_taken": query_time_taken,
-                    "index": index,
-                    "error": error_msg
-                }
+                return QueryResult(
+                    query=query,
+                    query_id=query["dataset_ids"],
+                    retrieved_ids=[],
+                    time_taken=query_time_taken
+                )
     
     queries_to_process = queries[:num_samples]
     total_batches = (len(queries_to_process) + batch_size - 1) // batch_size
@@ -141,16 +129,11 @@ async def run_queries_async(
         successful_results = [r for r in batch_results if "error" not in r]
         if successful_results:
             sample = successful_results[0]
-            print(f"Sample query: {sample['query']['question'][:100]}...")
-            print(f"Sample response: {sample['answer'][:200]}...")
+            print(f"Sample query: {sample.query['question'][:100]}...")
+            print(f"Sample response: {sample.retrieved_ids[:200]}...")
         
         if batch_idx + batch_size < len(queries_to_process):
             await asyncio.sleep(1)
-    
-    results.sort(key=lambda x: x["index"])
-    
-    for result in results:
-        result.pop("index", None)
     
     total_time = time.time() - start
     total_successes = sum(1 for r in results if "error" not in r)
@@ -162,12 +145,11 @@ async def run_queries_async(
     print(f"\033[95mAverage time per query: {total_time/len(results):.2f} seconds\033[0m")
     
     return results
-    '''
 
 async def analyze_results(
     weaviate_client: Any,
     dataset_name: str,
-    results: list[dict],
+    results: list[QueryResult],
     ground_truths: list[dict],
 ):
     """Analyze results with dataset-specific metrics."""
@@ -204,14 +186,14 @@ async def analyze_results(
     
     for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths))):
         if "error" in result:
-            print(f"\n\033[91mSkipping analysis for query {i} due to error: {result['error']}\033[0m")
+            print(f"\n\033[91mSkipping analysis for query {i} due to error: {result.error}\033[0m")
             for key in metric_results:
                 metric_results[key].append(0.0)
-            query_times.append(result["time_taken"])
+            query_times.append(result.time_taken)
             continue
 
         # Corrected list comprehension
-        retrieved_ids = [res.object_id for res in result["retrieved_ids"]]
+        retrieved_ids = [res.object_id for res in result.retrieved_ids]
         
         for metric_config in metrics:
             metric_func = metric_config["func"]
@@ -245,7 +227,7 @@ async def analyze_results(
             
             metric_results[key].append(score)
         
-        query_times.append(result["time_taken"])
+        query_times.append(result.time_taken)
         
         if (i + 1) % 10 == 0:
             print(f"\n\033[93m--- Analysis Progress ({i + 1}/{len(results)}) ---\033[0m")

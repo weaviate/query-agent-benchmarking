@@ -28,57 +28,6 @@ def make_json_serializable(obj):
             return str(obj)
         except Exception:
             return f"<Non-serializable object of type {type(obj).__name__}>"
-
-def save_all_results(
-    results: dict, 
-    config: dict, 
-    agent_name: str = "query_agent_prod", 
-    agents_host: str = None,
-    num_samples: int = None
-):
-    """Save benchmark results to a file.
-    
-    Args:
-        results: Dictionary containing benchmark results
-        config: Dictionary containing benchmark configuration
-        agent_name: Name of the agent used in this run
-        agents_host: Host URL for agents API
-        num_samples: Number of samples tested
-    """
-    import json
-    import os
-    from datetime import datetime
-    
-    # Create results directory if it doesn't exist
-    results_dir = os.path.join(os.getcwd(), "results")
-    os.makedirs(results_dir, exist_ok=True)
-    
-    # Generate filename with timestamp (month_day_year format: e.g., 5_27_25)
-    timestamp = datetime.now().strftime("%-m_%-d_%y")
-    filename = f"{agent_name}_{timestamp}.json"
-    filepath = os.path.join(results_dir, filename)
-    
-    # Convert results to JSON serializable format
-    serializable_results = make_json_serializable(results)
-    
-    # Combine results with relevant config information
-    output = {
-        "results": serializable_results,
-        "config": {
-            "dataset": config.get("dataset"),
-            "agent_name": config.get("agent_name"),
-            "agents_host": agents_host,
-            "num_samples": num_samples,
-            "timestamp": timestamp
-        }
-    }
-    
-    # Save to file
-    with open(filepath, 'w') as f:
-        json.dump(output, f, indent=2)
-    
-    print(f"Results saved to {filepath}")
-    return filepath
     
 def pretty_print_dict(dict_to_print: dict):
     """

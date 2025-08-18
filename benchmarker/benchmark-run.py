@@ -1,11 +1,14 @@
-import os
-import yaml
-import weaviate
 import asyncio
+from datetime import datetime
+import json
+import os
 from pathlib import Path
+import yaml
+
+import weaviate
+
 from benchmarker.agent import AgentBuilder
 from benchmarker.dataset import in_memory_dataset_loader
-
 from benchmarker.query_agent_benchmark import (
     run_queries,
     run_queries_async,
@@ -26,6 +29,7 @@ async def main():
     use_async = config.get("use_async", True)
 
     _, queries = in_memory_dataset_loader(config["dataset"])
+    print(f"There are \033[92m{len(queries)}\033[0m total queries in this dataset.\n")
     print("\033[92mFirst Query\033[0m")
     pretty_print_dict(queries[0])
 
@@ -72,6 +76,10 @@ async def main():
         results,
         queries,
     )
+
+    metrics["timestamp"] = datetime.now().isoformat()
+    with open(f"{config['dataset']}-{config['agent_name']}-{config['num_samples']}-results.json", "w") as f:
+        json.dump(metrics, f, indent=2)
 
     print(metrics)
 
