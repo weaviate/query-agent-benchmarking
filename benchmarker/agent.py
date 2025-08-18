@@ -39,6 +39,10 @@ class AgentBuilder:
             self.collection = f"Freshstack{subset}"
             self.target_property_name = "docs_text"
             self.id_property = "dataset_id"
+        elif dataset_name.startswith("beir/"):
+            self.collection = f"Beir{dataset_name.split('beir/')[1].replace('-', '_').replace('/', '_').capitalize()}"
+            self.target_property_name = "content"
+            self.id_property = "dataset_id"
         else:
             raise ValueError(f"Unknown dataset: {dataset_name}")
 

@@ -39,7 +39,7 @@ def _in_memory_dataset_loader_beir(dataset_name: str):
         query_id = qrel.query_id
         if query_id not in qrels:
             qrels[query_id] = []
-        qrels[query_id].extend(qrel.doc_id) # ignoring relevance ratings for now
+        qrels[query_id].append(qrel.doc_id)
     for question in dataset.queries_iter():
         questions.append({
             "query_id": question.query_id,
@@ -53,6 +53,7 @@ def _in_memory_dataset_loader_enron():
     questions = _load_dataset_from_hf_hub("weaviate/enron-qa-questions-dasovich-j")
     for question in questions:
         dataset_id = question.pop('dataset_id')
+        # Need to convert these to strings
         question['dataset_ids'] = [dataset_id] if not isinstance(dataset_id, list) else dataset_id
     return emails, questions
 

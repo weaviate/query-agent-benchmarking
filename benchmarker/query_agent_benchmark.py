@@ -30,10 +30,12 @@ def run_queries(
             time_taken=query_time_taken
         ))
         
-        # Print rolling update every 10 queries
-        if (i + 1) % 10 == 0:
-            print(f"\n\033[93m--- Progress Update ({i + 1}/{num_samples}) ---\033[0m")
+        # Print rolling update
+        if i % 10 == 0:
+            print(f"\n\033[93m--- Progress Update ({i}/{num_samples}) ---\033[0m")
             print(f"Latest query: {query['question']}")
+            print(f"Ground truth: {query['dataset_ids']}")
+            print(f"Latest response: {results[i].retrieved_ids}")
             print(f"Time taken: {query_time_taken:.2f} seconds")
             
     print(f"\033[95mExperiment completed {len(results)} queries in {time.time() - start:.2f} seconds.\033[0m")
@@ -73,6 +75,8 @@ async def run_queries_async(
                 elif index > 0:
                     await asyncio.sleep(0.1)
                 
+                question_sample = query["question"]
+                print(f"Running query {index}: {question_sample}")
                 response = await query_agent.run_async(query["question"])
                 query_time_taken = time.time() - query_start_time
 
@@ -168,6 +172,12 @@ async def analyze_results(
         metrics = [
             {"func": calculate_coverage, "params": {"k": 1000}},
             {"func": calculate_alpha_ndcg, "params": {"alpha": 0.5, "k": 10}},
+        ]
+    elif dataset_name.startswith("beir/"):
+        metrics = [
+            {"func": calculate_recall_at_k, "params": {"k": 1}},
+            {"func": calculate_recall_at_k, "params": {"k": 5}},
+            {"func": calculate_recall_at_k, "params": {"k": 20}},
         ]
     else:
         raise Exception("Enter a valid dataset_name!")

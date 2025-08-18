@@ -50,9 +50,9 @@ def database_loader(
             name=collection_name,
             vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             properties=[
-                wvcc.Property(name="title", data_type=wvcc.DataType.TEXT, skip_vectorizer=True),
+                wvcc.Property(name="title", data_type=wvcc.DataType.TEXT),
                 wvcc.Property(name="content", data_type=wvcc.DataType.TEXT),
-                wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT, skip_vectorizer=True),
+                wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT, index_searchable=False),
             ],
         )
 

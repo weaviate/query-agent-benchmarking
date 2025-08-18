@@ -83,7 +83,8 @@ async def main():
     )
 
     metrics["timestamp"] = datetime.now().isoformat()
-    with open(f"{config['dataset']}-{config['agent_name']}-{config['num_samples']}-results.json", "w") as f:
+    dataset_name = config["dataset"].replace("/", "-")
+    with open(f"{dataset_name}-{config['agent_name']}-{config['num_samples']}-results.json", "w") as f:
         json.dump(metrics, f, indent=2)
 
     print(metrics)
