@@ -9,10 +9,9 @@ from benchmarker.models import ObjectID
 
 class AgentBuilder:
     """
-    * `agent_name == "query-agent-search-only"`  ➜  wraps Weaviate's hosted QueryAgent in Search Only Mode.
-    * `agent_name == "hybrid-search"` ➜  wraps Weaviate Hybrid Search.
+    * `agent_name == "query-agent-search-only"`  ➜  Wraps the Weaviate QueryAgent in Search Only Mode.
+    * `agent_name == "hybrid-search"` ➜  Wraps Weaviate Hybrid Search.
     """
-
     def __init__(
         self,
         dataset_name: str,
