@@ -8,6 +8,8 @@ def in_memory_dataset_loader(dataset_name: str):
         return _in_memory_dataset_loader_enron()
     elif dataset_name == "wixqa":
         return _in_memory_dataset_loader_wixqa()
+    elif dataset_name.startswith("beir/"):
+        return _in_memory_dataset_loader_beir(dataset_name)
     elif dataset_name == "freshstack-angular":
         return _in_memory_dataset_loader_freshstack(subset="angular")
     elif dataset_name == "freshstack-godot":
@@ -20,6 +22,31 @@ def in_memory_dataset_loader(dataset_name: str):
         return _in_memory_dataset_loader_freshstack(subset="yolo")
     else:
         return None
+
+def _in_memory_dataset_loader_beir(dataset_name: str):
+    import ir_datasets
+    dataset = ir_datasets.load(f"{dataset_name}")
+    print(f"Loading BEIR dataset: {dataset_name}")
+    docs, questions = [], []
+    for doc in dataset.docs_iter():
+        docs.append({
+            "title": doc.title if doc.title else "",
+            "content": doc.text,
+            "doc_id": doc.doc_id
+        })
+    qrels = {}
+    for qrel in dataset.qrels_iter():
+        query_id = qrel.query_id
+        if query_id not in qrels:
+            qrels[query_id] = []
+        qrels[query_id].extend(qrel.doc_id) # ignoring relevance ratings for now
+    for question in dataset.queries_iter():
+        questions.append({
+            "query_id": question.query_id,
+            "question": question.text,
+            "dataset_ids": qrels[question.query_id]
+        })
+    return docs, questions
 
 def _in_memory_dataset_loader_enron():
     emails = _load_dataset_from_hf_hub("weaviate/enron-qa-emails-dasovich-j")
