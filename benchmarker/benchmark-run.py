@@ -38,10 +38,8 @@ async def main():
 
     num_samples = config["num_samples"]
     
-    # Run queries based on async flag
     if use_async:        
         print("\033[92mRunning queries async!\033[0m")
-        # Initialize async agent
         await query_agent.initialize_async()
         
         try:
@@ -53,7 +51,6 @@ async def main():
                 max_concurrent=config["max_concurrent"]
             )
         finally:
-            # Clean up async connection
             await query_agent.close_async()
     else:
         print("\n\033[94mRunning synchronous benchmark\033[0m")

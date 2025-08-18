@@ -1,6 +1,11 @@
 import numpy as np
 
-def calculate_recall_at_k(target_ids: list[str], retrieved_ids: list[str], k: int):
+def calculate_recall_at_k(
+    target_ids: list[str], 
+    retrieved_ids: list[str], 
+    k: int, 
+    verbose: bool = False
+):
     """Calculate traditional recall@k for retrieved documents.
     
     Args:
@@ -12,33 +17,32 @@ def calculate_recall_at_k(target_ids: list[str], retrieved_ids: list[str], k: in
         float: Recall@k score (0.0 to 1.0) - proportion of relevant docs
                found in the top k retrieved results.
     """
-    if not isinstance(target_ids, list):
-        target_ids = [target_ids]
-    
-    # Use sets for efficient lookup
     target_id_set = {str(id) for id in target_ids}
     retrieved_ids = [str(id) for id in retrieved_ids] if retrieved_ids else []
-    
-    # Consider only the top k retrieved IDs
+
     retrieved_ids_at_k = retrieved_ids[:k]
     
-    print(f"\033[96mTarget IDs: {target_id_set}\033[0m")
-    
-    # Find the number of relevant documents found in the top k
+    if verbose:
+        print(f"\033[96mTarget IDs: {target_id_set}\033[0m")
+
     found_count = sum(1 for retrieved_id in retrieved_ids_at_k if retrieved_id in target_id_set)
     
-    if found_count > 0:
+    if verbose:
         print(f"\033[92mRetrieved IDs @{k}: {retrieved_ids_at_k}\033[0m")
-    else:
-        print(f"\033[91mRetrieved IDs @{k}: {retrieved_ids_at_k}\033[0m")
-    
+
     recall = found_count / len(target_id_set) if target_id_set else 0
-    print(f"\033[96mRecall@{k}: {found_count}/{len(target_id_set)} = {recall:.2f}\033[0m")
+    if verbose:
+        print(f"\033[96mRecall@{k}: {found_count}/{len(target_id_set)} = {recall:.2f}\033[0m")
     
     return recall
 
 
-def calculate_coverage(retrieved_ids: list[str], nugget_data: list[dict], k: int = 100):
+def calculate_coverage(
+    retrieved_ids: list[str], 
+    nugget_data: list[dict], 
+    k: int = 100, 
+    verbose: bool = False
+):
     """Calculate Coverage@k metric from FreshStack.
     
     Measures the proportion of nuggets covered by the top-k retrieved documents.
@@ -54,7 +58,6 @@ def calculate_coverage(retrieved_ids: list[str], nugget_data: list[dict], k: int
     if not nugget_data:
         return 0.0
     
-    # Convert to strings for consistent comparison
     retrieved_ids = [str(id) for id in retrieved_ids[:k]] if retrieved_ids else []
     
     covered_nuggets = set()
@@ -64,7 +67,6 @@ def calculate_coverage(retrieved_ids: list[str], nugget_data: list[dict], k: int
         nugget_id = nugget.get('id', f'nugget_{i}')
         nugget_relevant_ids = [str(id) for id in nugget.get('relevant_corpus_ids', [])]
         
-        # Check if any relevant doc for this nugget is in top-k retrieved
         covered = any(doc_id in retrieved_ids for doc_id in nugget_relevant_ids)
         
         if covered:
@@ -75,20 +77,24 @@ def calculate_coverage(retrieved_ids: list[str], nugget_data: list[dict], k: int
     
     coverage_score = len(covered_nuggets) / len(nugget_data)
     
-    # Print summary
-    print(f"\033[96mCoverage@{k} evaluation:\033[0m")
-    print(f"Total nuggets: {len(nugget_data)}")
-    print(f"Covered nuggets: {len(covered_nuggets)}")
-    for detail in nugget_coverage_details[:5]:  # Show first 5 for brevity
-        print(detail)
-    if len(nugget_coverage_details) > 5:
-        print(f"... and {len(nugget_coverage_details) - 5} more nuggets")
-    print(f"\033[96mCoverage@{k}: {len(covered_nuggets)}/{len(nugget_data)} = {coverage_score:.2f}\033[0m")
+    if verbose:
+        print(f"\033[96mCoverage@{k} evaluation:\033[0m")
+        print(f"Total nuggets: {len(nugget_data)}")
+        print(f"Covered nuggets: {len(covered_nuggets)}")
+
+    if verbose:
+        print(f"\033[96mCoverage@{k}: {len(covered_nuggets)}/{len(nugget_data)} = {coverage_score:.2f}\033[0m")
     
     return coverage_score
 
 
-def calculate_alpha_ndcg(retrieved_ids: list[str], nugget_data: list[dict], alpha: float = 0.5, k: int = 10):
+def calculate_alpha_ndcg(
+    retrieved_ids: list[str], 
+    nugget_data: list[dict], 
+    alpha: float = 0.5, 
+    k: int = 10, 
+    verbose: bool = False
+):
     """Calculate α-nDCG@k for diversity-aware ranking.
     
     This metric rewards both relevance and diversity, penalizing redundant coverage
@@ -107,37 +113,30 @@ def calculate_alpha_ndcg(retrieved_ids: list[str], nugget_data: list[dict], alph
     if not nugget_data or not retrieved_ids:
         return 0.0
     
-    # Convert to strings for consistent comparison
     retrieved_ids = [str(id) for id in retrieved_ids[:k]]
     
-    # Track which nuggets have been covered
     covered_nuggets = set()
     dcg = 0.0
     position_gains = []
     
-    # Calculate DCG
     for i, doc_id in enumerate(retrieved_ids):
         position = i + 1
         doc_gain = 0.0
         doc_nuggets = []
         
-        # Find nuggets this document covers
         for j, nugget in enumerate(nugget_data):
             nugget_id = nugget.get('id', f'nugget_{j}')
             nugget_relevant_ids = [str(id) for id in nugget.get('relevant_corpus_ids', [])]
             
             if doc_id in nugget_relevant_ids:
                 if nugget_id not in covered_nuggets:
-                    # First time covering this nugget - full credit
                     doc_gain += 1.0
                     covered_nuggets.add(nugget_id)
                     doc_nuggets.append(f"new:{nugget_id}")
                 else:
-                    # Redundant coverage - penalized by (1-α)
                     doc_gain += (1 - alpha)
                     doc_nuggets.append(f"redundant:{nugget_id}")
         
-        # Apply position discount
         position_discount = 1.0 / np.log2(position + 1)
         position_contribution = doc_gain * position_discount
         dcg += position_contribution
@@ -151,30 +150,19 @@ def calculate_alpha_ndcg(retrieved_ids: list[str], nugget_data: list[dict], alph
             'nuggets': doc_nuggets
         })
     
-    # Calculate ideal DCG
-    # Ideal: each position covers a new nugget until all are covered
     idcg = 0.0
     for i in range(min(len(nugget_data), k)):
         position = i + 1
-        ideal_gain = 1.0  # Each position ideally covers a new nugget
+        ideal_gain = 1.0
         idcg += ideal_gain / np.log2(position + 1)
     
-    # Calculate α-nDCG
     alpha_ndcg = dcg / idcg if idcg > 0 else 0.0
     
-    # Print detailed breakdown
-    print(f"\033[96mα-nDCG@{k} evaluation (α={alpha}):\033[0m")
-    print(f"Total nuggets: {len(nugget_data)}")
-    print(f"Documents evaluated: {len(retrieved_ids)}")
-    print("\nPosition breakdown:")
-    for pg in position_gains[:5]:  # Show first 5 positions
-        nugget_info = ', '.join(pg['nuggets']) if pg['nuggets'] else 'none'
-        print(f"  Pos {pg['position']}: doc={pg['doc_id'][:8]}... gain={pg['gain']:.2f} "
-              f"discount={pg['discount']:.3f} contrib={pg['contribution']:.3f} nuggets=[{nugget_info}]")
-    if len(position_gains) > 5:
-        print(f"  ... and {len(position_gains) - 5} more positions")
-    
-    print(f"\nDCG: {dcg:.3f}, IDCG: {idcg:.3f}")
-    print(f"\033[96mα-nDCG@{k}: {alpha_ndcg:.3f}\033[0m")
+    if verbose:
+        print(f"\033[96mα-nDCG@{k} evaluation (α={alpha}):\033[0m")
+        print(f"Total nuggets: {len(nugget_data)}")
+        print(f"Documents evaluated: {len(retrieved_ids)}") 
+        print(f"\nDCG: {dcg:.3f}, IDCG: {idcg:.3f}")
+        print(f"\033[96mα-nDCG@{k}: {alpha_ndcg:.3f}\033[0m")
     
     return alpha_ndcg

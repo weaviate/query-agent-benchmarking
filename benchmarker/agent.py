@@ -45,31 +45,34 @@ class AgentBuilder:
         self.agent_name = agent_name
         self.agents_host = agents_host or "https://api.agents.weaviate.io"
 
-        # TODO: Separate this into `initialize_sync`
         if not use_async:
-            self.weaviate_client = weaviate.connect_to_weaviate_cloud(
-                cluster_url=self.cluster_url,
-                auth_credentials=weaviate.auth.AuthApiKey(self.api_key),
-            )
-            if agent_name == "query-agent-search-only":
-                self.agent = QueryAgent(
-                    client=self.weaviate_client,
-                    collections=[self.collection],
-                    agents_host=self.agents_host,
-                )
-            elif agent_name == "hybrid-search":
-                self.weaviate_collection = self.weaviate_client.collections.get(self.collection)
-            else:
-                raise ValueError(f"Unknown agent_name: {agent_name}. Must be 'query-agent-search-only' or 'hybrid-search'")
+            self.initialize_sync()
+        else:
+            self.initialize_async()
 
-    async def initialize_async(self):
-        if not self.use_async:
-            return
-            
+    def initialize_sync(self):
+        print(f"Initializing sync connection to {self.cluster_url}")
+        
+        self.weaviate_client = weaviate.connect_to_weaviate_cloud(
+            cluster_url=self.cluster_url,
+            auth_credentials=weaviate.auth.AuthApiKey(self.api_key),
+        )
+        if self.agent_name == "query-agent-search-only":
+            self.agent = QueryAgent(
+                client=self.weaviate_client,
+                collections=[self.collection],
+                agents_host=self.agents_host,
+            )
+        elif self.agent_name == "hybrid-search":
+            self.weaviate_collection = self.weaviate_client.collections.get(self.collection)
+        else:
+            raise ValueError(f"Unknown agent_name: {self.agent_name}. Must be 'query-agent-search-only' or 'hybrid-search'")
+
+    async def initialize_async(self):            
         print(f"Initializing async connection to {self.cluster_url}")
         
         try:
-            if self.agent_name == "query-agent":
+            if self.agent_name == "query-agent-search-only":
                 self.weaviate_client = weaviate.use_async_with_weaviate_cloud(
                     cluster_url=self.cluster_url,
                     auth_credentials=Auth.api_key(self.api_key),
