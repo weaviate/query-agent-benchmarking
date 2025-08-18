@@ -3,6 +3,7 @@ from datetime import datetime
 import json
 import os
 from pathlib import Path
+import random
 import yaml
 
 import weaviate
@@ -32,6 +33,10 @@ async def main():
     print(f"There are \033[92m{len(queries)}\033[0m total queries in this dataset.\n")
     print("\033[92mFirst Query\033[0m")
     pretty_print_dict(queries[0])
+
+    random.seed(42)
+    random.shuffle(queries)
+    print("Queries have been shuffled for fair comparison (seed=42).\n")
 
     query_agent = AgentBuilder(
         dataset_name=config["dataset"],

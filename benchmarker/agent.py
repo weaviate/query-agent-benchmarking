@@ -130,7 +130,7 @@ class AgentBuilder:
     async def run_async(self, query: str):
         try:
             if self.agent_name == "query-agent-search-only":
-                searcher = await self.agent.prepare_search(query)
+                searcher = self.agent.prepare_search(query)
                 response = await searcher.execute(limit=20, offset=0)
                 results = []
                 for obj in response.search_results.objects:
