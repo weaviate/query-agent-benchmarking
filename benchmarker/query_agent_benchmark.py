@@ -166,8 +166,11 @@ async def analyze_results(
             {"func": calculate_recall_at_k, "params": {"k": 20}},
         ]
     elif dataset_name == "wixqa":
-        # Use a large k to effectively calculate recall over all results
-        metrics = [{"func": calculate_recall_at_k, "params": {"k": 1000}}]
+        metrics = [
+            {"func": calculate_recall_at_k, "params": {"k": 1}},
+            {"func": calculate_recall_at_k, "params": {"k": 5}},
+            {"func": calculate_recall_at_k, "params": {"k": 20}},
+        ]
     elif dataset_name.startswith("freshstack-"):
         metrics = [
             {"func": calculate_coverage, "params": {"k": 1000}},
