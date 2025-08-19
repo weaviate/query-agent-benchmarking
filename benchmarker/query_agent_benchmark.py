@@ -20,12 +20,13 @@ def run_queries(
     start = time.time()
     for i, query in enumerate(tqdm(queries[:num_samples], desc="Running queries")):
         query_start_time = time.time()
+        stringified_ids = [str(dataset_id) for dataset_id in query["dataset_ids"]]
         response = query_agent.run(query["question"]) # -> list[ObjectID]
         query_time_taken = time.time() - query_start_time
 
         results.append(QueryResult(
             query=query,
-            query_id=query["dataset_ids"],
+            query_id=stringified_ids,
             retrieved_ids=response,
             time_taken=query_time_taken
         ))
@@ -67,6 +68,7 @@ async def run_queries_async(
     async def process_query(query, index, retry_count=0, max_retries=3):
         async with semaphore:
             query_start_time = time.time()
+            stringified_ids = [str(dataset_id) for dataset_id in query["dataset_ids"]]
             try:
                 if retry_count > 0:
                     delay = min(2 ** retry_count, 10)  # Exponential backoff
@@ -82,7 +84,7 @@ async def run_queries_async(
 
                 results = QueryResult(
                     query=query,
-                    query_id=query["dataset_ids"],
+                    query_id=stringified_ids,
                     retrieved_ids=response,
                     time_taken=query_time_taken
                 )
@@ -95,7 +97,7 @@ async def run_queries_async(
                 print(f"\n\033[91mError processing query {index}: {error_msg}\033[0m")
                 return QueryResult(
                     query=query,
-                    query_id=query["dataset_ids"],
+                    query_id=stringified_ids,
                     retrieved_ids=[],
                     time_taken=query_time_taken
                 )
@@ -274,3 +276,61 @@ async def analyze_results(
     print(f"Average Query Time: {results_dict['avg_query_time']:.2f} seconds")
     
     return results_dict
+
+
+def aggregate_metrics(metrics_across_trials: list[dict]) -> dict:
+    """Aggregate metrics from multiple trials into statistical summaries."""
+    
+    if not metrics_across_trials:
+        return {}
+    
+    # Get all metric keys that start with "avg_" from first trial
+    avg_keys = [k for k in metrics_across_trials[0].keys() if k.startswith("avg_")]
+    
+    aggregated = {
+        "num_trials": len(metrics_across_trials),
+        "trials": []  # Store individual trial averages
+    }
+    
+    # Calculate statistics for each metric
+    for key in avg_keys:
+        values = [trial[key] for trial in metrics_across_trials if key in trial]
+        
+        if values:
+            metric_name = key  # Keep the "avg_" prefix for clarity
+            aggregated[f"{metric_name}_mean"] = float(np.mean(values))
+            aggregated[f"{metric_name}_std"] = float(np.std(values))
+            aggregated[f"{metric_name}_min"] = float(np.min(values))
+            aggregated[f"{metric_name}_max"] = float(np.max(values))
+    
+    # Store individual trial summaries for reference
+    for i, trial in enumerate(metrics_across_trials):
+        trial_summary = {
+            "trial": i + 1,
+            **{k: v for k, v in trial.items() if k.startswith("avg_")}
+        }
+        aggregated["trials"].append(trial_summary)
+    
+    # Print summary to console
+    print("\n" + "="*70)
+    print(f"📊 AGGREGATED RESULTS ({len(metrics_across_trials)} trials)")
+    print("="*70)
+    
+    for key in avg_keys:
+        values = [trial[key] for trial in metrics_across_trials if key in trial]
+        if values:
+            mean = np.mean(values)
+            std = np.std(values)
+            min_val = np.min(values)
+            max_val = np.max(values)
+            metric_display = key.replace("_", " ").title()
+            
+            print(f"\n{metric_display}:")
+            print(f"  Mean: {mean:.4f} (± {std:.4f})")
+            print(f"  Min:  {min_val:.4f}")
+            print(f"  Max:  {max_val:.4f}")
+            print(f"  Raw:  {[f'{v:.4f}' for v in values]}")
+    
+    print("\n" + "="*70 + "\n")
+    
+    return aggregated

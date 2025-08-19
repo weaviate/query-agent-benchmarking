@@ -1,9 +1,10 @@
 agent_name: hybrid-search
 agents_host: http://localhost:8000
-dataset: wixqa
+dataset: enron
 use_async: False
 reload_database: False
-num_samples: 20
+num_samples: 5
+num_trials: 3
 batch_size: 5
 max_concurrent: 5
 experiment_name: hybrid-search

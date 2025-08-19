@@ -29,7 +29,7 @@ class AgentBuilder:
         
         if dataset_name == "enron":
             self.collection = "EnronEmails"
-            self.target_property_name = ""
+            self.target_property_name = "email_body_vector"
         elif dataset_name == "wixqa":
             self.collection = "WixKB"
             self.target_property_name = "contents"
@@ -124,11 +124,13 @@ class AgentBuilder:
         if self.agent_name == "hybrid-search":
             response = self.weaviate_collection.query.hybrid(
                 query=query,
+                target_vector=self.target_property_name,
                 limit=20
             )
             results = []
             for obj in response.objects:
-                results.append(ObjectID(object_id=obj.properties["dataset_id"]))
+                results.append(ObjectID(object_id=str(obj.properties["dataset_id"])))
+            print(results)
             return results
         
     async def run_async(self, query: str):
