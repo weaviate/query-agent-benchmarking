@@ -1,6 +1,6 @@
 agent_name: query-agent-search-only
 agents_host: http://localhost:8000
-dataset: enron
+dataset: wixqa
 use_async: True
 reload_database: False
 num_samples: 50
