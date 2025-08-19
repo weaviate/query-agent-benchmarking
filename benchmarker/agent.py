@@ -130,7 +130,6 @@ class AgentBuilder:
             results = []
             for obj in response.objects:
                 results.append(ObjectID(object_id=str(obj.properties["dataset_id"])))
-            print(results)
             return results
         
     async def run_async(self, query: str):

@@ -3,8 +3,8 @@ agents_host: http://localhost:8000
 dataset: enron
 use_async: False
 reload_database: False
-num_samples: 5
-num_trials: 3
+num_samples: 50
+num_trials: 5
 batch_size: 5
 max_concurrent: 5
 experiment_name: hybrid-search
