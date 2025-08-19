@@ -200,11 +200,8 @@ async def analyze_results(
     query_times = []
     
     for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths))):
-        if "error" in result:
-            print(f"\n\033[91mSkipping analysis for query {i} due to error: {result.error}\033[0m")
-            for key in metric_results:
-                metric_results[key].append(0.0)
-            query_times.append(result.time_taken)
+        if result.retrieved_ids == []: # proxy for error
+            print(f"\n\033[91mSkipping analysis for query {i} due to error.\033[0m")
             continue
 
         # Corrected list comprehension

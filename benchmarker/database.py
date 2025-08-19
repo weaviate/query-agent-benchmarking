@@ -12,9 +12,7 @@ def database_loader(
         
         weaviate_client.collections.create(
             name="EnronEmails",
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(
-                base_url="https://dev-embedding.labs.weaviate.io"
-            ),
+            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             properties=[
                 wvcc.Property(name="email_body", data_type=wvcc.DataType.TEXT),
                 wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT),

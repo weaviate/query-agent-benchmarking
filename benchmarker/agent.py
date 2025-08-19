@@ -29,7 +29,7 @@ class AgentBuilder:
         
         if dataset_name == "enron":
             self.collection = "EnronEmails"
-            self.target_property_name = "email_body_vector"
+            self.target_property_name = "" # I think we can remove this...
         elif dataset_name == "wixqa":
             self.collection = "WixKB"
             self.target_property_name = "contents"
@@ -124,7 +124,6 @@ class AgentBuilder:
         if self.agent_name == "hybrid-search":
             response = self.weaviate_collection.query.hybrid(
                 query=query,
-                target_vector=self.target_property_name,
                 limit=20
             )
             results = []

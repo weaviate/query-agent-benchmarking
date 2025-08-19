@@ -1,10 +1,10 @@
-agent_name: hybrid-search
+agent_name: query-agent-search-only
 agents_host: http://localhost:8000
 dataset: enron
-use_async: False
+use_async: True
 reload_database: False
 num_samples: 50
 num_trials: 5
 batch_size: 5
 max_concurrent: 5
-experiment_name: hybrid-search
+experiment_name: query-agent-search-only
