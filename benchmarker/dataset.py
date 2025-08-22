@@ -30,10 +30,10 @@ def _in_memory_dataset_loader_beir(dataset_name: str):
     docs, questions = [], []
     for doc in dataset.docs_iter():
         docs.append({
-            "title": doc.title if doc.title else "",
-            "content": doc.text,
-            "doc_id": doc.doc_id
-        })
+        "title": getattr(doc, "title", ""),
+        "content": getattr(doc, "text", ""),
+        "doc_id": getattr(doc, "doc_id", None)
+    })
     qrels = {}
     for qrel in dataset.qrels_iter():
         query_id = qrel.query_id
