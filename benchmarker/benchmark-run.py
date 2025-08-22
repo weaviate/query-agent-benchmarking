@@ -42,7 +42,6 @@ async def main():
         use_async=use_async,
     )
 
-    num_samples = config["num_samples"]
     num_trials = config["num_trials"]
 
     metrics_across_trials = []
@@ -59,7 +58,6 @@ async def main():
                 results = await run_queries_async(
                     queries=queries,
                     query_agent=query_agent,
-                    num_samples=num_samples,
                     batch_size=config["batch_size"],
                     max_concurrent=config["max_concurrent"]
                 )
@@ -70,7 +68,6 @@ async def main():
             results = run_queries(
                 queries=queries,
                 query_agent=query_agent,
-                num_samples=num_samples
             )
 
         # Open sync client for analysis
@@ -95,7 +92,7 @@ async def main():
 
     metrics["timestamp"] = datetime.now().isoformat()
     dataset_name = config["dataset"].replace("/", "-")
-    with open(f"{dataset_name}-{config['agent_name']}-{config['num_samples']}-{config['num_trials']}-results.json", "w") as f:
+    with open(f"{dataset_name}-{config['agent_name']}-{config['num_trials']}-results.json", "w") as f:
         json.dump(aggregated_metrics, f, indent=2)
 
 if __name__ == "__main__":

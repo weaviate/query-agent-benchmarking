@@ -13,12 +13,11 @@ from benchmarker.models import QueryResult
 def run_queries(
     queries: list[dict],
     query_agent: Any,
-    num_samples: int
 ) -> list[QueryResult]:
     """Synchronous version of run_queries"""
     results = []
     start = time.time()
-    for i, query in enumerate(tqdm(queries[:num_samples], desc="Running queries")):
+    for i, query in enumerate(tqdm(queries, desc="Running queries")):
         query_start_time = time.time()
         stringified_ids = [str(dataset_id) for dataset_id in query["dataset_ids"]]
         response = query_agent.run(query["question"]) # -> list[ObjectID]
@@ -31,9 +30,8 @@ def run_queries(
             time_taken=query_time_taken
         ))
         
-        # Print rolling update
         if i % 10 == 0:
-            print(f"\n\033[93m--- Progress Update ({i}/{num_samples}) ---\033[0m")
+            print(f"\n\033[93m--- Progress Update ({i}/{len(queries)}) ---\033[0m")
             print(f"Latest query: {query['question']}")
             print(f"Ground truth: {query['dataset_ids']}")
             print(f"Latest response: {results[i].retrieved_ids}")
@@ -45,17 +43,15 @@ def run_queries(
 async def run_queries_async(
     queries: list[dict],
     query_agent: Any,
-    num_samples: int,
     batch_size: int = 10,
-    max_concurrent: int = 3  # Reduced default to avoid rate limiting
+    max_concurrent: int = 3
 ) -> list[QueryResult]:
     """
     Asynchronous version of run_queries with concurrent execution.
     
     Args:
         queries: List of query dictionaries
-        query_agent: Async agent instance
-        num_samples: Number of queries to run
+        query_agent: Async searcher
         batch_size: Number of queries to process in each batch
         max_concurrent: Maximum number of concurrent requests
     """
@@ -102,7 +98,7 @@ async def run_queries_async(
                     time_taken=query_time_taken
                 )
     
-    queries_to_process = queries[:num_samples]
+    queries_to_process = queries
     total_batches = (len(queries_to_process) + batch_size - 1) // batch_size
     
     print(f"\033[94mProcessing {len(queries_to_process)} queries in {total_batches} batches "
