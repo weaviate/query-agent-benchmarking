@@ -3,7 +3,6 @@ from datetime import datetime
 import json
 import os
 from pathlib import Path
-import random
 import yaml
 
 import weaviate
