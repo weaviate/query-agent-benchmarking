@@ -47,12 +47,9 @@ async def main():
 
     metrics_across_trials = []
 
+    # NOTE: We are using multiple trials to account for the stochasticity of LLM-based systems.
     for trial in range(num_trials):
         print(f"\033[92mRunning trial {trial+1}/{num_trials}\033[0m")
-
-        random.seed(trial)
-        random.shuffle(queries)
-        print(f"Queries have been shuffled for fair comparison (seed={trial}).\n")
 
         if use_async:        
             print("\033[92mRunning queries async!\033[0m")
