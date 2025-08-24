@@ -34,6 +34,13 @@ async def main():
     print("\033[92mFirst Query\033[0m")
     pretty_print_dict(queries[0])
 
+    if config["use_subset"]:
+        queries = queries[:config["num_samples"]]
+        import random
+        random.seed(42)
+        random.shuffle(queries)
+        print(f"Using a subset of {config['num_samples']} queries.")
+
     query_agent = AgentBuilder(
         dataset_name=config["dataset"],
         agent_name=config["agent_name"],
