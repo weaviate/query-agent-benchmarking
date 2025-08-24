@@ -13,27 +13,28 @@ from benchmarker.models import QueryResult
 def run_queries(
     queries: list[dict],
     query_agent: Any,
-    num_samples: int
 ) -> list[QueryResult]:
     """Synchronous version of run_queries"""
     results = []
     start = time.time()
-    for i, query in enumerate(tqdm(queries[:num_samples], desc="Running queries")):
+    for i, query in enumerate(tqdm(queries, desc="Running queries")):
         query_start_time = time.time()
+        stringified_ids = [str(dataset_id) for dataset_id in query["dataset_ids"]]
         response = query_agent.run(query["question"]) # -> list[ObjectID]
         query_time_taken = time.time() - query_start_time
 
         results.append(QueryResult(
             query=query,
-            query_id=query["dataset_ids"],
+            query_id=stringified_ids,
             retrieved_ids=response,
             time_taken=query_time_taken
         ))
         
-        # Print rolling update every 10 queries
-        if (i + 1) % 10 == 0:
-            print(f"\n\033[93m--- Progress Update ({i + 1}/{num_samples}) ---\033[0m")
+        if i % 10 == 0:
+            print(f"\n\033[93m--- Progress Update ({i}/{len(queries)}) ---\033[0m")
             print(f"Latest query: {query['question']}")
+            print(f"Ground truth: {query['dataset_ids']}")
+            print(f"Latest response: {results[i].retrieved_ids}")
             print(f"Time taken: {query_time_taken:.2f} seconds")
             
     print(f"\033[95mExperiment completed {len(results)} queries in {time.time() - start:.2f} seconds.\033[0m")
@@ -42,17 +43,15 @@ def run_queries(
 async def run_queries_async(
     queries: list[dict],
     query_agent: Any,
-    num_samples: int,
     batch_size: int = 10,
-    max_concurrent: int = 3  # Reduced default to avoid rate limiting
+    max_concurrent: int = 3
 ) -> list[QueryResult]:
     """
     Asynchronous version of run_queries with concurrent execution.
     
     Args:
         queries: List of query dictionaries
-        query_agent: Async agent instance
-        num_samples: Number of queries to run
+        query_agent: Async searcher
         batch_size: Number of queries to process in each batch
         max_concurrent: Maximum number of concurrent requests
     """
@@ -65,6 +64,7 @@ async def run_queries_async(
     async def process_query(query, index, retry_count=0, max_retries=3):
         async with semaphore:
             query_start_time = time.time()
+            stringified_ids = [str(dataset_id) for dataset_id in query["dataset_ids"]]
             try:
                 if retry_count > 0:
                     delay = min(2 ** retry_count, 10)  # Exponential backoff
@@ -73,12 +73,14 @@ async def run_queries_async(
                 elif index > 0:
                     await asyncio.sleep(0.1)
                 
+                question_sample = query["question"]
+                print(f"Running query {index}: {question_sample}")
                 response = await query_agent.run_async(query["question"])
                 query_time_taken = time.time() - query_start_time
 
                 results = QueryResult(
                     query=query,
-                    query_id=query["dataset_ids"],
+                    query_id=stringified_ids,
                     retrieved_ids=response,
                     time_taken=query_time_taken
                 )
@@ -91,12 +93,12 @@ async def run_queries_async(
                 print(f"\n\033[91mError processing query {index}: {error_msg}\033[0m")
                 return QueryResult(
                     query=query,
-                    query_id=query["dataset_ids"],
+                    query_id=stringified_ids,
                     retrieved_ids=[],
                     time_taken=query_time_taken
                 )
     
-    queries_to_process = queries[:num_samples]
+    queries_to_process = queries
     total_batches = (len(queries_to_process) + batch_size - 1) // batch_size
     
     print(f"\033[94mProcessing {len(queries_to_process)} queries in {total_batches} batches "
@@ -162,12 +164,21 @@ async def analyze_results(
             {"func": calculate_recall_at_k, "params": {"k": 20}},
         ]
     elif dataset_name == "wixqa":
-        # Use a large k to effectively calculate recall over all results
-        metrics = [{"func": calculate_recall_at_k, "params": {"k": 1000}}]
+        metrics = [
+            {"func": calculate_recall_at_k, "params": {"k": 1}},
+            {"func": calculate_recall_at_k, "params": {"k": 5}},
+            {"func": calculate_recall_at_k, "params": {"k": 20}},
+        ]
     elif dataset_name.startswith("freshstack-"):
         metrics = [
             {"func": calculate_coverage, "params": {"k": 1000}},
             {"func": calculate_alpha_ndcg, "params": {"alpha": 0.5, "k": 10}},
+        ]
+    elif dataset_name.startswith("beir/"):
+        metrics = [
+            {"func": calculate_recall_at_k, "params": {"k": 1}},
+            {"func": calculate_recall_at_k, "params": {"k": 5}},
+            {"func": calculate_recall_at_k, "params": {"k": 20}},
         ]
     else:
         raise Exception("Enter a valid dataset_name!")
@@ -185,11 +196,8 @@ async def analyze_results(
     query_times = []
     
     for i, (result, ground_truth) in enumerate(tqdm(zip(results, ground_truths))):
-        if "error" in result:
-            print(f"\n\033[91mSkipping analysis for query {i} due to error: {result.error}\033[0m")
-            for key in metric_results:
-                metric_results[key].append(0.0)
-            query_times.append(result.time_taken)
+        if result.retrieved_ids == []: # proxy for error
+            print(f"\n\033[91mSkipping analysis for query {i} due to error.\033[0m")
             continue
 
         # Corrected list comprehension
@@ -261,3 +269,61 @@ async def analyze_results(
     print(f"Average Query Time: {results_dict['avg_query_time']:.2f} seconds")
     
     return results_dict
+
+
+def aggregate_metrics(metrics_across_trials: list[dict]) -> dict:
+    """Aggregate metrics from multiple trials into statistical summaries."""
+    
+    if not metrics_across_trials:
+        return {}
+    
+    # Get all metric keys that start with "avg_" from first trial
+    avg_keys = [k for k in metrics_across_trials[0].keys() if k.startswith("avg_")]
+    
+    aggregated = {
+        "num_trials": len(metrics_across_trials),
+        "trials": []  # Store individual trial averages
+    }
+    
+    # Calculate statistics for each metric
+    for key in avg_keys:
+        values = [trial[key] for trial in metrics_across_trials if key in trial]
+        
+        if values:
+            metric_name = key  # Keep the "avg_" prefix for clarity
+            aggregated[f"{metric_name}_mean"] = float(np.mean(values))
+            aggregated[f"{metric_name}_std"] = float(np.std(values))
+            aggregated[f"{metric_name}_min"] = float(np.min(values))
+            aggregated[f"{metric_name}_max"] = float(np.max(values))
+    
+    # Store individual trial summaries for reference
+    for i, trial in enumerate(metrics_across_trials):
+        trial_summary = {
+            "trial": i + 1,
+            **{k: v for k, v in trial.items() if k.startswith("avg_")}
+        }
+        aggregated["trials"].append(trial_summary)
+    
+    # Print summary to console
+    print("\n" + "="*70)
+    print(f"📊 AGGREGATED RESULTS ({len(metrics_across_trials)} trials)")
+    print("="*70)
+    
+    for key in avg_keys:
+        values = [trial[key] for trial in metrics_across_trials if key in trial]
+        if values:
+            mean = np.mean(values)
+            std = np.std(values)
+            min_val = np.min(values)
+            max_val = np.max(values)
+            metric_display = key.replace("_", " ").title()
+            
+            print(f"\n{metric_display}:")
+            print(f"  Mean: {mean:.4f} (± {std:.4f})")
+            print(f"  Min:  {min_val:.4f}")
+            print(f"  Max:  {max_val:.4f}")
+            print(f"  Raw:  {[f'{v:.4f}' for v in values]}")
+    
+    print("\n" + "="*70 + "\n")
+    
+    return aggregated

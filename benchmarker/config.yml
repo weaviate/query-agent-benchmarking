@@ -1,9 +1,9 @@
-agent_name: query-agent-search-only
+agent_name: hybrid-search
 agents_host: http://localhost:8000
-dataset: enron
+dataset: beir/nq
 use_async: True
 reload_database: False
-num_samples: 100
+num_trials: 1
 batch_size: 5
 max_concurrent: 5
-experiment_name: query-agent-search-only
+experiment_name: hybrid-search

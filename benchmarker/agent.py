@@ -29,7 +29,7 @@ class AgentBuilder:
         
         if dataset_name == "enron":
             self.collection = "EnronEmails"
-            self.target_property_name = ""
+            self.target_property_name = "" # I think we can remove this...
         elif dataset_name == "wixqa":
             self.collection = "WixKB"
             self.target_property_name = "contents"
@@ -38,6 +38,10 @@ class AgentBuilder:
             subset = dataset_name.split("-")[1].capitalize()
             self.collection = f"Freshstack{subset}"
             self.target_property_name = "docs_text"
+            self.id_property = "dataset_id"
+        elif dataset_name.startswith("beir/"):
+            self.collection = f"Beir{dataset_name.split('beir/')[1].replace('-', '_').replace('/', '_').capitalize()}"
+            self.target_property_name = "content"
             self.id_property = "dataset_id"
         else:
             raise ValueError(f"Unknown dataset: {dataset_name}")
@@ -124,7 +128,7 @@ class AgentBuilder:
             )
             results = []
             for obj in response.objects:
-                results.append(ObjectID(object_id=obj.properties["dataset_id"]))
+                results.append(ObjectID(object_id=str(obj.properties["dataset_id"])))
             return results
         
     async def run_async(self, query: str):
