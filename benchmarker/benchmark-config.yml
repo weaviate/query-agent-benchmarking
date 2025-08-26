@@ -1,6 +1,6 @@
 agent_name: query-agent-search-only
 agents_host: http://localhost:8000
-dataset: beir/arguana
+dataset: lotte/lifestyle/test
 use_async: True
 reload_database: False # remove this, isolate always
 use_subset: True
