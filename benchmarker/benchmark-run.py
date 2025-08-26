@@ -23,7 +23,7 @@ def load_config(config_path: str):
     return config
 
 async def main():
-    config_path = Path(os.path.dirname(__file__), "config.yml")
+    config_path = Path(os.path.dirname(__file__), "benchmark-config.yml")
     config = load_config(config_path)
     
     agents_host = config.get("agents_host", "https://api.agents.weaviate.io")

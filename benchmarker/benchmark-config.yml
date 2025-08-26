@@ -1,6 +1,6 @@
 agent_name: query-agent-search-only
 agents_host: http://localhost:8000
-dataset: beir/nq
+dataset: beir/nfcorpus/test
 use_async: True
 reload_database: False
 use_subset: False
