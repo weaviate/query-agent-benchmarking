@@ -39,10 +39,10 @@ async def main():
     pretty_print_dict(queries[0])
 
     if config["use_subset"]:
-        queries = queries[:config["num_samples"]]
         import random
         random.seed(42)
         random.shuffle(queries)
+        queries = queries[:config["num_samples"]]
         print(f"Using a subset of {config['num_samples']} queries.")
 
     query_agent = AgentBuilder(
@@ -87,7 +87,6 @@ async def main():
         )
 
         metrics = await analyze_results(
-            weaviate_client, 
             config["dataset"], 
             results,
             queries,

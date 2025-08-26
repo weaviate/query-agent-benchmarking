@@ -1,7 +1,7 @@
 supported_datasets = (
+    "beir/fiqa/test",
     "beir/nq",
-    "beir/nfcorpus/test",
-    "beir/fiqa",
+    "beir/scifact/test",
     "enron",
     "wixqa"
 )

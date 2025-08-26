@@ -1,10 +1,10 @@
 agent_name: query-agent-search-only
 agents_host: http://localhost:8000
-dataset: beir/nfcorpus/test
+dataset: beir/arguana
 use_async: True
 reload_database: False # remove this, isolate always
-use_subset: False
-num_samples: 5
+use_subset: True
+num_samples: 200
 num_trials: 1
 batch_size: 5
 max_concurrent: 5

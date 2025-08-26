@@ -150,7 +150,6 @@ async def run_queries_async(
     return results
 
 async def analyze_results(
-    weaviate_client: Any,
     dataset_name: str,
     results: list[QueryResult],
     ground_truths: list[dict],
