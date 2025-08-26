@@ -73,9 +73,9 @@ def database_loader(
             print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {upload_time:.2f} seconds)")
     
     if dataset_name.startswith("lotte/"):
-        lotte_subset = dataset_name.split("lotte/")[1]
-        formatted_lotte_name = lotte_subset.replace("-", "_").replace("/", "_").lower()
-        collection_name = f"Lotte{formatted_lotte_name.capitalize()}"
+        lotte_subset = dataset_name.split("/")[1]
+        collection_name = f"Lotte{lotte_subset.capitalize()}"
+        print(f"Creating collection: {collection_name}")
         
         if weaviate_client.collections.exists(collection_name):
             weaviate_client.collections.delete(collection_name)

@@ -5,5 +5,7 @@ supported_datasets = (
     "enron",
     "lotte/lifestyle/test/forum",
     "lotte/lifestyle/test/search",
+    "lotte/recreation/test/forum",
+    "lotte/recreation/test/search",
     "wixqa"
 )
