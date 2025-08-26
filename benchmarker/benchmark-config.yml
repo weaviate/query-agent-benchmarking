@@ -2,7 +2,7 @@ agent_name: query-agent-search-only
 agents_host: http://localhost:8000
 dataset: beir/nfcorpus/test
 use_async: True
-reload_database: False
+reload_database: False # remove this, isolate always
 use_subset: False
 num_samples: 5
 num_trials: 1

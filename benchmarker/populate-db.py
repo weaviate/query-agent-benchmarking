@@ -18,7 +18,7 @@ weaviate_client = weaviate.connect_to_weaviate_cloud(
     auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
 )
 
-config_path = Path(os.path.dirname(__file__), "config.yml")
+config_path = Path(os.path.dirname(__file__), "benchmark-config.yml")
 config = load_config(config_path)
 
 documents, _ = in_memory_dataset_loader(config["dataset"])
