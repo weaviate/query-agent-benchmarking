@@ -179,8 +179,14 @@ async def analyze_results(
             {"func": calculate_recall_at_k, "params": {"k": 1}},
             {"func": calculate_recall_at_k, "params": {"k": 5}},
             {"func": calculate_recall_at_k, "params": {"k": 20}},
-            {"func": calculate_recall_at_k, "params": {"k": 100}},
-            {"func": calculate_nDCG_at_k, "params": {"k": 10, "verbose": True}},
+            {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+        ]
+    elif dataset_name.startswith("lotte/"):
+        metrics = [
+            {"func": calculate_recall_at_k, "params": {"k": 1}},
+            {"func": calculate_recall_at_k, "params": {"k": 5}},
+            {"func": calculate_recall_at_k, "params": {"k": 20}},
+            {"func": calculate_nDCG_at_k, "params": {"k": 10}},
         ]
     else:
         raise Exception("Enter a valid dataset_name!")

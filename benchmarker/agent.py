@@ -43,6 +43,10 @@ class AgentBuilder:
             self.collection = f"Beir{dataset_name.split('beir/')[1].replace('-', '_').replace('/', '_').capitalize()}"
             self.target_property_name = "content"
             self.id_property = "dataset_id"
+        elif dataset_name.startswith("lotte/"):
+            self.collection = f"Lotte{dataset_name.split('lotte/')[1].replace('/', '_').capitalize()}"
+            self.target_property_name = "text"
+            self.id_property = "doc_id"
         else:
             raise ValueError(f"Unknown dataset: {dataset_name}")
 

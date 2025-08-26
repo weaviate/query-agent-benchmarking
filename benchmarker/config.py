@@ -3,5 +3,7 @@ supported_datasets = (
     "beir/nq",
     "beir/scifact/test",
     "enron",
+    "lotte/lifestyle/test/forum",
+    "lotte/lifestyle/test/search",
     "wixqa"
 )
