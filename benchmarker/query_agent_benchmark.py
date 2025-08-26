@@ -181,7 +181,7 @@ async def analyze_results(
             {"func": calculate_recall_at_k, "params": {"k": 5}},
             {"func": calculate_recall_at_k, "params": {"k": 20}},
             {"func": calculate_recall_at_k, "params": {"k": 100}},
-            {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+            {"func": calculate_nDCG_at_k, "params": {"k": 10, "verbose": True}},
         ]
     else:
         raise Exception("Enter a valid dataset_name!")
@@ -235,6 +235,28 @@ async def analyze_results(
                     nuggets=ground_truth["nugget_data"], 
                     **params
                 )
+            elif "nDCG" in func_name or "ndcg" in func_name.lower():
+                # Handle nDCG calculation
+                score = metric_func(
+                    target_ids=ground_truth["dataset_ids"],
+                    retrieved_ids=retrieved_ids,
+                    **params
+                )
+            else:
+                # Fallback for any other metric functions
+                # Try calling with the standard signature first
+                try:
+                    score = metric_func(
+                        target_ids=ground_truth["dataset_ids"],
+                        retrieved_ids=retrieved_ids,
+                        **params
+                    )
+                except TypeError:
+                    # If that fails, try without target_ids (for metrics that don't need ground truth)
+                    score = metric_func(
+                        retrieved_ids=retrieved_ids,
+                        **params
+                    )
             
             metric_results[key].append(score)
         
