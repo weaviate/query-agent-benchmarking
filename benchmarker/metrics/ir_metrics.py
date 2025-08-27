@@ -36,6 +36,41 @@ def calculate_recall_at_k(
     
     return recall
 
+def calculate_success_at_k(
+    target_ids: list[str],
+    retrieved_ids: list[str],
+    k: int,
+    verbose: bool = False
+) -> int:
+    """Calculate Success@k (Hit Rate@k).
+    
+    Args:
+        target_ids: List of target document IDs (ground truth).
+        retrieved_ids: List of retrieved document IDs.
+        k: The number of top results to consider.
+        
+    Returns:
+        int: 1 if at least one target_id is found in the top-k retrieved_ids,
+             otherwise 0.
+    """
+    target_id_set = {str(id) for id in target_ids}
+    retrieved_ids = [str(id) for id in retrieved_ids] if retrieved_ids else []
+
+    retrieved_ids_at_k = retrieved_ids[:k]
+    
+    if verbose:
+        print(f"\033[96mTarget IDs: {target_id_set}\033[0m")
+        print(f"\033[92mRetrieved IDs @{k}: {retrieved_ids_at_k}\033[0m")
+
+    # Success is binary: 1 if any overlap, 0 otherwise
+    success = int(any(rid in target_id_set for rid in retrieved_ids_at_k))
+
+    if verbose:
+        print(f"\033[96mSuccess@{k}: {success}\033[0m")
+
+    return success
+
+
 def calculate_nDCG_at_k(
     target_ids: list[str], 
     retrieved_ids: list[str], 

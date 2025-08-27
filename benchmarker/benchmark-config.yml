@@ -2,9 +2,8 @@ agent_name: query-agent-search-only
 agents_host: http://localhost:8000
 dataset: lotte/lifestyle/test/forum
 use_async: True
-reload_database: False # remove this, isolate always
-use_subset: True
-num_samples: 200
+use_subset: False
+num_samples: 5
 num_trials: 1
 batch_size: 5
 max_concurrent: 5

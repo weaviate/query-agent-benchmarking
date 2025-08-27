@@ -5,6 +5,7 @@ from tqdm import tqdm
 import numpy as np
 from benchmarker.metrics.ir_metrics import (
     calculate_recall_at_k, 
+    calculate_success_at_k,
     calculate_coverage, 
     calculate_alpha_ndcg,
     calculate_nDCG_at_k
@@ -186,7 +187,7 @@ async def analyze_results(
             {"func": calculate_recall_at_k, "params": {"k": 1}},
             {"func": calculate_recall_at_k, "params": {"k": 5}},
             {"func": calculate_recall_at_k, "params": {"k": 20}},
-            {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+            {"func": calculate_success_at_k, "params": {"k": 5}},
         ]
     else:
         raise Exception("Enter a valid dataset_name!")
