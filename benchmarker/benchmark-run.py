@@ -16,6 +16,7 @@ from benchmarker.query_agent_benchmark import (
     aggregate_metrics
 )
 from benchmarker.utils import pretty_print_dict
+from benchmarker.config import supported_datasets
 
 def load_config(config_path: str):
     with open(config_path) as f:
@@ -23,11 +24,14 @@ def load_config(config_path: str):
     return config
 
 async def main():
-    config_path = Path(os.path.dirname(__file__), "config.yml")
+    config_path = Path(os.path.dirname(__file__), "benchmark-config.yml")
     config = load_config(config_path)
     
     agents_host = config.get("agents_host", "https://api.agents.weaviate.io")
     use_async = config.get("use_async", True)
+
+    if config["dataset"] not in supported_datasets:
+        raise ValueError(f"Dataset {config['dataset']} is not supported. Supported datasets are: {supported_datasets}")
 
     _, queries = in_memory_dataset_loader(config["dataset"])
     print(f"There are \033[92m{len(queries)}\033[0m total queries in this dataset.\n")
@@ -35,10 +39,10 @@ async def main():
     pretty_print_dict(queries[0])
 
     if config["use_subset"]:
-        queries = queries[:config["num_samples"]]
         import random
         random.seed(42)
         random.shuffle(queries)
+        queries = queries[:config["num_samples"]]
         print(f"Using a subset of {config['num_samples']} queries.")
 
     query_agent = AgentBuilder(
@@ -83,7 +87,6 @@ async def main():
         )
 
         metrics = await analyze_results(
-            weaviate_client, 
             config["dataset"], 
             results,
             queries,

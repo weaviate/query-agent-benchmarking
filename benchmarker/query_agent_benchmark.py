@@ -5,8 +5,10 @@ from tqdm import tqdm
 import numpy as np
 from benchmarker.metrics.ir_metrics import (
     calculate_recall_at_k, 
+    calculate_success_at_k,
     calculate_coverage, 
-    calculate_alpha_ndcg
+    calculate_alpha_ndcg,
+    calculate_nDCG_at_k
 )
 from benchmarker.models import QueryResult
 
@@ -149,7 +151,6 @@ async def run_queries_async(
     return results
 
 async def analyze_results(
-    weaviate_client: Any,
     dataset_name: str,
     results: list[QueryResult],
     ground_truths: list[dict],
@@ -179,6 +180,14 @@ async def analyze_results(
             {"func": calculate_recall_at_k, "params": {"k": 1}},
             {"func": calculate_recall_at_k, "params": {"k": 5}},
             {"func": calculate_recall_at_k, "params": {"k": 20}},
+            {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+        ]
+    elif dataset_name.startswith("lotte/"):
+        metrics = [
+            {"func": calculate_recall_at_k, "params": {"k": 1}},
+            {"func": calculate_recall_at_k, "params": {"k": 5}},
+            {"func": calculate_recall_at_k, "params": {"k": 20}},
+            {"func": calculate_success_at_k, "params": {"k": 5}},
         ]
     else:
         raise Exception("Enter a valid dataset_name!")
@@ -232,6 +241,28 @@ async def analyze_results(
                     nuggets=ground_truth["nugget_data"], 
                     **params
                 )
+            elif "nDCG" in func_name or "ndcg" in func_name.lower():
+                # Handle nDCG calculation
+                score = metric_func(
+                    target_ids=ground_truth["dataset_ids"],
+                    retrieved_ids=retrieved_ids,
+                    **params
+                )
+            else:
+                # Fallback for any other metric functions
+                # Try calling with the standard signature first
+                try:
+                    score = metric_func(
+                        target_ids=ground_truth["dataset_ids"],
+                        retrieved_ids=retrieved_ids,
+                        **params
+                    )
+                except TypeError:
+                    # If that fails, try without target_ids (for metrics that don't need ground truth)
+                    score = metric_func(
+                        retrieved_ids=retrieved_ids,
+                        **params
+                    )
             
             metric_results[key].append(score)
         

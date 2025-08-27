@@ -36,6 +36,84 @@ def calculate_recall_at_k(
     
     return recall
 
+def calculate_success_at_k(
+    target_ids: list[str],
+    retrieved_ids: list[str],
+    k: int,
+    verbose: bool = False
+) -> int:
+    """Calculate Success@k (Hit Rate@k).
+    
+    Args:
+        target_ids: List of target document IDs (ground truth).
+        retrieved_ids: List of retrieved document IDs.
+        k: The number of top results to consider.
+        
+    Returns:
+        int: 1 if at least one target_id is found in the top-k retrieved_ids,
+             otherwise 0.
+    """
+    target_id_set = {str(id) for id in target_ids}
+    retrieved_ids = [str(id) for id in retrieved_ids] if retrieved_ids else []
+
+    retrieved_ids_at_k = retrieved_ids[:k]
+    
+    if verbose:
+        print(f"\033[96mTarget IDs: {target_id_set}\033[0m")
+        print(f"\033[92mRetrieved IDs @{k}: {retrieved_ids_at_k}\033[0m")
+
+    # Success is binary: 1 if any overlap, 0 otherwise
+    success = int(any(rid in target_id_set for rid in retrieved_ids_at_k))
+
+    if verbose:
+        print(f"\033[96mSuccess@{k}: {success}\033[0m")
+
+    return success
+
+
+def calculate_nDCG_at_k(
+    target_ids: list[str], 
+    retrieved_ids: list[str], 
+    k: int, 
+    verbose: bool = False
+) -> float:
+    """Calculate nDCG@k for retrieved documents with binary relevance.
+    
+    Args:
+        target_ids: List of relevant document IDs
+        retrieved_ids: List of retrieved document IDs in ranked order
+        k: Number of top documents to consider
+        verbose: Whether to print debug information
+    
+    Returns:
+        nDCG@k score (0 to 1)
+    """
+    target_id_set = {str(id) for id in target_ids}
+    retrieved_ids = [str(id) for id in retrieved_ids[:k]] if retrieved_ids else []
+    
+    # Calculate DCG@k - sum of (relevance / log2(position + 1))
+    dcg = 0.0
+    for i, doc_id in enumerate(retrieved_ids):
+        if doc_id in target_id_set:
+            # Position starts at 1, so we use i+2 for the denominator
+            dcg += 1.0 / np.log2(i + 2) if i > 0 else 1.0
+    
+    # Calculate IDCG@k - best possible DCG if we had perfect ranking
+    idcg = 0.0
+    num_relevant = min(len(target_id_set), k)
+    for i in range(num_relevant):
+        idcg += 1.0 / np.log2(i + 2) if i > 0 else 1.0
+    
+    # Calculate nDCG
+    ndcg = dcg / idcg if idcg > 0 else 0.0
+    
+    if verbose:
+        print(f"\033[96mTarget IDs: {target_id_set}\033[0m")
+        print(f"\033[92mRetrieved IDs @{k}: {retrieved_ids}\033[0m")
+        print(f"\033[93mDCG@{k}: {dcg:.4f}, IDCG@{k}: {idcg:.4f}\033[0m")
+        print(f"\033[96mnDCG@{k}: {ndcg:.4f}\033[0m")
+    
+    return ndcg
 
 def calculate_coverage(
     retrieved_ids: list[str], 
