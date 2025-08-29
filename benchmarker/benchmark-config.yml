@@ -1,9 +1,9 @@
 agent_name: query-agent-search-only
 agents_host: http://localhost:8000
-dataset: beir/scifact/test
+dataset: enron
 use_async: True
-use_subset: False
-num_samples: 5
+use_subset: True
+num_samples: 500
 num_trials: 3
 batch_size: 5
 max_concurrent: 5
