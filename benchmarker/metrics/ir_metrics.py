@@ -18,6 +18,7 @@ def calculate_recall_at_k(
                found in the top k retrieved results.
     """
     target_id_set = {str(id) for id in target_ids}
+
     retrieved_ids = [str(id) for id in retrieved_ids] if retrieved_ids else []
 
     retrieved_ids_at_k = retrieved_ids[:k]
@@ -30,7 +31,12 @@ def calculate_recall_at_k(
     if verbose:
         print(f"\033[92mRetrieved IDs @{k}: {retrieved_ids_at_k}\033[0m")
 
-    recall = found_count / len(target_id_set) if target_id_set else 0
+    # Compute Success @ 1 instead of Recall @ 1 because there may be multiple ground truths
+    if k == 1:
+        recall = found_count
+    else:
+        recall = found_count / len(target_id_set)
+
     if verbose:
         print(f"\033[96mRecall@{k}: {found_count}/{len(target_id_set)} = {recall:.2f}\033[0m")
     
