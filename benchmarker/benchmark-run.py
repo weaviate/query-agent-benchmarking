@@ -40,7 +40,7 @@ async def main():
 
     if config["use_subset"]:
         import random
-        random.seed(42)
+        random.seed(24)
         random.shuffle(queries)
         queries = queries[:config["num_samples"]]
         print(f"Using a subset of {config['num_samples']} queries.")
