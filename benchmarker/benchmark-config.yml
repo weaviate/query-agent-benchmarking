@@ -1,8 +1,8 @@
 agent_name: query-agent-search-only
 agents_host: http://localhost:8000
-dataset: enron
+dataset: beir/nq
 use_async: True
-use_subset: True
+use_subset: False
 num_samples: 500
 num_trials: 3
 batch_size: 5
