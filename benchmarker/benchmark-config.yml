@@ -1,6 +1,6 @@
 agent_name: query-agent-search-only
 agents_host: http://localhost:8000
-dataset: beir/nq
+dataset: bright/biology
 use_async: True
 use_subset: False
 num_samples: 500

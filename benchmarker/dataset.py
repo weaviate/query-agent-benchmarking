@@ -50,6 +50,23 @@ def _in_memory_dataset_loader_beir(dataset_name: str):
         })
     return docs, questions
 
+def _in_memory_dataset_loader_bright(dataset_name: str):
+    ds = load_dataset("xlangai/BRIGHT", dataset_name)
+    print(f"Loading BRIGHT dataset: {dataset_name}")
+    docs, questions = [], []
+    for doc in ds[dataset_name]:
+        docs.append({
+            "content": doc["content"],
+            "dataset_id": doc["id"]
+        })
+    for question in ds["examples"]:
+        questions.append({
+            "query_id": question["id"],
+            "question": question["query"],
+            "dataset_ids": question["gold_ids"]
+        })
+    return docs, questions
+
 def _in_memory_dataset_loader_lotte(dataset_name: str):
     import ir_datasets
     dataset = ir_datasets.load(f"{dataset_name}")

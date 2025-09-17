@@ -2,6 +2,7 @@ supported_datasets = (
     "beir/fiqa/test",
     "beir/nq",
     "beir/scifact/test",
+    "bright/biology",
     "enron",
     "lotte/lifestyle/test/forum",
     "lotte/lifestyle/test/search",
