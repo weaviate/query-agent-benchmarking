@@ -10,6 +10,8 @@ def in_memory_dataset_loader(dataset_name: str):
         return _in_memory_dataset_loader_wixqa()
     elif dataset_name.startswith("beir/"):
         return _in_memory_dataset_loader_beir(dataset_name)
+    elif dataset_name.startswith("bright/"):
+        return _in_memory_dataset_loader_bright(dataset_name)
     elif dataset_name.startswith("lotte/"):
         return _in_memory_dataset_loader_lotte(dataset_name)
     elif dataset_name == "freshstack-angular":
@@ -51,15 +53,17 @@ def _in_memory_dataset_loader_beir(dataset_name: str):
     return docs, questions
 
 def _in_memory_dataset_loader_bright(dataset_name: str):
-    ds = load_dataset("xlangai/BRIGHT", dataset_name)
+    all_docs = load_dataset("xlangai/BRIGHT", "documents")
+    split = dataset_name.split("/")[1]
     print(f"Loading BRIGHT dataset: {dataset_name}")
     docs, questions = [], []
-    for doc in ds[dataset_name]:
+    for doc in all_docs[split]:
         docs.append({
             "content": doc["content"],
             "dataset_id": doc["id"]
         })
-    for question in ds["examples"]:
+    all_questions = load_dataset("xlangai/BRIGHT", "examples")
+    for question in all_questions[split]:
         questions.append({
             "query_id": question["id"],
             "question": question["query"],
