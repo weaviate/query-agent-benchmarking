@@ -189,6 +189,12 @@ async def analyze_results(
             {"func": calculate_recall_at_k, "params": {"k": 20}},
             {"func": calculate_success_at_k, "params": {"k": 5}},
         ]
+    elif dataset_name.startswith("bright/"):
+        metrics = [
+            {"func": calculate_recall_at_k, "params": {"k": 1}},
+            {"func": calculate_recall_at_k, "params": {"k": 5}},
+            {"func": calculate_recall_at_k, "params": {"k": 20}},
+        ]
     else:
         raise Exception("Enter a valid dataset_name!")
     

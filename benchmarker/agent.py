@@ -48,6 +48,10 @@ class AgentBuilder:
             self.collection = f"Lotte{lotte_subset.capitalize()}"
             self.target_property_name = "content"
             self.id_property = "dataset_id"
+        elif dataset_name.startswith("bright/"):
+            self.collection = f"Bright{dataset_name.split('/')[1].capitalize()}"
+            self.target_property_name = "content"
+            self.id_property = "dataset_id"
         else:
             raise ValueError(f"Unknown dataset: {dataset_name}")
 
