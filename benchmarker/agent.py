@@ -122,9 +122,8 @@ class AgentBuilder:
 
     def run(self, query: str) -> list[ObjectID]:
         if self.agent_name == "query-agent-search-only":
-            searcher = self.agent.prepare_search(query)
             # TODO: Interface `retrieved_k` instead of hardcoding `20`
-            response = searcher.execute(limit=20, offset=0)
+            response = self.agent.search(query, limit=20)
             results = []
             for obj in response.search_results.objects:
                 results.append(ObjectID(object_id=obj.properties["dataset_id"]))
@@ -143,8 +142,8 @@ class AgentBuilder:
     async def run_async(self, query: str):
         try:
             if self.agent_name == "query-agent-search-only":
-                searcher = self.agent.prepare_search(query)
-                response = await searcher.execute(limit=20, offset=0)
+                # TODO: Interface `retrieved_k` instead of hardcoding `20`
+                response = await self.agent.search(query, limit=20)
                 results = []
                 for obj in response.search_results.objects:
                     results.append(ObjectID(object_id=obj.properties["dataset_id"]))

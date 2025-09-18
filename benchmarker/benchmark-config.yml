@@ -1,4 +1,4 @@
-agent_name: hybrid-search
+agent_name: query-agent-search-only
 agents_host: http://localhost:8000
 dataset: bright/biology
 use_async: True
@@ -7,4 +7,4 @@ num_samples: 500
 num_trials: 1
 batch_size: 5
 max_concurrent: 5
-experiment_name: hybrid-search
+experiment_name: query-agent-search-only

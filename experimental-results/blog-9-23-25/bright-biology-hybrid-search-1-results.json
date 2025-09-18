@@ -3,16 +3,16 @@
   "trials": [
     {
       "trial": 1,
-      "avg_query_time": 0.31452676624927706,
+      "avg_query_time": 0.2673681291561682,
       "avg_recall_at_1": 0.1262135922330097,
       "avg_recall_at_5": 0.1050849366383347,
       "avg_recall_at_20": 0.21039599559017033
     }
   ],
-  "avg_query_time_mean": 0.31452676624927706,
+  "avg_query_time_mean": 0.2673681291561682,
   "avg_query_time_std": 0.0,
-  "avg_query_time_min": 0.31452676624927706,
-  "avg_query_time_max": 0.31452676624927706,
+  "avg_query_time_min": 0.2673681291561682,
+  "avg_query_time_max": 0.2673681291561682,
   "avg_recall_at_1_mean": 0.1262135922330097,
   "avg_recall_at_1_std": 0.0,
   "avg_recall_at_1_min": 0.1262135922330097,
