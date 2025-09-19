@@ -1,10 +1,10 @@
 agent_name: query-agent-search-only
-agents_host: http://localhost:8000
-dataset: bright/biology
+agents_host: https://api.agents.weaviate.io
+dataset: bright/psychology
 use_async: True
 use_subset: False
 num_samples: 500
-num_trials: 1
+num_trials: 3
 batch_size: 5
 max_concurrent: 5
 experiment_name: query-agent-search-only
