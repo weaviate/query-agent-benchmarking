@@ -9,18 +9,15 @@ requires-python = ">=3.11"
 dependencies = [
   "dspy>=2.6.27",
   "sentence-transformers>=5.0.0",
-  "weaviate-client>=4.15.4",
-  "weaviate-agents", # plain name here
+  "weaviate-client[agents]>=4.15.4",
+  "weaviate-agents>=1.0.0",
   "pandas>=2.3.1",
   "datasets>=4.0.0",
   "ir-datasets>=0.5.11",
+  "pip>=25.2",
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["benchmarker*"]
 exclude = ["notebooks*", "results*", "locust*", "ci*"]
-
-[tool.uv.sources]
-# Use an ABSOLUTE path, not relative
-weaviate-agents = { path = "/Users/cshorten/Desktop/dev/weaviate-agents-python-client", editable = true }
