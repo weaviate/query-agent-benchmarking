@@ -68,13 +68,13 @@ def _in_memory_dataset_loader_bright(dataset_name: str):
         })
     all_questions = load_dataset("xlangai/BRIGHT", "examples")
     for question in all_questions[split]:
-        questions.append({
+        questions.append(
             InMemoryQuery(
                 question=question["query"],
                 query_id=question["id"],
                 dataset_ids=question["gold_ids"]
             )
-        })
+        )
     return docs, questions
 
 def _in_memory_dataset_loader_lotte(dataset_name: str):
@@ -94,13 +94,13 @@ def _in_memory_dataset_loader_lotte(dataset_name: str):
             qrels[query_id] = []
         qrels[query_id].append(qrel.doc_id)
     for question in dataset.queries_iter():
-        questions.append({
+        questions.append(
             InMemoryQuery(
                 question=question.text,
                 query_id=question.query_id,
                 dataset_ids=qrels[question.query_id]
             )
-        })
+        )
     return docs, questions
 
 def _in_memory_dataset_loader_enron():
@@ -109,11 +109,13 @@ def _in_memory_dataset_loader_enron():
     for question in questions:
         dataset_ids = question.pop('dataset_id')
         # Need to convert these to strings
-        questions.append(InMemoryQuery(
-            question=question["question"],
-            query_id=question["query_id"],
-            dataset_ids=[dataset_ids] if not isinstance(dataset_ids, list) else dataset_ids
-        ))
+        questions.append(
+            InMemoryQuery(
+                question=question["question"],
+                query_id=question["query_id"],
+                dataset_ids=[dataset_ids] if not isinstance(dataset_ids, list) else dataset_ids
+            )
+        )
     return emails, questions
 
 def _in_memory_dataset_loader_wixqa():
