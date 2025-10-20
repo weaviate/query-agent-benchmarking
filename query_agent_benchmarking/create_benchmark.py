@@ -65,7 +65,6 @@ def create_benchmark(
         obj_properties = obj.properties
         benchmark_collection.data.insert(
             properties={
-                query_property_name: obj_properties[query_property_name],
                 content_property_name: obj_properties[content_property_name],
                 id_property_name: obj_properties[id_property_name],
             }
