@@ -7,17 +7,6 @@ from weaviate.classes.config import DataType, Property, Configure
 from weaviate.agents.classes import Operations
 from weaviate.agents.transformation import TransformationAgent
 
-# NEEDS WORK!
-"""
-We can't save the new queries in the same collection as the documents...
-
-We need to:
-
-1. Move sample of docs => new collection
-2. Run TA on new collection
-"""
-
-
 def create_benchmark(
     docs_source_collection: str,
     benchmark_collection_name: str,
@@ -33,7 +22,7 @@ def create_benchmark(
     )
 
     if delete_if_exists and weaviate_client.collections.exists(benchmark_collection_name):
-        print(f"Deleting existing collection {benchmark_collection_name}...")
+        print(f"\033[96mDeleting existing collection {benchmark_collection_name}...\033[0m")
         weaviate_client.collections.delete(benchmark_collection_name)
 
     if not weaviate_client.collections.exists(benchmark_collection_name):
@@ -109,6 +98,9 @@ def create_benchmark(
         collection=benchmark_collection_name,
         operations=[create_reasoning_intensive_queries],
     )
+    print("="*50)
+    print(create_reasoning_intensive_queries)
+    print("="*50)
     response = agent.update_all()
     workflow_id = response.workflow_id
 
