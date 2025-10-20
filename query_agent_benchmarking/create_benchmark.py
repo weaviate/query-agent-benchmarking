@@ -7,6 +7,17 @@ from weaviate.classes.config import DataType
 from weaviate.agents.classes import Operations
 from weaviate.agents.transformation import TransformationAgent
 
+# NEEDS WORK!
+"""
+We can't save the new queries in the same collection as the documents...
+
+We need to:
+
+1. Move sample of docs => new collection
+2. Run TA on new collection
+"""
+
+
 def create_benchmark(
     collection_name: str,
     property_name: Optional[str] = "simulated_user_query",
@@ -16,8 +27,6 @@ def create_benchmark(
         cluster_url=os.getenv("WEAVIATE_URL"),
         auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
     )
-
-
 
     create_reasoning_intensive_queries = Operations.append_property(
         property_name=property_name,
@@ -78,6 +87,8 @@ def create_benchmark(
         sampled_uuids.append(obj.uuid)
         if len(sampled_uuids) >= num_queries:
             break
+
+    print(f"Adding {len(sampled_uuids)} queries...")
 
     response = agent.update_by_uuids(
         uuids=sampled_uuids
