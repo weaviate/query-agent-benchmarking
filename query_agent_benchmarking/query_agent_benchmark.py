@@ -10,10 +10,10 @@ from query_agent_benchmarking.metrics.ir_metrics import (
     calculate_alpha_ndcg,
     calculate_nDCG_at_k
 )
-from query_agent_benchmarking.models import QueryResult
+from query_agent_benchmarking.models import QueryResult, InMemoryQuery
 
 def run_queries(
-    queries: list[dict],
+    queries: list[InMemoryQuery],
     query_agent: Any,
 ) -> list[QueryResult]:
     """Synchronous version of run_queries"""
@@ -21,8 +21,8 @@ def run_queries(
     start = time.time()
     for i, query in enumerate(tqdm(queries, desc="Running queries")):
         query_start_time = time.time()
-        stringified_ids = [str(dataset_id) for dataset_id in query["dataset_ids"]]
-        response = query_agent.run(query["question"]) # -> list[ObjectID]
+        stringified_ids = [str(dataset_id) for dataset_id in query.dataset_ids]
+        response = query_agent.run(query.question) # -> list[ObjectID]
         query_time_taken = time.time() - query_start_time
 
         results.append(QueryResult(
@@ -34,8 +34,8 @@ def run_queries(
         
         if i % 10 == 0:
             print(f"\n\033[93m--- Progress Update ({i}/{len(queries)}) ---\033[0m")
-            print(f"Latest query: {query['question']}")
-            print(f"Ground truth: {query['dataset_ids']}")
+            print(f"Latest query: {query.question}")
+            print(f"Ground truth: {query.dataset_ids}")
             print(f"Latest response: {results[i].retrieved_ids}")
             print(f"Time taken: {query_time_taken:.2f} seconds")
             
@@ -43,7 +43,7 @@ def run_queries(
     return results
 
 async def run_queries_async(
-    queries: list[dict],
+    queries: list[InMemoryQuery],
     query_agent: Any,
     batch_size: int = 10,
     max_concurrent: int = 3
@@ -66,7 +66,7 @@ async def run_queries_async(
     async def process_query(query, index, retry_count=0, max_retries=3):
         async with semaphore:
             query_start_time = time.time()
-            stringified_ids = [str(dataset_id) for dataset_id in query["dataset_ids"]]
+            stringified_ids = [str(dataset_id) for dataset_id in query.dataset_ids]
             try:
                 if retry_count > 0:
                     delay = min(2 ** retry_count, 10)  # Exponential backoff
@@ -75,9 +75,9 @@ async def run_queries_async(
                 elif index > 0:
                     await asyncio.sleep(0.1)
                 
-                question_sample = query["question"]
+                question_sample = query.question
                 print(f"Running query {index}: {question_sample}")
-                response = await query_agent.run_async(query["question"])
+                response = await query_agent.run_async(query.question)
                 query_time_taken = time.time() - query_start_time
 
                 results = QueryResult(
@@ -133,7 +133,7 @@ async def run_queries_async(
         successful_results = [r for r in batch_results if "error" not in r]
         if successful_results:
             sample = successful_results[0]
-            print(f"Sample query: {sample.query['question'][:100]}...")
+            print(f"Sample query: {sample.query.question[:100]}...")
             print(f"Sample response: {sample.retrieved_ids[:200]}...")
         
         if batch_idx + batch_size < len(queries_to_process):
@@ -153,7 +153,7 @@ async def run_queries_async(
 async def analyze_results(
     dataset_name: str,
     results: list[QueryResult],
-    ground_truths: list[dict],
+    ground_truths: list[InMemoryQuery],
 ):
     """Analyze results with dataset-specific metrics."""
     
@@ -233,25 +233,28 @@ async def analyze_results(
             score = 0.0
             if "recall" in func_name:
                 score = metric_func(
-                    target_ids=ground_truth["dataset_ids"],
+                    target_ids=ground_truth.dataset_ids,
                     retrieved_ids=retrieved_ids,
                     **params
                 )
             elif func_name in ["calculate_coverage", "calculate_alpha_ndcg"]:
-                if ground_truth.get("nugget_data"):
-                    for idx, nugget in enumerate(ground_truth["nugget_data"]):
+                pass
+                """
+                if ground_truth.get(nugget_data):
+                    for idx, nugget in enumerate(ground_truth.nugget_data):
                         if 'id' not in nugget:
                             nugget['id'] = f"nugget_{idx}"
                 
                 score = metric_func(
                     retrieved_ids=retrieved_ids, 
-                    nuggets=ground_truth["nugget_data"], 
+                    nuggets=ground_truth.nugget_data, 
                     **params
                 )
+                """
             elif "nDCG" in func_name or "ndcg" in func_name.lower():
                 # Handle nDCG calculation
                 score = metric_func(
-                    target_ids=ground_truth["dataset_ids"],
+                    target_ids=ground_truth.dataset_ids,
                     retrieved_ids=retrieved_ids,
                     **params
                 )
@@ -260,7 +263,7 @@ async def analyze_results(
                 # Try calling with the standard signature first
                 try:
                     score = metric_func(
-                        target_ids=ground_truth["dataset_ids"],
+                        target_ids=ground_truth.dataset_ids,
                         retrieved_ids=retrieved_ids,
                         **params
                     )
