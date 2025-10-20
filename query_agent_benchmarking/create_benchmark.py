@@ -3,7 +3,7 @@ from typing import Optional
 from uuid import UUID
 
 import weaviate
-from weaviate.classes.config import DataType
+from weaviate.classes.config import DataType, Property, Configure
 from weaviate.agents.classes import Operations
 from weaviate.agents.transformation import TransformationAgent
 
@@ -19,19 +19,62 @@ We need to:
 
 
 def create_benchmark(
-    collection_name: str,
-    property_name: Optional[str] = "simulated_user_query",
+    docs_source_collection: str,
+    benchmark_collection_name: str,
+    delete_if_exists: Optional[bool] = True,
     num_queries: Optional[int] = 100,
+    query_property_name: Optional[str] = "simulated_user_query",
+    content_property_name: Optional[str] = "content",
+    id_property_name: Optional[str] = "dataset_id",
 ):
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
         auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
     )
 
+    if delete_if_exists:
+        if weaviate_client.collections.exists(benchmark_collection_name):
+            weaviate_client.collections.delete(benchmark_collection_name)
+            weaviate_client.collections.create(
+                name=benchmark_collection_name,
+                vectorizer_config=Configure.Vectorizer.text2vec_weaviate(),
+                properties=[
+                    Property(
+                        name=query_property_name,
+                        data_type=DataType.TEXT,
+                    ),
+                    Property(
+                        name=content_property_name,
+                        data_type=DataType.TEXT,
+                        skip_vectorization=True,
+                    ),
+                    Property(
+                        name=id_property_name,
+                        data_type=DataType.TEXT,
+                        skip_vectorization=True,
+                    ),
+                ]
+            )
+
+    benchmark_collection = weaviate_client.collections.get(benchmark_collection_name)
+
+    source_collection = weaviate_client.collections.get(docs_source_collection)
+    for i, obj in enumerate(source_collection.iterator()):
+        if i >= num_queries:
+            break
+        obj_properties = obj.properties
+        benchmark_collection.data.insert(
+            properties={
+                query_property_name: obj_properties[query_property_name],
+                content_property_name: obj_properties[content_property_name],
+                id_property_name: obj_properties[id_property_name],
+            }
+        )
+
     create_reasoning_intensive_queries = Operations.append_property(
-        property_name=property_name,
+        property_name=query_property_name,
         data_type=DataType.TEXT,
-        view_properties=["content"],
+        view_properties=[content_property_name],
         instructions="""You are tasked with generating reasoning-intensive queries for retrieval tasks. These queries should require intensive reasoning to identify that the provided document content is relevant—simple keyword matching or semantic similarity should NOT be sufficient.
 
     ## What Makes a Query "Reasoning-Intensive"?
@@ -76,24 +119,10 @@ def create_benchmark(
 
     agent = TransformationAgent(
         client=weaviate_client,
-        collection=collection_name,
+        collection=benchmark_collection_name,
         operations=[create_reasoning_intensive_queries],
     )
-
-    sampled_uuids: list[UUID] = []
-
-    collection = weaviate_client.collections.get(collection_name)
-    for obj in collection.iterator():
-        sampled_uuids.append(obj.uuid)
-        if len(sampled_uuids) >= num_queries:
-            break
-
-    print(f"Adding {len(sampled_uuids)} queries...")
-
-    response = agent.update_by_uuids(
-        uuids=sampled_uuids
-    )
-
+    response = agent.update_all()
     workflow_id = response.workflow_id
 
     print(agent.get_status(workflow_id))
