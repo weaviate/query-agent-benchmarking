@@ -1,7 +1,7 @@
 # This is used to demonstrate running evals from Queries stored in Weaviate
 import os
 import weaviate
-from weaviate.classes.config import Configure, Property
+from weaviate.classes.config import Configure, Property, DataType
 
 from query_agent_benchmarking.dataset import in_memory_dataset_loader
 
@@ -21,16 +21,16 @@ if not weaviate_client.collections.exists(collection_name):
         properties=[
             Property(
                 name="question",
-                data_type=weaviate.DataType.TEXT
+                data_type=DataType.TEXT
             ),
             Property(
                 name="query_id",
-                data_type=weaviate.DataType.TEXT,
+                data_type=DataType.TEXT,
                 skip_vectorization=True
             ),
             Property(
                 name="dataset_ids",
-                data_type=weaviate.DataType.TEXT_ARRAY,
+                data_type=DataType.TEXT_ARRAY,
                 skip_vectorization=True
             )
         ]
