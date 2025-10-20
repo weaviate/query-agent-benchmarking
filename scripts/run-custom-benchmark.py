@@ -3,7 +3,6 @@ import query_agent_benchmarking
 from query_agent_benchmarking.models import (
     DocsCollection,
     QueriesCollection,
-    InMemoryQuery,
 )
 
 docs_collection = DocsCollection(
@@ -17,7 +16,6 @@ queries_collection = QueriesCollection(
 )
 
 query_agent_benchmarking.run_eval(
-    dataset="bright/biology",
     docs_collection=docs_collection,
-    queries_collection=queries_collection,
+    queries=queries_collection,
 )
