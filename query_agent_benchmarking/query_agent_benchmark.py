@@ -27,7 +27,7 @@ def run_queries(
 
         results.append(QueryResult(
             query=query,
-            query_id=stringified_ids,
+            query_ground_truth_id=stringified_ids,
             retrieved_ids=response,
             time_taken=query_time_taken
         ))
@@ -82,7 +82,7 @@ async def run_queries_async(
 
                 results = QueryResult(
                     query=query,
-                    query_id=stringified_ids,
+                    query_ground_truth_id=stringified_ids,
                     retrieved_ids=response,
                     time_taken=query_time_taken
                 )
@@ -95,7 +95,7 @@ async def run_queries_async(
                 print(f"\n\033[91mError processing query {index}: {error_msg}\033[0m")
                 return QueryResult(
                     query=query,
-                    query_id=stringified_ids,
+                    query_ground_truth_id=stringified_ids,
                     retrieved_ids=[],
                     time_taken=query_time_taken
                 )
