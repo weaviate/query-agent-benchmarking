@@ -1,6 +1,6 @@
 import asyncio
 import time
-from typing import Any
+from typing import Any, Optional
 from tqdm import tqdm
 import numpy as np
 from query_agent_benchmarking.metrics.ir_metrics import (
@@ -151,9 +151,9 @@ async def run_queries_async(
     return results
 
 async def analyze_results(
-    dataset_name: str,
     results: list[QueryResult],
     ground_truths: list[InMemoryQuery],
+    dataset_name: Optional[str] = None,
 ):
     """Analyze results with dataset-specific metrics."""
     
@@ -197,7 +197,13 @@ async def analyze_results(
             {"func": calculate_nDCG_at_k, "params": {"k": 10}},
         ]
     else:
-        raise Exception("Enter a valid dataset_name!")
+        # TODO: Extend this...
+        metrics = [
+            {"func": calculate_recall_at_k, "params": {"k": 1}},
+            {"func": calculate_recall_at_k, "params": {"k": 5}},
+            {"func": calculate_recall_at_k, "params": {"k": 20}},
+            {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+        ]
     
     # Initialize result storage with descriptive keys
     metric_results = {}
