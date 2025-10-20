@@ -41,7 +41,17 @@ def load_config(config_path: str) -> Dict[str, Any]:
 def merge_configs(file_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
     """Merge file-based config with programmatic overrides."""
     merged = file_config.copy()
-    merged.update({k: v for k, v in override_config.items() if v is not None})
+    
+    # Filter out None values from override_config
+    filtered_overrides = {k: v for k, v in override_config.items() if v is not None}
+    
+    # Special handling: if docs_collection is provided, remove dataset from merged config
+    if 'docs_collection' in filtered_overrides and 'dataset' in merged:
+        del merged['dataset']
+    
+    # Apply overrides
+    merged.update(filtered_overrides)
+    
     return merged
 
 
@@ -75,9 +85,9 @@ async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
             # Load from Weaviate
             queries = load_queries_from_weaviate_collection(
                 collection_name=queries_input.collection_name,
-                query_content_key=queries_input.query_field,
-                query_id_key="query_id",
-                dataset_ids_key=queries_input.gold_ids_field,
+                query_content_key=queries_input.query_content_key,
+                query_id_key=queries_input.query_id_key,
+                dataset_ids_key=queries_input.dataset_ids_key,
             )
         elif isinstance(queries_input, list):
             # Verify all items are InMemoryQuery
@@ -95,7 +105,7 @@ async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
                 f"Got: {type(queries_input)}"
             )
         
-        dataset_identifier = docs_collection.name
+        dataset_identifier = docs_collection.collection_name
         
     else:
         raise ValueError(

@@ -15,9 +15,11 @@ class QueryResult(BaseModel):
     time_taken: float
 
 class DocsCollection(BaseModel):
-    name: str
+    collection_name: str
     id_key: str
 
 class QueriesCollection(BaseModel):
-    name: str
-    id_key: str
+    collection_name: str
+    query_content_key: str
+    query_id_key: str
+    dataset_ids_key: str

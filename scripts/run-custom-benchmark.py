@@ -6,13 +6,15 @@ from query_agent_benchmarking.models import (
 )
 
 docs_collection = DocsCollection(
-    name="BrightBiology",
+    collection_name="BrightBiology",
     id_key="dataset_id",
 )
 
 queries_collection = QueriesCollection(
-    name="BrightBiologyQueries",
-    id_key="dataset_id",
+    collection_name="BrightBiologyQueries",
+    query_content_key="question",
+    query_id_key="query_id",
+    dataset_ids_key="dataset_ids",
 )
 
 query_agent_benchmarking.run_eval(
