@@ -3,6 +3,8 @@ import random
 
 from datasets import load_dataset
 
+from query_agent_benchmarking.models import DocsCollection, QueriesCollection, InMemoryQuery
+
 def in_memory_dataset_loader(dataset_name: str):
     if dataset_name == "enron":
         return _in_memory_dataset_loader_enron()
@@ -46,9 +48,11 @@ def _in_memory_dataset_loader_beir(dataset_name: str):
         qrels[query_id].append(qrel.doc_id)
     for question in dataset.queries_iter():
         questions.append({
-            "query_id": question.query_id,
-            "question": question.text,
-            "dataset_ids": qrels[question.query_id]
+            InMemoryQuery(
+                question=question.text,
+                query_id=question.query_id,
+                dataset_ids=qrels[question.query_id]
+            )
         })
     return docs, questions
 
@@ -65,9 +69,11 @@ def _in_memory_dataset_loader_bright(dataset_name: str):
     all_questions = load_dataset("xlangai/BRIGHT", "examples")
     for question in all_questions[split]:
         questions.append({
-            "query_id": question["id"],
-            "question": question["query"],
-            "dataset_ids": question["gold_ids"]
+            InMemoryQuery(
+                question=question["query"],
+                query_id=question["id"],
+                dataset_ids=question["gold_ids"]
+            )
         })
     return docs, questions
 
@@ -89,9 +95,11 @@ def _in_memory_dataset_loader_lotte(dataset_name: str):
         qrels[query_id].append(qrel.doc_id)
     for question in dataset.queries_iter():
         questions.append({
-            "query_id": question.query_id,
-            "question": question.text,
-            "dataset_ids": qrels[question.query_id]
+            InMemoryQuery(
+                question=question.text,
+                query_id=question.query_id,
+                dataset_ids=qrels[question.query_id]
+            )
         })
     return docs, questions
 
@@ -99,9 +107,13 @@ def _in_memory_dataset_loader_enron():
     emails = _load_dataset_from_hf_hub("weaviate/enron-qa-emails-dasovich-j")
     questions = _load_dataset_from_hf_hub("weaviate/enron-qa-questions-dasovich-j")
     for question in questions:
-        dataset_id = question.pop('dataset_id')
+        dataset_ids = question.pop('dataset_id')
         # Need to convert these to strings
-        question['dataset_ids'] = [dataset_id] if not isinstance(dataset_id, list) else dataset_id
+        questions.append(InMemoryQuery(
+            question=question["question"],
+            query_id=question["query_id"],
+            dataset_ids=[dataset_ids] if not isinstance(dataset_ids, list) else dataset_ids
+        ))
     return emails, questions
 
 def _in_memory_dataset_loader_wixqa():
@@ -109,10 +121,17 @@ def _in_memory_dataset_loader_wixqa():
     questions = _load_dataset_from_hf_hub(filepath="Wix/WixQA",subset="wixqa_expertwritten")
     for question in questions:
         article_ids = question.pop('article_ids')
-        question['dataset_ids'] = [article_ids] if not isinstance(article_ids, list) else article_ids
+        questions.append(InMemoryQuery(
+            question=question["question"],
+            query_id=question["query_id"],
+            dataset_ids=[article_ids] if not isinstance(article_ids, list) else article_ids
+        ))
     return documents, questions
 
+# Need to check how this benchmark needs to extend the `InMemoryQuery` model
 def _in_memory_dataset_loader_freshstack(subset: str):
+    pass
+    """
     docs = _load_dataset_from_hf_hub(filepath="freshstack/corpus-oct-2024", subset=subset)
     for doc in docs:
         doc['dataset_id'] = doc.pop('_id')
@@ -151,6 +170,7 @@ def _in_memory_dataset_loader_freshstack(subset: str):
         question["question"] = question["query_text"]
     
     return docs, questions
+    """
 
 def _load_dataset_from_hf_hub(filepath, subset=None, train=True):
     ds = load_dataset(filepath, subset)
