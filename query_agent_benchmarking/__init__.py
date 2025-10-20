@@ -6,6 +6,7 @@ from .models import (
     ObjectID,
     QueryResult,
 )
+from .create_benchmark import create_benchmark
 
 __all__ = [
     "run_eval",
@@ -14,5 +15,6 @@ __all__ = [
     "InMemoryQuery",
     "ObjectID",
     "QueryResult",
+    "create_benchmark",
 ]
 __version__ = "0.1.0"
