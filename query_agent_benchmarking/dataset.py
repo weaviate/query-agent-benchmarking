@@ -196,6 +196,7 @@ def _load_dataset_from_json(filepath):
 # Update me!
 # TODO: Update to just take a sample of the queries
 def load_queries_from_weaviate_collection(collection_name: str, query_content_key: str, query_id_key: str, dataset_ids_key: str):
+    print("STEFONDIGGS"*50)
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
         auth_credentials=weaviate.auth.AuthApiKey(api_key=os.getenv("WEAVIATE_API_KEY"))
