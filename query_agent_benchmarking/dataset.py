@@ -1,6 +1,7 @@
 import json
 import random
-
+import os
+import weaviate
 from datasets import load_dataset
 
 from query_agent_benchmarking.models import DocsCollection, QueriesCollection, InMemoryQuery
@@ -193,8 +194,28 @@ def _load_dataset_from_json(filepath):
     return data
 
 # Update me!
-def load_queries_from_weaviate_collection(collection_name: str, query_content_key: str,id_key: str):
-    pass
+# TODO: Update to just take a sample of the queries
+def load_queries_from_weaviate_collection(collection_name: str, query_content_key: str, query_id_key: str, dataset_ids_key: str):
+    weaviate_client = weaviate.connect_to_weaviate_cloud(
+        cluster_url=os.getenv("WEAVIATE_URL"),
+        auth_credentials=weaviate.auth.AuthApiKey(api_key=os.getenv("WEAVIATE_API_KEY"))
+    )
+
+    query_collection = weaviate_client.collections.get(collection_name)
+    
+    queries: list[InMemoryQuery] = []
+
+    for query_item in query_collection.iterator():
+        props = query_item.properties
+        query = InMemoryQuery(
+            question=props[query_content_key],
+            query_id=props[query_id_key],
+            dataset_ids=props[dataset_ids_key]
+        )
+        queries.append(query)
+    return queries
+
+
 
 def split_dataset(dataset, train_ratio=0.8, shuffle=True):
     if shuffle:
