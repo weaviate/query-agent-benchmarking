@@ -192,6 +192,10 @@ def _load_dataset_from_json(filepath):
         data = json.load(f)
     return data
 
+# Update me!
+def load_queries_from_weaviate_collection(collection_name: str, query_content_key: str,id_key: str):
+    pass
+
 def split_dataset(dataset, train_ratio=0.8, shuffle=True):
     if shuffle:
         dataset = dataset.copy()
