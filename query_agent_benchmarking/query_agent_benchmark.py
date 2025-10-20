@@ -3,14 +3,14 @@ import time
 from typing import Any
 from tqdm import tqdm
 import numpy as np
-from benchmarker.metrics.ir_metrics import (
+from query_agent_benchmarking.metrics.ir_metrics import (
     calculate_recall_at_k, 
     calculate_success_at_k,
     calculate_coverage, 
     calculate_alpha_ndcg,
     calculate_nDCG_at_k
 )
-from benchmarker.models import QueryResult
+from query_agent_benchmarking.models import QueryResult
 
 def run_queries(
     queries: list[dict],

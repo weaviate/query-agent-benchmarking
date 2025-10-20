@@ -7,16 +7,16 @@ import yaml
 
 import weaviate
 
-from benchmarker.agent import AgentBuilder
-from benchmarker.dataset import in_memory_dataset_loader
-from benchmarker.query_agent_benchmark import (
+from query_agent_benchmarking.agent import AgentBuilder
+from query_agent_benchmarking.dataset import in_memory_dataset_loader
+from query_agent_benchmarking.query_agent_benchmark import (
     run_queries,
     run_queries_async,
     analyze_results,
     aggregate_metrics
 )
-from benchmarker.utils import pretty_print_dict
-from benchmarker.config import supported_datasets
+from query_agent_benchmarking.utils import pretty_print_dict
+from query_agent_benchmarking.config import supported_datasets
 
 def load_config(config_path: str):
     with open(config_path) as f:
