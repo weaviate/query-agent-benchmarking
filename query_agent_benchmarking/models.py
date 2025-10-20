@@ -8,3 +8,11 @@ class QueryResult(BaseModel):
     query_id: list[str]
     retrieved_ids: list[ObjectID]
     time_taken: float
+
+class DocsCollection(BaseModel):
+    name: str
+    id_key: str
+
+class QueriesCollection(BaseModel):
+    name: str
+    id_key: str
