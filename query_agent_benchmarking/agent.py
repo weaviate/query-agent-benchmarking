@@ -4,7 +4,7 @@ from typing import Optional
 import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
-from benchmarker.models import ObjectID
+from query_agent_benchmarking.models import ObjectID
 
 class AgentBuilder:
     """

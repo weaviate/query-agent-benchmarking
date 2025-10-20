@@ -22,5 +22,5 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["benchmarker*"]
+include = ["query_agent_benchmarking*"]
 exclude = ["notebooks*", "results*", "locust*", "ci*"]
