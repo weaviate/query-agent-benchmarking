@@ -201,7 +201,6 @@ def load_queries_from_weaviate_collection(
     query_id_key: str, 
     dataset_ids_key: str
 ):
-    print("STEFONDIGGS"*50)
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
         auth_credentials=weaviate.auth.AuthApiKey(api_key=os.getenv("WEAVIATE_API_KEY"))
