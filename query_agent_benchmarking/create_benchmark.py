@@ -33,6 +33,7 @@ def create_benchmark(
     )
 
     if delete_if_exists and weaviate_client.collections.exists(benchmark_collection_name):
+        print(f"Deleting existing collection {benchmark_collection_name}...")
         weaviate_client.collections.delete(benchmark_collection_name)
 
     if not weaviate_client.collections.exists(benchmark_collection_name):
@@ -58,9 +59,8 @@ def create_benchmark(
             }
         )
 
-    create_reasoning_intensive_queries = Operations.append_property(
+    create_reasoning_intensive_queries = Operations.update_property(
         property_name=query_property_name,
-        data_type=DataType.TEXT,
         view_properties=[content_property_name],
         instruction="""You are tasked with generating reasoning-intensive queries for retrieval tasks. These queries should require intensive reasoning to identify that the provided document content is relevant—simple keyword matching or semantic similarity should NOT be sufficient.
 
