@@ -158,38 +158,7 @@ async def analyze_results(
     """Analyze results with dataset-specific metrics."""
     
     # Define metrics with their specific parameters for each dataset
-    if dataset_name == "enron":
-        metrics = [
-            {"func": calculate_recall_at_k, "params": {"k": 1}},
-            {"func": calculate_recall_at_k, "params": {"k": 5}},
-            {"func": calculate_recall_at_k, "params": {"k": 20}},
-        ]
-    elif dataset_name == "wixqa":
-        metrics = [
-            {"func": calculate_recall_at_k, "params": {"k": 1}},
-            {"func": calculate_recall_at_k, "params": {"k": 5}},
-            {"func": calculate_recall_at_k, "params": {"k": 20}},
-        ]
-    elif dataset_name.startswith("freshstack-"):
-        metrics = [
-            {"func": calculate_coverage, "params": {"k": 1000}},
-            {"func": calculate_alpha_ndcg, "params": {"alpha": 0.5, "k": 10}},
-        ]
-    elif dataset_name.startswith("beir/"):
-        metrics = [
-            {"func": calculate_recall_at_k, "params": {"k": 1}},
-            {"func": calculate_recall_at_k, "params": {"k": 5}},
-            {"func": calculate_recall_at_k, "params": {"k": 20}},
-            {"func": calculate_nDCG_at_k, "params": {"k": 10}},
-        ]
-    elif dataset_name.startswith("lotte/"):
-        metrics = [
-            {"func": calculate_recall_at_k, "params": {"k": 1}},
-            {"func": calculate_recall_at_k, "params": {"k": 5}},
-            {"func": calculate_recall_at_k, "params": {"k": 20}},
-            {"func": calculate_success_at_k, "params": {"k": 5}},
-        ]
-    elif dataset_name.startswith("bright/"):
+    if dataset_name is None:
         metrics = [
             {"func": calculate_recall_at_k, "params": {"k": 1}},
             {"func": calculate_recall_at_k, "params": {"k": 5}},
@@ -197,13 +166,46 @@ async def analyze_results(
             {"func": calculate_nDCG_at_k, "params": {"k": 10}},
         ]
     else:
-        # TODO: Extend this...
-        metrics = [
-            {"func": calculate_recall_at_k, "params": {"k": 1}},
-            {"func": calculate_recall_at_k, "params": {"k": 5}},
-            {"func": calculate_recall_at_k, "params": {"k": 20}},
-            {"func": calculate_nDCG_at_k, "params": {"k": 10}},
-        ]
+        if dataset_name == "enron":
+            metrics = [
+                {"func": calculate_recall_at_k, "params": {"k": 1}},
+                {"func": calculate_recall_at_k, "params": {"k": 5}},
+                {"func": calculate_recall_at_k, "params": {"k": 20}},
+            ]
+        elif dataset_name == "wixqa":
+            metrics = [
+                {"func": calculate_recall_at_k, "params": {"k": 1}},
+                {"func": calculate_recall_at_k, "params": {"k": 5}},
+                {"func": calculate_recall_at_k, "params": {"k": 20}},
+            ]
+        elif dataset_name.startswith("freshstack-"):
+            metrics = [
+                {"func": calculate_coverage, "params": {"k": 1000}},
+                {"func": calculate_alpha_ndcg, "params": {"alpha": 0.5, "k": 10}},
+            ]
+        elif dataset_name.startswith("beir/"):
+            metrics = [
+                {"func": calculate_recall_at_k, "params": {"k": 1}},
+                {"func": calculate_recall_at_k, "params": {"k": 5}},
+                {"func": calculate_recall_at_k, "params": {"k": 20}},
+                {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+            ]
+        elif dataset_name.startswith("lotte/"):
+            metrics = [
+                {"func": calculate_recall_at_k, "params": {"k": 1}},
+                {"func": calculate_recall_at_k, "params": {"k": 5}},
+                {"func": calculate_recall_at_k, "params": {"k": 20}},
+                {"func": calculate_success_at_k, "params": {"k": 5}},
+            ]
+        elif dataset_name.startswith("bright/"):
+            metrics = [
+                {"func": calculate_recall_at_k, "params": {"k": 1}},
+                {"func": calculate_recall_at_k, "params": {"k": 5}},
+                {"func": calculate_recall_at_k, "params": {"k": 20}},
+                {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+            ]
+        else:
+            raise ValueError(f"Unknown dataset: {dataset_name}")
     
     # Initialize result storage with descriptive keys
     metric_results = {}
