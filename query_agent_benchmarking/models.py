@@ -16,3 +16,8 @@ class DocsCollection(BaseModel):
 class QueriesCollection(BaseModel):
     name: str
     id_key: str
+
+class InMemoryQuery(BaseModel):
+    question: str
+    query_id: str
+    dataset_ids: list[str]
