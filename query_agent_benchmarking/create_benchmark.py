@@ -32,29 +32,17 @@ def create_benchmark(
         auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
     )
 
-    if delete_if_exists:
-        if weaviate_client.collections.exists(benchmark_collection_name):
-            weaviate_client.collections.delete(benchmark_collection_name)
-            weaviate_client.collections.create(
-                name=benchmark_collection_name,
-                vectorizer_config=Configure.Vectorizer.text2vec_weaviate(),
-                properties=[
-                    Property(
-                        name=query_property_name,
-                        data_type=DataType.TEXT,
-                    ),
-                    Property(
-                        name=content_property_name,
-                        data_type=DataType.TEXT,
-                        skip_vectorization=True,
-                    ),
-                    Property(
-                        name=id_property_name,
-                        data_type=DataType.TEXT,
-                        skip_vectorization=True,
-                    ),
-                ]
-            )
+    if delete_if_exists and weaviate_client.collections.exists(benchmark_collection_name):
+        weaviate_client.collections.delete(benchmark_collection_name)
+
+    if not weaviate_client.collections.exists(benchmark_collection_name):
+      _create_collection(
+        weaviate_client=weaviate_client, 
+        name=benchmark_collection_name,
+        query_property_name=query_property_name, 
+        content_property_name=content_property_name, 
+        id_property_name=id_property_name
+    )
 
     benchmark_collection = weaviate_client.collections.get(benchmark_collection_name)
 
@@ -74,7 +62,7 @@ def create_benchmark(
         property_name=query_property_name,
         data_type=DataType.TEXT,
         view_properties=[content_property_name],
-        instructions="""You are tasked with generating reasoning-intensive queries for retrieval tasks. These queries should require intensive reasoning to identify that the provided document content is relevant—simple keyword matching or semantic similarity should NOT be sufficient.
+        instruction="""You are tasked with generating reasoning-intensive queries for retrieval tasks. These queries should require intensive reasoning to identify that the provided document content is relevant—simple keyword matching or semantic similarity should NOT be sufficient.
 
     ## What Makes a Query "Reasoning-Intensive"?
 
@@ -125,3 +113,32 @@ def create_benchmark(
     workflow_id = response.workflow_id
 
     print(agent.get_status(workflow_id))
+
+def _create_collection(
+    weaviate_client: weaviate.WeaviateClient, 
+    name: str, 
+    query_property_name: str, 
+    content_property_name: str, 
+    id_property_name: str
+):
+    """Helper to create collection with standard schema."""
+    return weaviate_client.collections.create(
+        name=name,
+        vectorizer_config=Configure.Vectorizer.text2vec_weaviate(),
+        properties=[
+            Property(
+                name=query_property_name,
+                data_type=DataType.TEXT,
+            ),
+            Property(
+                name=content_property_name,
+                data_type=DataType.TEXT,
+                skip_vectorization=True,
+            ),
+            Property(
+                name=id_property_name,
+                data_type=DataType.TEXT,
+                skip_vectorization=True,
+            ),
+        ]
+    )
