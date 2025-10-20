@@ -175,9 +175,9 @@ async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
         )
 
         metrics = await analyze_results(
-            dataset_identifier, 
-            results,
-            queries,
+            results=results,
+            ground_truths=queries,
+            dataset_name=dataset_name, 
         )
         print(metrics)
 
