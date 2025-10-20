@@ -16,7 +16,7 @@ from query_agent_benchmarking.query_agent_benchmark import (
     analyze_results,
     aggregate_metrics
 )
-from query_agent_benchmarking.utils import pretty_print_dict
+from query_agent_benchmarking.utils import pretty_print_in_memory_query
 from query_agent_benchmarking.config import supported_datasets
 
 
@@ -54,7 +54,7 @@ async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
     _, queries = in_memory_dataset_loader(config["dataset"])
     print(f"There are \033[92m{len(queries)}\033[0m total queries in this dataset.\n")
     print("\033[92mFirst Query\033[0m")
-    pretty_print_dict(queries[0])
+    pretty_print_in_memory_query(queries[0])
 
     # Handle subset if requested
     if config.get("use_subset", False):
