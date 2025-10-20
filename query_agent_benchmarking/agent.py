@@ -4,7 +4,7 @@ from typing import Optional
 import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
-from query_agent_benchmarking.models import ObjectID
+from query_agent_benchmarking.models import ObjectID, DocsCollection
 
 class AgentBuilder:
     """
@@ -13,8 +13,9 @@ class AgentBuilder:
     """
     def __init__(
         self,
-        dataset_name: str,
         agent_name: str,
+        dataset_name: Optional[str] = None,
+        docs_collection: Optional[DocsCollection] = None,
         agents_host: Optional[str] = None,
         use_async: bool = False,
     ):
@@ -26,9 +27,23 @@ class AgentBuilder:
         self.api_key = os.getenv("WEAVIATE_API_KEY")
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         
-        if dataset_name == "enron":
+        # Require either dataset_name or docs_collection, but not both
+        if dataset_name and docs_collection:
+            raise ValueError("Cannot specify both dataset_name and docs_collection")
+        if not dataset_name and not docs_collection:
+            raise ValueError("Must specify either dataset_name or docs_collection")
+        
+        # Handle custom DocsCollection
+        if docs_collection:
+            self.collection = docs_collection.collection_name
+            self.target_property_name = docs_collection.content_key
+            self.id_property = docs_collection.id_key
+            
+        # Handle built-in datasets
+        elif dataset_name == "enron":
             self.collection = "EnronEmails"
-            self.target_property_name = "" # I think we can remove this...
+            self.target_property_name = ""
+            self.id_property = "dataset_id"
         elif dataset_name == "wixqa":
             self.collection = "WixKB"
             self.target_property_name = "contents"
@@ -125,7 +140,7 @@ class AgentBuilder:
             response = self.agent.search(query, limit=20)
             results = []
             for obj in response.search_results.objects:
-                results.append(ObjectID(object_id=obj.properties["dataset_id"]))
+                results.append(ObjectID(object_id=obj.properties[self.id_property]))
             return results
         
         if self.agent_name == "hybrid-search":
@@ -135,7 +150,7 @@ class AgentBuilder:
             )
             results = []
             for obj in response.objects:
-                results.append(ObjectID(object_id=str(obj.properties["dataset_id"])))
+                results.append(ObjectID(object_id=str(obj.properties[self.id_property])))
             return results
         
     async def run_async(self, query: str):
@@ -145,7 +160,7 @@ class AgentBuilder:
                 response = await self.agent.search(query, limit=20)
                 results = []
                 for obj in response.search_results.objects:
-                    results.append(ObjectID(object_id=obj.properties["dataset_id"]))
+                    results.append(ObjectID(object_id=obj.properties[self.id_property]))
                 return results
             elif self.agent_name == "hybrid-search":
                 response = await self.weaviate_collection.query.hybrid(
@@ -154,7 +169,7 @@ class AgentBuilder:
                 )
                 results = []
                 for obj in response.objects:
-                    results.append(ObjectID(object_id=obj.properties["dataset_id"]))
+                    results.append(ObjectID(object_id=str(obj.properties[self.id_property])))
                 return results
         except Exception as e:
             print(f"Query '{query[:50]}...' failed with error: {str(e)}")

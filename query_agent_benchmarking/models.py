@@ -16,6 +16,7 @@ class QueryResult(BaseModel):
 
 class DocsCollection(BaseModel):
     collection_name: str
+    content_key: str
     id_key: str
 
 class QueriesCollection(BaseModel):

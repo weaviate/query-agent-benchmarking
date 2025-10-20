@@ -7,6 +7,7 @@ from query_agent_benchmarking.models import (
 
 docs_collection = DocsCollection(
     collection_name="BrightBiology",
+    content_key="content",
     id_key="dataset_id",
 )
 
