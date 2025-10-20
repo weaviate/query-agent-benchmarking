@@ -46,12 +46,6 @@ def merge_configs(file_config: Dict[str, Any], override_config: Dict[str, Any]) 
 
 
 async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Internal async implementation of run_eval.
-    
-    Handles both built-in datasets and custom collections.
-    """
-    
     agents_host = config.get("agents_host", "https://api.agents.weaviate.io")
     use_async = config.get("use_async", True)
     
@@ -60,9 +54,8 @@ async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
     docs_collection = config.get("docs_collection")
     queries_input = config.get("queries")
     
-    # Load queries
     if dataset_name:
-        # Built-in dataset path
+        # Built-in dataset paths
         if dataset_name not in supported_datasets:
             raise ValueError(
                 f"Dataset {dataset_name} is not supported. "
@@ -77,7 +70,7 @@ async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
         if not isinstance(docs_collection, DocsCollection):
             raise ValueError("docs_collection must be a DocsCollection object")
         
-        # Load queries based on type
+        # Load queries based on the type of queries_input
         if isinstance(queries_input, QueriesCollection):
             # Load from Weaviate
             queries = load_queries_from_weaviate_collection(
@@ -122,7 +115,7 @@ async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
         queries = queries[:config["num_samples"]]
         print(f"Using a subset of {config['num_samples']} queries.")
 
-    # Build agent - works for both built-in and custom
+    # Build agent
     if dataset_name:
         query_agent = AgentBuilder(
             agent_name=config["agent_name"],
@@ -257,23 +250,22 @@ def run_eval(
         >>> run_eval(dataset="bright/biology", num_trials=3)
         
         # Custom collection with Weaviate queries
-        >>> docs = DocsCollection(name="MyDocs", weaviate_collection="MyDocsClass")
+        >>> docs = DocsCollection(name="MyDocs", id_key="id")
         >>> queries = QueriesCollection(
         ...     name="MyQueries",
-        ...     weaviate_collection="MyQueriesClass"
+        ...     id_key="id"
         ... )
         >>> run_eval(docs_collection=docs, queries=queries, agent_name="my-agent")
         
         # Custom collection with in-memory queries
         >>> docs = DocsCollection(name="MyDocs")
         >>> queries = [
-        ...     InMemoryQuery(question="What is X?", dataset_ids=["doc1"], query_id="q1"),
-        ...     InMemoryQuery(question="Explain Y", dataset_ids=["doc2"], query_id="q2")
+        ...     InMemoryQuery(question="What is X?", query_id="q1", dataset_ids=["doc1"]),
+        ...     InMemoryQuery(question="Explain Y", query_id="q2", dataset_ids=["doc2"])
         ... ]
         >>> run_eval(docs_collection=docs, queries=queries, agent_name="my-agent")
     """
     
-    # Determine config path
     if config_path is None:
         config_path = DEFAULT_CONFIG_PATH
     
