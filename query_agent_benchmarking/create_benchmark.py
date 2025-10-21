@@ -1,6 +1,5 @@
 import os
 from typing import Optional
-from uuid import UUID
 import time
 
 import weaviate

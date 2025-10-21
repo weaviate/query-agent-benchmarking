@@ -4,7 +4,7 @@ import os
 import weaviate
 from datasets import load_dataset
 
-from query_agent_benchmarking.models import DocsCollection, QueriesCollection, InMemoryQuery
+from query_agent_benchmarking.models import InMemoryQuery
 
 def in_memory_dataset_loader(dataset_name: str):
     if dataset_name == "enron":
