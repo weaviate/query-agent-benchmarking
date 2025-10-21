@@ -5,8 +5,6 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
-        "dspy>=2.6.27",
-        "sentence-transformers>=5.0.0",
         "weaviate-client[agents]>=4.15.4",
         "weaviate-agents>=1.0.0",
         "pandas>=2.3.1",
