@@ -7,6 +7,7 @@ from .models import (
     QueryResult,
 )
 from .create_benchmark import create_benchmark
+from .config import print_supported_datasets
 
 __all__ = [
     "run_eval",
@@ -16,5 +17,6 @@ __all__ = [
     "ObjectID",
     "QueryResult",
     "create_benchmark",
+    "print_supported_datasets",
 ]
-__version__ = "0.1.0"
+__version__ = "0.1"
