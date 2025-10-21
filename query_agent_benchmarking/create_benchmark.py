@@ -45,7 +45,7 @@ def create_benchmark(
         
         properties={
             content_property_name: obj_properties[content_property_name],
-            "dataset_ids": list[str(obj_properties[id_property_name])],
+            "dataset_ids": [str(obj_properties[id_property_name])],
         }
 
         benchmark_collection.data.insert(
@@ -132,8 +132,8 @@ def _create_collection(
                 skip_vectorization=True,
             ),
             Property(
-                name=id_property_name,
-                data_type=DataType.TEXT,
+                name="dataset_ids",
+                data_type=DataType.TEXT_ARRAY,
                 skip_vectorization=True,
             ),
         ]
