@@ -4,12 +4,12 @@ This repo contains a tool for benchmarking the performance of Weaviate's Query A
 
 Populate Weaviate with benchmark data:
 ```
-uv run python benchmarker/populate-db.py
+uv run python query_agent_benchmarking/populate-db.py
 ```
 
 Run eval:
 ```
-uv run python benchmarker/benchmark-run.py
+uv run python scripts/run-benchmark.py
 ```
 
 See `benchmarker/config.yml` to change the dataset populated in your Weaviate instance, as well as ablate `hybrid-search` or `query-agent-search-only`, as well as the number of samples and concurrency parameters.

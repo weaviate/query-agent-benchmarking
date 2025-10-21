@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="query_agent_benchmarking",
-    version="0.1",
+    version="0.3",
     packages=find_packages(),
     install_requires=[
         "weaviate-client[agents]>=4.15.4",
