@@ -1,6 +1,12 @@
 # Query Agent Benchmarking
 
-This repo contains a tool for benchmarking the performance of Weaviate's Query Agent.
+This repo contains a package for benchmarking the performance of Weaviate's Query Agent.
+
+## News 📯
+
+[9/25] 📊 Search Mode Benchmarking is live on the [Weaviate Blog](https://weaviate.io/blog/search-mode-benchmarking).
+
+## How to Run 🧰
 
 Populate Weaviate with benchmark data:
 ```
