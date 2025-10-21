@@ -12,10 +12,10 @@ docs_collection = DocsCollection(
 )
 
 queries_collection = QueriesCollection(
-    collection_name="BrightBiologyQueries",
-    query_content_key="question",
-    query_id_key="query_id",
-    dataset_ids_key="dataset_ids",
+    collection_name="SyntheticBrightBiology",
+    query_content_key="simulated_user_query",
+    query_id_key="dataset_id",
+    dataset_ids_key="dataset_id",
 )
 
 query_agent_benchmarking.run_eval(

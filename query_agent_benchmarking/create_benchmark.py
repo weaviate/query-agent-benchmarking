@@ -1,6 +1,7 @@
 import os
 from typing import Optional
 from uuid import UUID
+import time
 
 import weaviate
 from weaviate.classes.config import DataType, Property, Configure
@@ -41,11 +42,14 @@ def create_benchmark(
         if i >= num_queries:
             break
         obj_properties = obj.properties
+        
+        properties={
+            content_property_name: obj_properties[content_property_name],
+            "dataset_ids": list[str(obj_properties[id_property_name])],
+        }
+
         benchmark_collection.data.insert(
-            properties={
-                content_property_name: obj_properties[content_property_name],
-                id_property_name: obj_properties[id_property_name],
-            }
+            properties=properties
         )
 
     create_reasoning_intensive_queries = Operations.update_property(
@@ -98,11 +102,11 @@ def create_benchmark(
         collection=benchmark_collection_name,
         operations=[create_reasoning_intensive_queries],
     )
-    print("="*50)
-    print(create_reasoning_intensive_queries)
-    print("="*50)
     response = agent.update_all()
     workflow_id = response.workflow_id
+
+    print("\033[92mWaiting for 30 seconds...\033[0m")
+    time.sleep(30)
 
     print(agent.get_status(workflow_id))
 
