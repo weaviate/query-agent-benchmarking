@@ -21,7 +21,6 @@ def make_json_serializable(obj):
     elif isinstance(obj, InMemoryQuery):
         return {
             "question": obj.question,
-            "query_id": obj.query_id,
             "dataset_ids": obj.dataset_ids
         }
     elif isinstance(obj, list):
@@ -45,7 +44,6 @@ def pretty_print_in_memory_query(in_memory_query: InMemoryQuery):
         dict_to_print: Dictionary to be printed
     """
     print(f"\t\033[96mQuestion\033[0m: {in_memory_query.question}")
-    print(f"\t\033[96mQuery ID\033[0m: {in_memory_query.query_id}")
     print(f"\t\033[96mDataset IDs\033[0m: {in_memory_query.dataset_ids}")
     print("="*60)
     print("\n\n")

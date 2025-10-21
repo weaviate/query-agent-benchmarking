@@ -5,7 +5,6 @@ class ObjectID(BaseModel):
 
 class InMemoryQuery(BaseModel):
     question: str
-    query_id: str
     dataset_ids: list[str]
 
 class QueryResult(BaseModel):
@@ -22,5 +21,4 @@ class DocsCollection(BaseModel):
 class QueriesCollection(BaseModel):
     collection_name: str
     query_content_key: str
-    query_id_key: str
     dataset_ids_key: str

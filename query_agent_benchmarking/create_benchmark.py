@@ -105,9 +105,17 @@ def create_benchmark(
     response = agent.update_all()
     workflow_id = response.workflow_id
 
-    print("\033[92mWaiting for 30 seconds...\033[0m")
-    time.sleep(30)
+    finished = False
 
+    while not finished:
+        status = agent.get_status(workflow_id)
+        if status["status"]["state"] != "running":
+            finished = True
+        else:
+            print("\033[96mNot yet finished. Checking again in 30 seconds...\033[0m")
+            time.sleep(30)
+
+    print(f"\033[92mWorkflow {workflow_id} finished.\033[0m")
     print(agent.get_status(workflow_id))
 
 def _create_collection(

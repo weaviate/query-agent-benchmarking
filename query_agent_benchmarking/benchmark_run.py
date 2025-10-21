@@ -86,7 +86,6 @@ async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
             queries = load_queries_from_weaviate_collection(
                 collection_name=queries_input.collection_name,
                 query_content_key=queries_input.query_content_key,
-                query_id_key=queries_input.query_id_key,
                 dataset_ids_key=queries_input.dataset_ids_key,
             )
         elif isinstance(queries_input, list):
