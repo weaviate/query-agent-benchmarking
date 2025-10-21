@@ -38,13 +38,14 @@ def create_benchmark(
     benchmark_collection = weaviate_client.collections.get(benchmark_collection_name)
 
     source_collection = weaviate_client.collections.get(docs_source_collection)
-    for i, obj in enumerate(source_collection.iterator()):
-        if i >= num_queries:
+    obj_counter = 0
+    for obj in source_collection.iterator():
+        if obj_counter >= num_queries:
             break
-        if prune_short_docs and len(obj.properties[content_property_name]) < 100:
+        if prune_short_docs and len(obj.properties[content_property_name].split(" ")) < 100:
             continue
         obj_properties = obj.properties
-        
+        obj_counter += 1
         properties={
             content_property_name: obj_properties[content_property_name],
             "dataset_ids": [str(obj_properties[id_property_name])],

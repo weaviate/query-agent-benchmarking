@@ -2,9 +2,9 @@ agent_name: hybrid-search
 agents_host: https://api.agents.weaviate.io
 dataset: bright/psychology
 use_async: True
-use_subset: True
+use_subset: False
 num_samples: 50
-num_trials: 3
+num_trials: 1
 batch_size: 5
 max_concurrent: 5
 experiment_name: hybrid-search
