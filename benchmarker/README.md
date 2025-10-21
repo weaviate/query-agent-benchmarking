@@ -1,2 +1,0 @@
-# Weaviate Query Agent Benchmarker
-

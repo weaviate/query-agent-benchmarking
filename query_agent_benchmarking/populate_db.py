@@ -4,9 +4,9 @@ import yaml
 
 import weaviate
 
-from benchmarker.dataset import in_memory_dataset_loader
-from benchmarker.database import database_loader
-from benchmarker.utils import pretty_print_dict
+from query_agent_benchmarking.dataset import in_memory_dataset_loader
+from query_agent_benchmarking.database import database_loader
+from query_agent_benchmarking.utils import pretty_print_in_memory_query
 
 def load_config(config_path: str):
     with open(config_path) as f:
@@ -23,7 +23,7 @@ config = load_config(config_path)
 
 documents, _ = in_memory_dataset_loader(config["dataset"])
 print("\033[92mFirst Document:\033[0m")
-pretty_print_dict(documents[0])
+pretty_print_in_memory_query(documents[0])
 
 database_loader(weaviate_client, config["dataset"], documents)
 

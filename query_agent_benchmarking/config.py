@@ -14,3 +14,8 @@ supported_datasets = (
     "lotte/recreation/test/search",
     "wixqa"
 )
+
+def print_supported_datasets():
+    print("Supported datasets:")
+    for dataset in supported_datasets:
+        print(f"- {dataset}")
