@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "query-agent-benchmarking"
-version = "0.1.0"
-requires-python = ">=3.11"
+version = "0.1"
+requires-python = ">=3.9"
 dependencies = [
   "dspy>=2.6.27",
   "sentence-transformers>=5.0.0",
