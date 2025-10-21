@@ -198,7 +198,7 @@ def _load_dataset_from_json(filepath):
 def load_queries_from_weaviate_collection(
     collection_name: str, 
     query_content_key: str, 
-    dataset_ids_key: str
+    gold_ids_key: str
 ):
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
@@ -213,7 +213,7 @@ def load_queries_from_weaviate_collection(
         props = query_item.properties
         query = InMemoryQuery(
             question=props[query_content_key],
-            dataset_ids=props[dataset_ids_key]
+            dataset_ids=props[gold_ids_key]
         )
         queries.append(query)
     return queries

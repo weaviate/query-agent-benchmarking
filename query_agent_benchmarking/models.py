@@ -21,4 +21,4 @@ class DocsCollection(BaseModel):
 class QueriesCollection(BaseModel):
     collection_name: str
     query_content_key: str
-    dataset_ids_key: str
+    gold_ids_key: str
