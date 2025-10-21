@@ -15,6 +15,7 @@ def create_benchmark(
     query_property_name: Optional[str] = "simulated_user_query",
     content_property_name: Optional[str] = "content",
     id_property_name: Optional[str] = "dataset_id",
+    prune_short_docs: Optional[bool] = True,
 ):
     weaviate_client = weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
@@ -40,6 +41,8 @@ def create_benchmark(
     for i, obj in enumerate(source_collection.iterator()):
         if i >= num_queries:
             break
+        if prune_short_docs and len(obj.properties[content_property_name]) < 100:
+            continue
         obj_properties = obj.properties
         
         properties={
