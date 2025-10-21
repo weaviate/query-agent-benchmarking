@@ -5,6 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "query-agent-benchmarking"
 version = "0.1"
+description="A Python library for benchmarking Weaviate's Query Agent!"
+readme="README.md"
 requires-python = ">=3.9"
 dependencies = [
   "dspy>=2.6.27",

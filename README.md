@@ -1,6 +1,6 @@
 # Query Agent Benchmarking
 
-This repo contains a tool for benchmarking the performance of the Weaviate Query Agent.
+This repo contains a tool for benchmarking the performance of Weaviate's Query Agent.
 
 Populate Weaviate with benchmark data:
 ```
