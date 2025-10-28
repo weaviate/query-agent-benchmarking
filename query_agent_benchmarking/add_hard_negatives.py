@@ -2,7 +2,7 @@ import os
 import time
 
 import weaviate
-from weaviate.classes.config import DataType
+from weaviate.classes.config import DataType, Property
 from weaviate.classes.query import Filter
 from weaviate.agents.classes import Operations
 from weaviate.agents.transformation import TransformationAgent
@@ -29,7 +29,19 @@ def add_hard_negatives(
 
     _queries_collection = weaviate_client.collections.get(queries_collection.collection_name)
     _docs_collection = weaviate_client.collections.get(docs_collection.collection_name)
-    _hard_negatives_collection = weaviate_client.collections.get(hard_negatives_collection.collection_name)
+
+    if not weaviate_client.collections.exists(hard_negatives_collection.collection_name):
+        _hard_negatives_collection = _create_hard_negatives_collection(
+            weaviate_client=weaviate_client,
+            name=hard_negatives_collection.collection_name,
+            query_content_key=hard_negatives_collection.query_content_key,
+            gold_ids_key=hard_negatives_collection.gold_ids_key,
+            gold_documents_key=hard_negatives_collection.gold_documents_key,
+            hard_negative_document_key=hard_negatives_collection.hard_negative_document_key,
+            hard_negative_id_key=hard_negatives_collection.hard_negative_id_key,
+        )
+    else:
+        _hard_negatives_collection = weaviate_client.collections.get(hard_negatives_collection.collection_name)
 
     # populate the hard negatives collection with the hard negatives for each query
     query_counter = 0
@@ -107,3 +119,42 @@ def add_hard_negatives(
             time.sleep(30)
     
     print(f"\033[92mHard negatives added and assessed for relevance for {query_samples} queries.\033[0m")
+
+def _create_hard_negatives_collection(
+    weaviate_client: weaviate.WeaviateClient,
+    name: str,
+    query_content_key: str,
+    gold_ids_key: str,
+    gold_documents_key: str,
+    hard_negative_document_key: str,
+    hard_negative_id_key: str,
+):
+    weaviate_client.collections.create(
+        name=name,
+        properties=[
+            Property(
+                name=query_content_key,
+                data_type=DataType.TEXT,
+            ),
+            Property(
+                name=gold_ids_key,
+                data_type=DataType.TEXT_ARRAY,
+                skip_vectorization=True,
+            ),
+            Property(
+                name=gold_documents_key,
+                data_type=DataType.TEXT,
+                skip_vectorization=True,
+            ),
+            Property(
+                name=hard_negative_document_key,
+                data_type=DataType.TEXT,
+                skip_vectorization=True,
+            ),
+            Property(
+                name=hard_negative_id_key,
+                data_type=DataType.TEXT,
+                skip_vectorization=True,
+            ),
+         ],
+    )
