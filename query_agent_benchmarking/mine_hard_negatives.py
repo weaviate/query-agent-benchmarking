@@ -4,6 +4,7 @@ import weaviate
 from query_agent_benchmarking.models import (
     DocsCollection,
     QueriesCollection,
+    HardNegativesCollection,
 )
 def mine_hard_negatives(
     docs_collection: DocsCollection,
