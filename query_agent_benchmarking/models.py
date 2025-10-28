@@ -22,3 +22,10 @@ class QueriesCollection(BaseModel):
     collection_name: str
     query_content_key: str
     gold_ids_key: str
+
+class HardNegativesCollection(BaseModel):
+    collection_name: str
+    query_content_key: str
+    gold_ids_key: str
+    gold_documents_key: list[str] # might be multiple
+    hard_negative_key: str
