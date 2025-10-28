@@ -70,7 +70,7 @@ def add_hard_negatives(
             limit=negatives_per_query * 2,
         )
         collected_count = 0
-        for result in hard_negative_results:
+        for result in hard_negative_results.objects:
             if collected_count >= negatives_per_query:
                 break
 
