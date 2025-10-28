@@ -37,23 +37,33 @@ def add_hard_negatives(
         query_content = query_properties[queries_collection.query_content_key]
         gold_ids = query_properties[queries_collection.gold_ids_key]
 
+        # Fetch gold documents once per query
+        gold_docs = []
+        for gold_id in gold_ids:
+            gold_response = _docs_collection.query.fetch_objects(
+                filters=Filter.by_property(docs_collection.id_key).equal(gold_id),
+                limit=1
+            )
+            if gold_response.objects:
+                gold_doc_content = gold_response.objects[0].properties[docs_collection.content_key]
+                gold_docs.append(gold_doc_content)
+                
         # update to ablate `retriever`
-        results = _docs_collection.query.hybrid(
+        hard_negative_results = _docs_collection.query.hybrid(
             query=query_content,
-            limit=negatives_per_query*2,
+            limit=negatives_per_query,
         )
-
-        for result in results:
+        for result in hard_negative_results:
             result_properties = result.properties
             result_id = result_properties[docs_collection.id_key]
             if result_id not in gold_ids:
-                # THIS ISN'T ALL THE DATA FOR THE HARD NEGATIVE!!
                 _hard_negatives_collection.data.insert(
                     properties={
-                        hard_negatives_collection.hard_negative_key: result.query_content_key,
                         hard_negatives_collection.query_content_key: query_content,
                         hard_negatives_collection.gold_ids_key: gold_ids,
-                        hard_negatives_collection.gold_documents_key: [result_id],
+                        hard_negatives_collection.gold_documents_key: gold_docs,  # reuse fetched gold docs
+                        hard_negatives_collection.hard_negative_document_key: result_properties[docs_collection.content_key],
+                        hard_negatives_collection.hard_negative_id_key: result_id,
                     }
                 )
 
