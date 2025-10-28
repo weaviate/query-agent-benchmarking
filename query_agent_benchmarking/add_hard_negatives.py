@@ -81,7 +81,10 @@ def add_hard_negatives(
     assess_if_relevant = Operations.append_property(
         property_name="is_relevant",
         data_type=DataType.BOOL,
-        view_properties=[hard_negatives_collection.gold_documents_key],
+        view_properties=[
+            hard_negatives_collection.query_content_key,
+            hard_negatives_collection.hard_negative_document_key,
+        ],
         instruction=relevance_assessment_prompt,
     )
 
@@ -102,10 +105,5 @@ def add_hard_negatives(
         else:
             print("\033[96mNot yet finished. Checking again in 30 seconds...\033[0m")
             time.sleep(30)
-
-    # delete hard negatives that are actually relevant as determined by TA
-    result = _hard_negatives_collection.data.delete_many(
-        where=Filter.by_property(property_name="is_relevant", value=True),
-    )
-
-    print(result)
+    
+    print(f"\033[92mHard negatives added and assessed for relevance for {query_samples} queries.\033[0m")
