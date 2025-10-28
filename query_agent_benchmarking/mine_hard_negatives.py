@@ -12,6 +12,8 @@ from query_agent_benchmarking.models import (
     QueriesCollection,
     HardNegativesCollection,
 )
+from query_agent_benchmarking.hard_negative_prompts import relevance_assessment_prompt
+
 def mine_hard_negatives(
     docs_collection: DocsCollection,
     queries_collection: QueriesCollection,
@@ -60,7 +62,7 @@ def mine_hard_negatives(
         property_name="is_relevant",
         data_type=DataType.BOOL,
         view_properties=[hard_negatives_collection.gold_documents_key],
-        instruction=f"Assess if the document is relevant to the query: {query_content}.",
+        instruction=relevance_assessment_prompt,
     )
 
     agent = TransformationAgent(
