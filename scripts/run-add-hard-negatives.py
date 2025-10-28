@@ -31,5 +31,6 @@ query_agent_benchmarking.add_hard_negatives(
     negatives_per_query=5,
     docs_collection=docs_collection,
     queries_collection=queries_collection,
+    hard_negatives_collection=hard_negatives_collection,
     query_samples=100,
 )
