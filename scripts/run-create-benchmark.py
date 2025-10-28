@@ -3,6 +3,7 @@ import query_agent_benchmarking
 query_agent_benchmarking.create_benchmark(
     docs_source_collection="BrightBiology",
     benchmark_collection_name="SyntheticBrightBiology",
+    num_queries=1_000,
 )
 
 # Then optionally test with:
