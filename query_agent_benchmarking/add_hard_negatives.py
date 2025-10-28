@@ -32,7 +32,11 @@ def add_hard_negatives(
     _hard_negatives_collection = weaviate_client.collections.get(hard_negatives_collection.collection_name)
 
     # populate the hard negatives collection with the hard negatives for each query
+    query_counter = 0
     for query in _queries_collection.iterator():
+        if query_counter >= query_samples:
+            break
+        query_counter += 1
         query_properties = query.properties
         query_content = query_properties[queries_collection.query_content_key]
         gold_ids = query_properties[queries_collection.gold_ids_key]
@@ -47,15 +51,20 @@ def add_hard_negatives(
             if gold_response.objects:
                 gold_doc_content = gold_response.objects[0].properties[docs_collection.content_key]
                 gold_docs.append(gold_doc_content)
-                
+
         # update to ablate `retriever`
         hard_negative_results = _docs_collection.query.hybrid(
             query=query_content,
-            limit=negatives_per_query,
+            limit=negatives_per_query * 2,
         )
+        collected_count = 0
         for result in hard_negative_results:
+            if collected_count >= negatives_per_query:
+                break
+
             result_properties = result.properties
             result_id = result_properties[docs_collection.id_key]
+
             if result_id not in gold_ids:
                 _hard_negatives_collection.data.insert(
                     properties={
@@ -66,6 +75,7 @@ def add_hard_negatives(
                         hard_negatives_collection.hard_negative_id_key: result_id,
                     }
                 )
+                collected_count += 1
 
     # check if hard negatives are indeed not relevant with TA
     assess_if_relevant = Operations.append_property(
