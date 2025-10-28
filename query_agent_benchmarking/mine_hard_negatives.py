@@ -1,5 +1,10 @@
 import os
+import time
+
 import weaviate
+from weaviate.classes.config import DataType
+from weaviate.agents.classes import Operations
+from weaviate.agents.transformation import TransformationAgent
 
 from query_agent_benchmarking.models import (
     DocsCollection,
@@ -40,6 +45,7 @@ def mine_hard_negatives(
             result_properties = result.properties
             result_id = result_properties[docs_collection.id_key]
             if result_id not in gold_ids:
+                # THIS ISN'T ALL THE DATA FOR THE HARD NEGATIVE!!
                 _hard_negatives_collection.data.insert(
                     properties={
                         hard_negatives_collection.query_content_key: query_content,
@@ -49,6 +55,28 @@ def mine_hard_negatives(
                 )
 
     # check if hard negatives are indeed not relevant with TA
+    assess_if_relevant = Operations.append_property(
+        property_name="is_relevant",
+        data_type=DataType.BOOL,
+        view_properties=[hard_negatives_collection.gold_documents_key],
+        instruction=f"Assess if the document is relevant to the query: {query_content}.",
+    )
 
+    agent = TransformationAgent(
+        client=weaviate_client,
+        collection=hard_negatives_collection.collection_name,
+        operations=[assess_if_relevant],
+    )
+    response = agent.update_all()
+    workflow_id = response.workflow_id
 
+    finished = False
+
+    while not finished:
+        status = agent.get_status(workflow_id)
+        if status["status"]["state"] != "running":
+            finished = True
+        else:
+            print("\033[96mNot yet finished. Checking again in 30 seconds...\033[0m")
+            time.sleep(30)
     # delete hard negatives that are actually relevant as determined by TA
