@@ -3,6 +3,7 @@ import time
 
 import weaviate
 from weaviate.classes.config import DataType
+from weaviate.classes.query import Filter
 from weaviate.agents.classes import Operations
 from weaviate.agents.transformation import TransformationAgent
 
@@ -79,4 +80,10 @@ def mine_hard_negatives(
         else:
             print("\033[96mNot yet finished. Checking again in 30 seconds...\033[0m")
             time.sleep(30)
+
     # delete hard negatives that are actually relevant as determined by TA
+    result = _hard_negatives_collection.data.delete_many(
+        where=Filter.by_property(property_name="is_relevant", value=True),
+    )
+
+    print(result)
