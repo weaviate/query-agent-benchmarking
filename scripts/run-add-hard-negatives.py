@@ -1,13 +1,3 @@
-# 4. Hard Negative Miner
-
-As a quick reminder, in Information Retrieval benchmarking, for each query, we are looking to see where the labeled ground truth, "gold", document is ranked by the search system. Now let's say the search system indeed found the gold document in the top 10, but it is ranked at position 4, :/. That's still pretty encouraging if we are searching out of say, 100s of thousands, millions, ... of objects!
-
-The 3 documents ranked ahead of the gold document in this example are particularly interesting because they are likely to have some kind of relevance to the query. These documents are called "hard negatives", because unlike say documents 100,000 to 100,003, assessing their relevance is confusing the search system.
-
-Hard negatives are particularly useful for training search models. The following API will help you mine out hard negatives from your custom benchmarks, just specify which `hard_negative_key` to store the hard negative and the number of negatives to mine per query, `negatives_per_query`.
-
-
-```python
 import query_agent_benchmarking
 
 from query_agent_benchmarking.models import (
@@ -43,4 +33,3 @@ query_agent_benchmarking.add_hard_negatives(
     queries_collection=queries_collection,
     query_samples=100,
 )
-```
