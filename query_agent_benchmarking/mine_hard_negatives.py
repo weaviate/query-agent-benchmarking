@@ -14,7 +14,7 @@ from query_agent_benchmarking.models import (
 )
 from query_agent_benchmarking.hard_negative_prompts import relevance_assessment_prompt
 
-def mine_hard_negatives(
+def add_hard_negatives(
     docs_collection: DocsCollection,
     queries_collection: QueriesCollection,
     hard_negatives_collection: HardNegativesCollection,
