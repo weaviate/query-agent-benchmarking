@@ -2,7 +2,7 @@ import os
 import time
 
 import weaviate
-from weaviate.classes.config import DataType, Property
+from weaviate.classes.config import DataType, Property, Configure
 from weaviate.classes.query import Filter
 from weaviate.agents.classes import Operations
 from weaviate.agents.transformation import TransformationAgent
@@ -129,8 +129,9 @@ def _create_hard_negatives_collection(
     hard_negative_document_key: str,
     hard_negative_id_key: str,
 ):
-    weaviate_client.collections.create(
+    _hard_negatives_collection = weaviate_client.collections.create(
         name=name,
+        vectorizer_config=Configure.Vectorizer.text2vec_weaviate(),
         properties=[
             Property(
                 name=query_content_key,
@@ -143,7 +144,7 @@ def _create_hard_negatives_collection(
             ),
             Property(
                 name=gold_documents_key,
-                data_type=DataType.TEXT,
+                data_type=DataType.TEXT_ARRAY,
                 skip_vectorization=True,
             ),
             Property(
@@ -158,3 +159,4 @@ def _create_hard_negatives_collection(
             ),
          ],
     )
+    return _hard_negatives_collection
