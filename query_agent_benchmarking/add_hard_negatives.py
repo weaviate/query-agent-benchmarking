@@ -18,7 +18,6 @@ def add_hard_negatives(
     docs_collection: DocsCollection,
     queries_collection: QueriesCollection,
     hard_negatives_collection: HardNegativesCollection,
-    hard_negative_key: str,
     negatives_per_query: int,
     query_samples: int = 100,
 ):
@@ -51,6 +50,7 @@ def add_hard_negatives(
                 # THIS ISN'T ALL THE DATA FOR THE HARD NEGATIVE!!
                 _hard_negatives_collection.data.insert(
                     properties={
+                        hard_negatives_collection.hard_negative_key: result.query_content_key,
                         hard_negatives_collection.query_content_key: query_content,
                         hard_negatives_collection.gold_ids_key: gold_ids,
                         hard_negatives_collection.gold_documents_key: [result_id],
