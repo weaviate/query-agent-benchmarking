@@ -53,6 +53,18 @@ def pretty_print_in_memory_query(in_memory_query: InMemoryQuery):
     print("="*60)
     print("\n\n")
 
+# Note, there isn't a unified document model yet, e.g. InMemoryDocument...
+def pretty_print_in_memory_document(in_memory_document: str):
+    """
+    Pretty prints a dictionary with colored keys and formatted output.
+    
+    Args:
+        dict_to_print: Dictionary to be printed
+    """
+    print(f"\t\033[96mDocument\033[0m: {in_memory_document}")
+    print("="*60)
+    print("\n\n")
+    
 def load_config(config_path: str):
     with open(config_path) as f:
         config = yaml.safe_load(f)

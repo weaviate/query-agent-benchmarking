@@ -8,7 +8,7 @@ from query_agent_benchmarking.dataset import in_memory_dataset_loader
 from query_agent_benchmarking.utils import (
     get_weaviate_client, 
     load_config, 
-    pretty_print_in_memory_query,
+    pretty_print_in_memory_document
 )
 
 def database_loader():
@@ -19,7 +19,7 @@ def database_loader():
     
     documents, _ = in_memory_dataset_loader(config["dataset"])
     print("\033[92mFirst Document:\033[0m")
-    pretty_print_in_memory_query(documents[0])
+    pretty_print_in_memory_document(documents[0]["content"])
 
     _database_loader(
         weaviate_client,
