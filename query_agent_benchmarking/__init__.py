@@ -1,4 +1,4 @@
-from .add_hard_negatives import add_hard_negatives
+from .experimental.add_hard_negatives import add_hard_negatives
 from .benchmark_run import run_eval
 from .models import (
     DocsCollection,
@@ -7,7 +7,7 @@ from .models import (
     ObjectID,
     QueryResult,
 )
-from .create_benchmark import create_benchmark
+from .experimental.create_benchmark import create_benchmark
 from .config import print_supported_datasets
 
 __all__ = [
