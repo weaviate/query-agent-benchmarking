@@ -1,3 +1,5 @@
+import yaml
+
 from query_agent_benchmarking.models import InMemoryQuery
 
 def get_object_by_dataset_id(dataset_id, objects_list):
@@ -47,3 +49,8 @@ def pretty_print_in_memory_query(in_memory_query: InMemoryQuery):
     print(f"\t\033[96mDataset IDs\033[0m: {in_memory_query.dataset_ids}")
     print("="*60)
     print("\n\n")
+
+def load_config(config_path: str):
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+    return config

@@ -1,17 +1,11 @@
 import os
 from pathlib import Path
-import yaml
 
 import weaviate
 
 from query_agent_benchmarking.dataset import in_memory_dataset_loader
 from query_agent_benchmarking.database import database_loader
-from query_agent_benchmarking.utils import pretty_print_in_memory_query
-
-def load_config(config_path: str):
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
-    return config
+from query_agent_benchmarking.utils import pretty_print_in_memory_query, load_config
 
 weaviate_client = weaviate.connect_to_weaviate_cloud(
     cluster_url=os.getenv("WEAVIATE_URL"),
