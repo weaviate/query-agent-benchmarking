@@ -1,5 +1,7 @@
 from .experimental.add_hard_negatives import add_hard_negatives
 from .benchmark_run import run_eval
+from .database import database_loader
+from .dataset import in_memory_dataset_loader
 from .models import (
     DocsCollection,
     QueriesCollection,
@@ -13,6 +15,7 @@ from .config import print_supported_datasets
 __all__ = [
     "run_eval",
     "add_hard_negatives",
+    "database_loader",
     "DocsCollection",
     "QueriesCollection",
     "InMemoryQuery",
