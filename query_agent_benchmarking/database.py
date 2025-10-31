@@ -1,239 +1,214 @@
+from __future__ import annotations
+
 import os
+import re
 import time
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Sequence, Tuple
 
 import weaviate.collections.classes.config as wvcc
 
 from query_agent_benchmarking.dataset import in_memory_dataset_loader
 from query_agent_benchmarking.utils import (
-    get_weaviate_client, 
-    load_config, 
-    pretty_print_in_memory_document
+    get_weaviate_client,
+    load_config,
+    pretty_print_in_memory_document,
 )
 
-def database_loader():
+@dataclass(frozen=True)
+class DatasetSpec:
+    """Defines how to store a dataset in Weaviate."""
+    name_fn: Callable[[str], str]
+    properties: Tuple[wvcc.Property, ...]
+    vectorizer_config: Any
+    item_to_props: Callable[[Mapping[str, Any]], Dict[str, Any]]
+
+def _pascalize_name(raw: str) -> str:
+    # Keep letters/digits, split on non-alnum, PascalCase tokens: "beir/scifact" -> "BeirScifact"
+    tokens = re.split(r"[^0-9A-Za-z]+", raw)
+    return "".join(t.capitalize() for t in tokens if t)
+
+def _drop_and_create_collection(
+    client,
+    name: str,
+    properties: Sequence[wvcc.Property],
+    vectorizer_config: Any,
+    recreate: bool = True,
+) -> None:
+    if recreate and client.collections.exists(name):
+        client.collections.delete(name)
+    if not client.collections.exists(name):
+        client.collections.create(
+            name=name,
+            vectorizer_config=vectorizer_config,
+            properties=list(properties),
+        )
+
+TEXT = wvcc.DataType.TEXT
+
+REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
+    # enron
+    (
+        lambda d: d == "enron",
+        DatasetSpec(
+            name_fn=lambda d: "EnronEmails",
+            properties=(
+                wvcc.Property(name="email_body", data_type=TEXT),
+                wvcc.Property(name="dataset_id", data_type=TEXT),
+            ),
+            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            item_to_props=lambda item: {
+                "email_body": item["email_body"],
+                "dataset_id": str(item["dataset_id"]),
+            },
+        ),
+    ),
+    # beir/<subset>
+    (
+        lambda d: d.startswith("beir/"),
+        DatasetSpec(
+            name_fn=lambda d: f"Beir{_pascalize_name(d.split('beir/')[1])}",
+            properties=(
+                wvcc.Property(name="title", data_type=TEXT),
+                wvcc.Property(name="content", data_type=TEXT),
+                # Consider index_searchable/index_filterable flags here if desired
+                wvcc.Property(name="dataset_id", data_type=TEXT),
+            ),
+            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            item_to_props=lambda item: {
+                "title": item["title"],
+                "content": item["content"],
+                "dataset_id": str(item["doc_id"]),
+            },
+        ),
+    ),
+    # bright/<subset>
+    (
+        lambda d: d.startswith("bright/"),
+        DatasetSpec(
+            name_fn=lambda d: f"Bright{_pascalize_name(d.split('/')[1])}",
+            properties=(
+                wvcc.Property(name="content", data_type=TEXT),
+                wvcc.Property(name="dataset_id", data_type=TEXT),
+            ),
+            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            item_to_props=lambda item: {
+                "content": item["content"],
+                "dataset_id": str(item["dataset_id"]),
+            },
+        ),
+    ),
+    # lotte/<subset>
+    (
+        lambda d: d.startswith("lotte/"),
+        DatasetSpec(
+            name_fn=lambda d: f"Lotte{_pascalize_name(d.split('/')[1])}",
+            properties=(
+                wvcc.Property(name="content", data_type=TEXT),
+                wvcc.Property(name="dataset_id", data_type=TEXT),
+            ),
+            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            item_to_props=lambda item: {
+                "content": item["text"],
+                "dataset_id": str(item["doc_id"]),
+            },
+        ),
+    ),
+    # wixqa
+    (
+        lambda d: d == "wixqa",
+        DatasetSpec(
+            name_fn=lambda d: "WixKB",
+            properties=(
+                wvcc.Property(name="contents", data_type=TEXT),
+                wvcc.Property(name="title", data_type=TEXT),
+                wvcc.Property(name="article_type", data_type=TEXT),
+                wvcc.Property(name="dataset_id", data_type=TEXT),
+            ),
+            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            item_to_props=lambda item: {
+                "contents": item["contents"],
+                "title": item["title"],
+                "article_type": item["article_type"],
+                "dataset_id": str(item["id"]),
+            },
+        ),
+    ),
+    # freshstack-<topic>
+    (
+        lambda d: d.startswith("freshstack-"),
+        DatasetSpec(
+            name_fn=lambda d: f"Freshstack{_pascalize_name(d.split('-')[1])}",
+            properties=(
+                wvcc.Property(name="docs_text", data_type=TEXT),
+                wvcc.Property(name="dataset_id", data_type=TEXT),
+            ),
+            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            item_to_props=lambda item: {
+                "docs_text": item["text"],
+                "dataset_id": str(item["dataset_id"]),
+            },
+        ),
+    ),
+]
+
+def _resolve_spec(dataset_name: str) -> DatasetSpec:
+    for pred, spec in REGISTRY:
+        if pred(dataset_name):
+            return spec
+    raise ValueError(f"Unsupported dataset_name: {dataset_name}")
+
+def _batch_insert(
+    client,
+    collection: str,
+    items: Iterable[Mapping[str, Any]],
+    item_to_props: Callable[[Mapping[str, Any]], Dict[str, Any]],
+    batch_size: int = 100,
+    concurrent_requests: int = 4,
+):
+    start = time.perf_counter()
+    total = 0
+    with client.batch.fixed_size(batch_size=batch_size, concurrent_requests=concurrent_requests) as batch:
+        for i, item in enumerate(items, start=1):
+            props = item_to_props(item)
+            batch.add_object(collection=collection, properties=props)
+            if i % 1000 == 0:
+                elapsed = time.perf_counter() - start
+                print(f"Inserted {i} objects ({(elapsed):.1f} s, {(i / max(elapsed, 1e-9)):.1f} objs/s)")
+            total = i
+    elapsed = time.perf_counter() - start
+    print(f"Inserted {total} objects in {(elapsed):.2f} s ({(total / max(elapsed, 1e-9)):.1f} objs/s)")
+
+def database_loader(recreate: bool = True) -> None:
     config_path = Path(os.path.dirname(__file__), "benchmark-config.yml")
     config = load_config(config_path)
 
     weaviate_client = get_weaviate_client()
     
-    documents, _ = in_memory_dataset_loader(config["dataset"])
-    print("\033[92mFirst Document:\033[0m")
-    pretty_print_in_memory_document(documents[0]["content"])
+    try:
+        dataset_name: str = config["dataset"]
+        objects, _ = in_memory_dataset_loader(dataset_name)
 
-    _database_loader(
-        weaviate_client,
-        config["dataset"],
-        documents
-    )
-    
-    weaviate_client.close()
+        print("\033[92mFirst Document:\033[0m")
+        pretty_print_in_memory_document(objects[0]["content"])
 
-def _database_loader(
-    weaviate_client,
-    dataset_name: str, 
-    objects: dict
-):
-    if dataset_name == "enron":
-        if weaviate_client.collections.exists("EnronEmails"):
-            weaviate_client.collections.delete("EnronEmails")
-        
-        weaviate_client.collections.create(
-            name="EnronEmails",
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
-            properties=[
-                wvcc.Property(name="email_body", data_type=wvcc.DataType.TEXT),
-                wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT),
-            ],
+        spec = _resolve_spec(dataset_name)
+        collection_name = spec.name_fn(dataset_name)
+
+        _drop_and_create_collection(
+            weaviate_client,
+            collection_name,
+            properties=spec.properties,
+            vectorizer_config=spec.vectorizer_config,
+            recreate=recreate,
         )
 
-        start_time = time.time()
-        with weaviate_client.batch.fixed_size(batch_size=100, concurrent_requests=4) as batch:
-            for i, email_with_id in enumerate(objects):
-                batch.add_object(
-                    collection="EnronEmails",
-                    properties={
-                        "email_body": email_with_id["email_body"],
-                        "dataset_id": str(email_with_id["dataset_id"])
-                    }
-                )
-                if i % 1000 == 999:
-                    print(f"Inserted {i + 1} emails into Weaviate... (Time elapsed: {time.time()-start_time:.2f} seconds)")
-
-        end_time = time.time()
-        upload_time = end_time - start_time
-        print(f"Inserted {i + 1} emails into Weaviate... (Time elapsed: {upload_time:.2f} seconds)")
-
-    if dataset_name.startswith("beir/"):
-        beir_subset = dataset_name.split("beir/")[1]
-        formatted_beir_name = beir_subset.replace("-", "_").replace("/", "_").lower()
-        collection_name = f"Beir{formatted_beir_name.capitalize()}"
-        
-        if weaviate_client.collections.exists(collection_name):
-            weaviate_client.collections.delete(collection_name)
-        
-        weaviate_client.collections.create(
-            name=collection_name,
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
-            properties=[
-                wvcc.Property(name="title", data_type=wvcc.DataType.TEXT),
-                wvcc.Property(name="content", data_type=wvcc.DataType.TEXT),
-                wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT, index_searchable=False),
-            ],
+        _batch_insert(
+            weaviate_client,
+            collection=collection_name,
+            items=objects,
+            item_to_props=spec.item_to_props,
         )
-
-        start_time = time.time()
-        with weaviate_client.batch.fixed_size(batch_size=100, concurrent_requests=4) as batch:
-            for i, doc in enumerate(objects):
-                batch.add_object(
-                    collection=collection_name,
-                    properties={
-                        "title": doc["title"],
-                        "content": doc["content"],
-                        "dataset_id": str(doc["doc_id"])
-                    }
-                )
-                if i % 1000 == 999:
-                    print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {time.time()-start_time:.2f} seconds)")
-
-            end_time = time.time()
-            upload_time = end_time - start_time
-            print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {upload_time:.2f} seconds)")
-    
-
-    if dataset_name.startswith("bright/"):
-        bright_subset = dataset_name.split("/")[1]
-        collection_name = f"Bright{bright_subset.capitalize()}"
-        print(f"Creating collection: {collection_name}")
-        
-        if weaviate_client.collections.exists(collection_name):
-            weaviate_client.collections.delete(collection_name)
-        
-        weaviate_client.collections.create(
-            name=collection_name,
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
-            properties=[
-                wvcc.Property(name="content", data_type=wvcc.DataType.TEXT),
-                wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT, index_searchable=False),
-            ],
-        )
-
-        start_time = time.time()
-        with weaviate_client.batch.fixed_size(batch_size=100, concurrent_requests=4) as batch:
-            for i, doc in enumerate(objects):
-                batch.add_object(
-                    collection=collection_name,
-                    properties={
-                        "content": doc["content"],
-                        "dataset_id": str(doc["dataset_id"])
-                    }
-                )
-
-                if i % 1000 == 999:
-                    print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {time.time()-start_time:.2f} seconds)")
-
-            end_time = time.time()
-            upload_time = end_time - start_time
-            print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {upload_time:.2f} seconds)")
-
-    if dataset_name.startswith("lotte/"):
-        lotte_subset = dataset_name.split("/")[1]
-        collection_name = f"Lotte{lotte_subset.capitalize()}"
-        print(f"Creating collection: {collection_name}")
-        
-        if weaviate_client.collections.exists(collection_name):
-            weaviate_client.collections.delete(collection_name)
-        
-        weaviate_client.collections.create(
-            name=collection_name,
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
-            properties=[
-                wvcc.Property(name="content", data_type=wvcc.DataType.TEXT),
-                wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT, index_searchable=False),
-            ],
-        )
-
-        start_time = time.time()
-        with weaviate_client.batch.fixed_size(batch_size=100, concurrent_requests=4) as batch:
-            for i, doc in enumerate(objects):
-                batch.add_object(
-                    collection=collection_name,
-                    properties={
-                        "content": doc["text"],
-                        "dataset_id": str(doc["doc_id"])
-                    }
-                )
-                if i % 1000 == 999:
-                    print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {time.time()-start_time:.2f} seconds)")
-
-            end_time = time.time()
-            upload_time = end_time - start_time
-            print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {upload_time:.2f} seconds)")
-
-    if dataset_name == "wixqa":
-        if weaviate_client.collections.exists("WixKB"):
-            weaviate_client.collections.delete("WixKB")
-        
-        weaviate_client.collections.create(
-            name="WixKB",
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
-            properties=[
-                wvcc.Property(name="contents", data_type=wvcc.DataType.TEXT),
-                wvcc.Property(name="title", data_type=wvcc.DataType.TEXT),
-                wvcc.Property(name="article_type", data_type=wvcc.DataType.TEXT),
-                wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT)
-            ]
-        )
-
-        start_time = time.time()
-        with weaviate_client.batch.fixed_size(batch_size=100, concurrent_requests=4) as batch:
-            for i, kb_item_with_id in enumerate(objects):
-                batch.add_object(
-                    collection="WixKB",
-                    properties={
-                        "contents": kb_item_with_id["contents"],
-                        "title": kb_item_with_id["title"],
-                        "article_type": kb_item_with_id["article_type"],
-                        "dataset_id": kb_item_with_id["id"]
-                    }
-                )
-                if i % 1000 == 999:
-                    print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {time.time()-start_time:.2f} seconds)")
-
-            end_time = time.time()
-            upload_time = end_time - start_time
-            print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {upload_time:.2f} seconds)")
-        
-    if dataset_name.startswith("freshstack-"):
-        collection_name = f"Freshstack{dataset_name.split('-')[1].capitalize()}"
-        
-        if weaviate_client.collections.exists(collection_name):
-            weaviate_client.collections.delete(collection_name)
-        
-        weaviate_client.collections.create(
-            name=collection_name,
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(
-                base_url="https://dev-embedding.labs.weaviate.io"
-            ),
-            properties=[
-                wvcc.Property(name="docs_text", data_type=wvcc.DataType.TEXT),
-                wvcc.Property(name="dataset_id", data_type=wvcc.DataType.TEXT),
-            ],
-        )
-
-        start_time = time.time()
-        with weaviate_client.batch.fixed_size(batch_size=100, concurrent_requests=4) as batch:
-            for i, doc in enumerate(objects):
-                batch.add_object(
-                    collection=collection_name,
-                    properties={
-                        "docs_text": doc["text"],
-                        "dataset_id": str(doc["dataset_id"])
-                    }
-                )
-                if i % 1000 == 999:
-                    print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {time.time()-start_time:.2f} seconds)")
-
-        end_time = time.time()
-        upload_time = end_time - start_time
-        print(f"Inserted {i + 1} documents into Weaviate... (Time elapsed: {upload_time:.2f} seconds)")
+    finally:
+        weaviate_client.close()
