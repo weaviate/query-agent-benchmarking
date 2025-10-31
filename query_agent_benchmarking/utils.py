@@ -1,4 +1,7 @@
+import os
 import yaml
+
+import weaviate
 
 from query_agent_benchmarking.models import InMemoryQuery
 
@@ -54,3 +57,9 @@ def load_config(config_path: str):
     with open(config_path) as f:
         config = yaml.safe_load(f)
     return config
+
+def get_weaviate_client():
+    return weaviate.connect_to_weaviate_cloud(
+        cluster_url=os.getenv("WEAVIATE_URL"),
+        auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY"))
+    )

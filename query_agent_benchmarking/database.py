@@ -1,7 +1,35 @@
+import os
 import time
+from pathlib import Path
+
 import weaviate.collections.classes.config as wvcc
 
-def database_loader(
+from query_agent_benchmarking.dataset import in_memory_dataset_loader
+from query_agent_benchmarking.utils import (
+    get_weaviate_client, 
+    load_config, 
+    pretty_print_in_memory_query,
+)
+
+def database_loader():
+    config_path = Path(os.path.dirname(__file__), "benchmark-config.yml")
+    config = load_config(config_path)
+
+    weaviate_client = get_weaviate_client()
+    
+    documents, _ = in_memory_dataset_loader(config["dataset"])
+    print("\033[92mFirst Document:\033[0m")
+    pretty_print_in_memory_query(documents[0])
+
+    _database_loader(
+        weaviate_client,
+        config["dataset"],
+        documents
+    )
+    
+    weaviate_client.close()
+
+def _database_loader(
     weaviate_client,
     dataset_name: str, 
     objects: dict
