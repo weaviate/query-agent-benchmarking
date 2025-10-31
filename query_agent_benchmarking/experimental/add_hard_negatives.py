@@ -12,7 +12,7 @@ from query_agent_benchmarking.models import (
     QueriesCollection,
     HardNegativesCollection,
 )
-from query_agent_benchmarking.hard_negative_prompts import relevance_assessment_prompt
+from query_agent_benchmarking.experimental.hard_negative_prompts import relevance_assessment_prompt
 
 def add_hard_negatives(
     docs_collection: DocsCollection,
