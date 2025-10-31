@@ -1,4 +1,4 @@
-agent_name: hybrid-search
+agent_name: hybrid-search # use of list[str] for `run_evals`
 agents_host: https://api.agents.weaviate.io
 dataset: bright/psychology
 use_async: True

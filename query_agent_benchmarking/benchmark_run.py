@@ -304,3 +304,22 @@ def run_eval(
     
     # Run evaluation
     return asyncio.run(_run_eval_async(final_config))
+
+def run_evals(
+    config_path: Optional[str] = None,
+    dataset: Optional[str] = None,
+    docs_collection: Optional[DocsCollection] = None,
+    queries: Optional[Union[QueriesCollection, List[InMemoryQuery]]] = None,
+    agent_name: Optional[str] = None,
+    num_trials: Optional[int] = None,
+    use_subset: Optional[bool] = None,
+    num_samples: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    max_concurrent: Optional[int] = None,
+    use_async: Optional[bool] = None,
+    agents_host: Optional[str] = None,
+    output_path: Optional[str] = None,
+    random_seed: Optional[int] = None,
+    **kwargs
+) -> Dict[str, Any]:
+    pass
