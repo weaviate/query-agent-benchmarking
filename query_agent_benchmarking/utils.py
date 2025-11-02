@@ -1,5 +1,6 @@
 import os
 import yaml
+from typing import Dict, Any
 
 import weaviate
 
@@ -75,3 +76,54 @@ def get_weaviate_client():
         cluster_url=os.getenv("WEAVIATE_URL"),
         auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY"))
     )
+
+def print_results_comparison(all_results: Dict[str, Dict[str, Any]]) -> None:
+    """Print key metrics for each agent."""
+    if not all_results:
+        return
+    
+    # Collect all "_mean" metrics (from aggregated results)
+    all_mean_metrics = set()
+    for results in all_results.values():
+        if "error" not in results:
+            for key, value in results.items():
+                if key.endswith("_mean") and isinstance(value, (int, float)):
+                    all_mean_metrics.add(key)
+    
+    if not all_mean_metrics:
+        return
+    
+    # Sort metrics by priority
+    priority_order = ["recall", "ndcg", "precision", "mrr", "query_time"]
+    
+    def metric_priority(key):
+        for i, term in enumerate(priority_order):
+            if term in key.lower():
+                return (i, key)
+        return (len(priority_order), key)
+    
+    sorted_metrics = sorted(all_mean_metrics, key=metric_priority)
+    
+    # Format metric names
+    def format_name(key):
+        # Remove avg_ and _mean suffixes
+        name = key.replace("avg_", "").replace("_mean", "")
+        # Handle specific patterns
+        name = name.replace("recall_at_", "Recall@").replace("ndcg_at_k", "NDCG@10")
+        name = name.replace("query_time", "Time(s)")
+        return name
+    
+    print("\nResults:")
+    for agent_name, results in all_results.items():
+        print(f"\n{agent_name}:")
+        
+        if "error" in results:
+            print("  ERROR")
+            continue
+        
+        for metric_key in sorted_metrics:
+            value = results.get(metric_key)
+            if value is not None:
+                print(f"  {format_name(metric_key)}: {value:.3f}")
+    
+    print()

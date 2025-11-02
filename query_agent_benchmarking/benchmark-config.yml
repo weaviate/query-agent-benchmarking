@@ -1,9 +1,9 @@
-agent_name: hybrid-search # use of list[str] for `run_evals`
+agent_name: ["hybrid-search", "query-agent-search-only"]
 agents_host: https://api.agents.weaviate.io
 dataset: bright/biology
 use_async: True
 use_subset: True
-num_samples: 10
+num_samples: 5
 num_trials: 1
 batch_size: 5
 max_concurrent: 5

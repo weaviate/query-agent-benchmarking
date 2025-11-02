@@ -1,5 +1,5 @@
 from .experimental.add_hard_negatives import add_hard_negatives
-from .benchmark_run import run_eval
+from .benchmark_run import run_eval, run_evals
 from .database import database_loader
 from .dataset import in_memory_dataset_loader
 from .models import (
@@ -15,6 +15,7 @@ from .result_serialization import save_trial_results, save_trial_metrics, save_a
 
 __all__ = [
     "run_eval",
+    "run_evals",
     "add_hard_negatives",
     "database_loader",
     "DocsCollection",
