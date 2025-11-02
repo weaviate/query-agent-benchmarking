@@ -11,6 +11,7 @@ from .models import (
 )
 from .experimental.create_benchmark import create_benchmark
 from .config import print_supported_datasets
+from .result_serialization import save_trial_results, save_trial_metrics, save_aggregated_results
 
 __all__ = [
     "run_eval",
@@ -23,5 +24,8 @@ __all__ = [
     "QueryResult",
     "create_benchmark",
     "print_supported_datasets",
+    "save_trial_results",
+    "save_trial_metrics",
+    "save_aggregated_results",
 ]
-__version__ = "0.1"
+__version__ = "0.4"

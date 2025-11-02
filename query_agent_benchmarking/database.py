@@ -47,6 +47,7 @@ def _drop_and_create_collection(
         )
 
 TEXT = wvcc.DataType.TEXT
+FIELD = wvcc.Tokenization.FIELD
 
 REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
     # enron
@@ -56,7 +57,14 @@ REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
             name_fn=lambda d: "EnronEmails",
             properties=(
                 wvcc.Property(name="email_body", data_type=TEXT),
-                wvcc.Property(name="dataset_id", data_type=TEXT, index_searchable=False, index_filterable=False),
+                wvcc.Property(
+                    name="dataset_id", 
+                    data_type=TEXT, 
+                    index_searchable=False, 
+                    index_filterable=True,
+                    skip_vectorization=True,
+                    tokenization=FIELD,
+                ),
             ),
             vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             item_to_props=lambda item: {
@@ -73,7 +81,14 @@ REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
             properties=(
                 wvcc.Property(name="title", data_type=TEXT),
                 wvcc.Property(name="content", data_type=TEXT),
-                wvcc.Property(name="dataset_id", data_type=TEXT, index_searchable=False, index_filterable=False),
+                wvcc.Property(
+                    name="dataset_id", 
+                    data_type=TEXT, 
+                    index_searchable=False, 
+                    index_filterable=True,
+                    skip_vectorization=True,
+                    tokenization=FIELD,
+                ),
             ),
             vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             item_to_props=lambda item: {
@@ -90,7 +105,14 @@ REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
             name_fn=lambda d: f"Bright{_pascalize_name(d.split('/')[1])}",
             properties=(
                 wvcc.Property(name="content", data_type=TEXT),
-                wvcc.Property(name="dataset_id", data_type=TEXT, index_searchable=False, index_filterable=False),
+                wvcc.Property(
+                    name="dataset_id", 
+                    data_type=TEXT, 
+                    index_searchable=False, 
+                    index_filterable=True,
+                    skip_vectorization=True,
+                    tokenization=FIELD,
+                ),
             ),
             vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             item_to_props=lambda item: {
@@ -106,7 +128,14 @@ REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
             name_fn=lambda d: f"Lotte{_pascalize_name(d.split('/')[1])}",
             properties=(
                 wvcc.Property(name="content", data_type=TEXT),
-                wvcc.Property(name="dataset_id", data_type=TEXT, index_searchable=False, index_filterable=False),
+                wvcc.Property(
+                    name="dataset_id", 
+                    data_type=TEXT, 
+                    index_searchable=False, 
+                    index_filterable=True,
+                    skip_vectorization=True,
+                    tokenization=FIELD,
+                ),
             ),
             vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             item_to_props=lambda item: {
@@ -124,7 +153,14 @@ REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
                 wvcc.Property(name="contents", data_type=TEXT),
                 wvcc.Property(name="title", data_type=TEXT),
                 wvcc.Property(name="article_type", data_type=TEXT, index_searchable=False, index_filterable=False),
-                wvcc.Property(name="dataset_id", data_type=TEXT, index_searchable=False, index_filterable=False),
+                wvcc.Property(
+                    name="dataset_id", 
+                    data_type=TEXT, 
+                    index_searchable=False, 
+                    index_filterable=True,
+                    skip_vectorization=True,
+                    tokenization=FIELD,
+                ),
             ),
             vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             item_to_props=lambda item: {
@@ -142,7 +178,14 @@ REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
             name_fn=lambda d: f"Freshstack{_pascalize_name(d.split('-')[1])}",
             properties=(
                 wvcc.Property(name="docs_text", data_type=TEXT),
-                wvcc.Property(name="dataset_id", data_type=TEXT, index_searchable=False, index_filterable=False),
+                wvcc.Property(
+                    name="dataset_id", 
+                    data_type=TEXT, 
+                    index_searchable=False, 
+                    index_filterable=True,
+                    skip_vectorization=True,
+                    tokenization=FIELD,
+                ),
             ),
             vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             item_to_props=lambda item: {

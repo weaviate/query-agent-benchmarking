@@ -1,9 +1,9 @@
 agent_name: hybrid-search # use of list[str] for `run_evals`
 agents_host: https://api.agents.weaviate.io
-dataset: bright/psychology
+dataset: bright/biology
 use_async: True
-use_subset: False
-num_samples: 50
+use_subset: True
+num_samples: 10
 num_trials: 1
 batch_size: 5
 max_concurrent: 5

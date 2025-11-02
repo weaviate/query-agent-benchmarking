@@ -24,6 +24,11 @@ from query_agent_benchmarking.query_agent_benchmark import (
     analyze_results,
     aggregate_metrics
 )
+from query_agent_benchmarking.result_serialization import (
+    save_trial_results,
+    save_trial_metrics,
+    save_aggregated_results,
+)
 from query_agent_benchmarking.utils import pretty_print_in_memory_query, load_config
 from query_agent_benchmarking.config import supported_datasets
 
@@ -105,6 +110,9 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
             "'docs_collection' + 'queries' (for custom)"
         )
     
+
+    config["dataset_identifier"] = dataset_identifier
+    
     print(f"There are \033[92m{len(queries)}\033[0m total queries in this dataset.\n")
     print("\033[92mFirst Query\033[0m")
     pretty_print_in_memory_query(queries[0])
@@ -160,6 +168,12 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
                 query_agent=query_agent,
             )
 
+        save_trial_results(
+            results=results,
+            config=config,
+            trial_number=trial+1,
+        )
+
         # Analyze results
         weaviate_client = weaviate.connect_to_weaviate_cloud(
             cluster_url=os.getenv("WEAVIATE_URL"),
@@ -172,25 +186,21 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
             dataset_name=dataset_name, 
         )
         print(metrics)
+        save_trial_metrics(
+            metrics=metrics,
+            config=config,
+            trial_number=trial+1,
+        )
 
         weaviate_client.close()
         metrics_across_trials.append(metrics)
 
     # Aggregate and save results
     aggregated_metrics = aggregate_metrics(metrics_across_trials)
-    aggregated_metrics["timestamp"] = datetime.now().isoformat()
-    
-    # Save results
-    output_path = config.get("output_path")
-    if output_path is None:
-        dataset_name_for_file = dataset_identifier.replace("/", "-")
-        output_path = f"{dataset_name_for_file}-{config['agent_name']}-{num_trials}-results.json"
-    
-    with open(output_path, "w") as f:
-        json.dump(aggregated_metrics, f, indent=2)
-    
-    print(f"\n\033[92mResults saved to {output_path}\033[0m")
-    
+    save_aggregated_results(
+        aggregated_metrics=aggregated_metrics,
+        config=config,
+    )
     return aggregated_metrics
 
 
