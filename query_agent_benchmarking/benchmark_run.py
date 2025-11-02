@@ -55,7 +55,7 @@ def merge_configs(file_config: Dict[str, Any], override_config: Dict[str, Any]) 
     return merged
 
 
-async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
+async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
     agents_host = config.get("agents_host", "https://api.agents.weaviate.io")
     use_async = config.get("use_async", True)
     
@@ -303,7 +303,7 @@ def run_eval(
     final_config = merge_configs(file_config, override_config)
     
     # Run evaluation
-    return asyncio.run(_run_eval_async(final_config))
+    return asyncio.run(_run_eval(final_config))
 
 def run_evals(
     config_path: Optional[str] = None,
