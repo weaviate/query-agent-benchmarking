@@ -24,18 +24,11 @@ from query_agent_benchmarking.query_agent_benchmark import (
     analyze_results,
     aggregate_metrics
 )
-from query_agent_benchmarking.utils import pretty_print_in_memory_query
+from query_agent_benchmarking.utils import pretty_print_in_memory_query, load_config
 from query_agent_benchmarking.config import supported_datasets
 
 
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "benchmark-config.yml"
-
-
-def load_config(config_path: str) -> Dict[str, Any]:
-    """Load configuration from YAML file."""
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
-    return config
 
 
 def merge_configs(file_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
