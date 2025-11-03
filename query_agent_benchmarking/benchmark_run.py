@@ -32,29 +32,13 @@ from query_agent_benchmarking.result_serialization import (
 from query_agent_benchmarking.utils import (
     pretty_print_in_memory_query, 
     load_config, 
+    merge_configs,
     print_results_comparison,
 )
 from query_agent_benchmarking.config import supported_datasets
 
 
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "benchmark-config.yml"
-
-
-def merge_configs(file_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
-    """Merge file-based config with programmatic overrides."""
-    merged = file_config.copy()
-    
-    # Filter out None values from override_config
-    filtered_overrides = {k: v for k, v in override_config.items() if v is not None}
-    
-    # Special handling: if docs_collection is provided, remove dataset from merged config
-    if 'docs_collection' in filtered_overrides and 'dataset' in merged:
-        del merged['dataset']
-    
-    # Apply overrides
-    merged.update(filtered_overrides)
-    
-    return merged
 
 
 async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
@@ -213,6 +197,7 @@ def run_eval(
     dataset: Optional[str] = None,
     docs_collection: Optional[DocsCollection] = None,
     queries: Optional[Union[QueriesCollection, List[InMemoryQuery]]] = None,
+    embeddings: Optional[list[str]] = None,
     agent_name: Optional[str] = None,
     num_trials: Optional[int] = None,
     use_subset: Optional[bool] = None,
@@ -236,6 +221,7 @@ def run_eval(
         "dataset": dataset,
         "docs_collection": docs_collection,
         "queries": queries,
+        "embeddings": embeddings,
         "agent_name": agent_name,
         "num_trials": num_trials,
         "use_subset": use_subset,

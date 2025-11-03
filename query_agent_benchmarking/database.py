@@ -5,7 +5,7 @@ import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Sequence, Tuple
+from typing import Any, Callable, Dict, Iterable, Mapping, Sequence, Tuple, Optional
 
 import weaviate.collections.classes.config as wvcc
 import weaviate
@@ -15,41 +15,31 @@ from query_agent_benchmarking.utils import (
     get_weaviate_client,
     load_config,
     pretty_print_in_memory_document,
+    pascalize_name,
 )
 
-@dataclass(frozen=True)
+@dataclass()
 class DatasetSpec:
     """Defines how to store a dataset in Weaviate."""
+    # name_fn should just produce the canonical name (no add_default needed!),
+    # e.g. "bright/biology" -> "BrightBiology"
     name_fn: Callable[[str], str]
     properties: Tuple[wvcc.Property, ...]
     vectorizer_config: Any
     item_to_props: Callable[[Mapping[str, Any]], Dict[str, Any]]
 
-def _pascalize_name(raw: str) -> str:
+def pascalize_name(raw: str) -> str:
     # Keep letters/digits, split on non-alnum, PascalCase tokens: "beir/scifact" -> "BeirScifact"
     tokens = re.split(r"[^0-9A-Za-z]+", raw)
     return "".join(t.capitalize() for t in tokens if t)
 
-def _drop_and_create_collection(
-    weaviate_client: weaviate.WeaviateClient,
-    name: str,
-    properties: Sequence[wvcc.Property],
-    vectorizer_config: Any,
-    recreate: bool = True,
-) -> None:
-    if recreate and weaviate_client.collections.exists(name):
-        weaviate_client.collections.delete(name)
-    if not weaviate_client.collections.exists(name):
-        weaviate_client.collections.create(
-            name=name,
-            vectorizer_config=vectorizer_config,
-            properties=list(properties),
-        )
+def add_tag_to_name(original_name: str, tag: str) -> str:
+    return f"{original_name}_{tag}"
 
 TEXT = wvcc.DataType.TEXT
 FIELD = wvcc.Tokenization.FIELD
 
-REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
+REGISTRY: list[Tuple[Callable[[str], bool], DatasetSpec]] = [
     # enron
     (
         lambda d: d == "enron",
@@ -77,7 +67,7 @@ REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
     (
         lambda d: d.startswith("beir/"),
         DatasetSpec(
-            name_fn=lambda d: f"Beir{_pascalize_name(d.split('beir/')[1])}",
+            name_fn=lambda d: f"Beir{pascalize_name(d.split('beir/')[1])}",
             properties=(
                 wvcc.Property(name="title", data_type=TEXT),
                 wvcc.Property(name="content", data_type=TEXT),
@@ -102,7 +92,7 @@ REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
     (
         lambda d: d.startswith("bright/"),
         DatasetSpec(
-            name_fn=lambda d: f"Bright{_pascalize_name(d.split('/')[1])}",
+            name_fn=lambda d: f"Bright{pascalize_name(d.split('/')[1])}",
             properties=(
                 wvcc.Property(name="content", data_type=TEXT),
                 wvcc.Property(
@@ -125,7 +115,7 @@ REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
     (
         lambda d: d.startswith("lotte/"),
         DatasetSpec(
-            name_fn=lambda d: f"Lotte{_pascalize_name(d.split('/')[1])}",
+            name_fn=lambda d: f"Lotte{pascalize_name(d.split('/')[1])}",
             properties=(
                 wvcc.Property(name="content", data_type=TEXT),
                 wvcc.Property(
@@ -175,7 +165,7 @@ REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
     (
         lambda d: d.startswith("freshstack-"),
         DatasetSpec(
-            name_fn=lambda d: f"Freshstack{_pascalize_name(d.split('-')[1])}",
+            name_fn=lambda d: f"Freshstack{pascalize_name(d.split('-')[1])}",
             properties=(
                 wvcc.Property(name="docs_text", data_type=TEXT),
                 wvcc.Property(
@@ -196,11 +186,27 @@ REGISTRY: List[Tuple[Callable[[str], bool], DatasetSpec]] = [
     ),
 ]
 
-def _resolve_spec(dataset_name: str) -> DatasetSpec:
+def resolve_spec(dataset_name: str) -> DatasetSpec:
     for pred, spec in REGISTRY:
         if pred(dataset_name):
             return spec
     raise ValueError(f"Unsupported dataset_name: {dataset_name}")
+
+def _drop_and_create_collection(
+    weaviate_client: weaviate.WeaviateClient,
+    name: str,
+    properties: Sequence[wvcc.Property],
+    vectorizer_config: Any,
+    recreate: bool = True,
+) -> None:
+    if recreate and weaviate_client.collections.exists(name):
+        weaviate_client.collections.delete(name)
+    if not weaviate_client.collections.exists(name):
+        weaviate_client.collections.create(
+            name=name,
+            vectorizer_config=vectorizer_config,
+            properties=list(properties),
+        )
 
 def _batch_insert(
     weaviate_client: weaviate.WeaviateClient,
@@ -223,7 +229,73 @@ def _batch_insert(
     elapsed = time.perf_counter() - start
     print(f"Inserted {total} objects in {(elapsed):.2f} s ({(total / max(elapsed, 1e-9)):.1f} objs/s)")
 
-def database_loader(recreate: bool = True) -> None:
+def get_vectorizer_config(embedding_model: Optional[str] = None) -> Any:
+    """
+    Factory function to create text2vec_weaviate vectorizer config.
+    
+    Args:
+        embedding_model: Specific model to use (e.g., "Snowflake/snowflake-arctic-embed-l-v2.0").
+                        If None, uses default model.
+    
+    Returns:
+        Vectorizer configuration object
+    """
+    if embedding_model:
+        return wvcc.Configure.Vectorizer.text2vec_weaviate(
+            model=embedding_model
+        )
+    else:
+        # Default config without specifying model
+        return wvcc.Configure.Vectorizer.text2vec_weaviate()
+
+def create_collection_with_vectorizer(
+    weaviate_client: weaviate.WeaviateClient,
+    dataset_name: str,
+    tag: str = "Default",
+    embedding_model: Optional[str] = None,
+) -> None:
+    """
+    Create and populate a collection with a specified embedding model, using a collection name suffixed with a tag.
+    
+    This is used for embedding model comparison where temporary collections
+    are created with different models using the text2vec_weaviate vectorizer.
+    
+    Args:
+        weaviate_client: Connected Weaviate client
+        dataset_name: Name of the dataset to load
+        tag: Suffix to add to the collection's name (e.g., 'Default', 'Arctic2')
+        embedding_model: Embedding model to use (e.g., "Snowflake/snowflake-arctic-embed-l-v2.0").
+                        If None, uses default model.
+    """
+    print(f"Loading dataset '{dataset_name}'...")
+    objects, _ = in_memory_dataset_loader(dataset_name)
+    
+    spec = resolve_spec(dataset_name)
+    alias_collection_name = spec.name_fn(dataset_name)
+    collection_name = add_tag_to_name(alias_collection_name, tag)
+    vectorizer_config = get_vectorizer_config(embedding_model)
+    
+    model_info = f" with model {embedding_model}" if embedding_model else " with default model"
+    print(f"Creating collection '{collection_name}'{model_info}...")
+    _drop_and_create_collection(
+        weaviate_client,
+        collection_name,
+        properties=spec.properties,
+        vectorizer_config=vectorizer_config,
+        recreate=True,
+    )
+
+    print(f"Populating collection with {len(objects)} objects...")
+    _batch_insert(
+        weaviate_client,
+        collection=collection_name,
+        items=objects,
+        item_to_props=spec.item_to_props,
+    )
+    print(f"Collection '{collection_name}' ready!\n")
+
+
+def database_loader(recreate: bool = True, tag: str = "Default") -> None:
     config_path = Path(os.path.dirname(__file__), "benchmark-config.yml")
     config = load_config(config_path)
 
@@ -236,8 +308,9 @@ def database_loader(recreate: bool = True) -> None:
         print("\033[92mFirst Document:\033[0m")
         pretty_print_in_memory_document(objects[0]["content"])
 
-        spec = _resolve_spec(dataset_name)
-        collection_name = spec.name_fn(dataset_name)
+        spec = resolve_spec(dataset_name)
+        alias_collection_name = spec.name_fn(dataset_name)
+        collection_name = add_tag_to_name(alias_collection_name, tag)
 
         _drop_and_create_collection(
             weaviate_client,
@@ -246,6 +319,18 @@ def database_loader(recreate: bool = True) -> None:
             vectorizer_config=spec.vectorizer_config,
             recreate=recreate,
         )
+
+        alias_info = weaviate_client.alias.get(alias_name=alias_collection_name)
+        if alias_info is None:
+            weaviate_client.alias.create(
+                alias_name=alias_collection_name,
+                new_target_collection=collection_name,
+            )
+        else:
+            weaviate_client.alias.update(
+                alias_name=alias_collection_name,
+                new_target_collection=collection_name,
+            )
 
         _batch_insert(
             weaviate_client,

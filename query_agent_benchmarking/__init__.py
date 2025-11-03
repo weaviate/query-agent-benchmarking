@@ -1,5 +1,6 @@
 from .experimental.add_hard_negatives import add_hard_negatives
 from .benchmark_run import run_eval, run_evals
+from .compare_embeddings import compare_embeddings
 from .database import database_loader
 from .dataset import in_memory_dataset_loader
 from .models import (
@@ -18,6 +19,7 @@ __all__ = [
     "run_evals",
     "add_hard_negatives",
     "database_loader",
+    "compare_embeddings",
     "DocsCollection",
     "QueriesCollection",
     "InMemoryQuery",

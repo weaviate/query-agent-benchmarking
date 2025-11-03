@@ -27,6 +27,7 @@ class AgentBuilder:
         self.api_key = os.getenv("WEAVIATE_API_KEY")
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         
+        # NOTE: Update this to use `docs_collection` if both `dataset_name` and `docs_collection` are provided.
         # Require either dataset_name or docs_collection, but not both
         if dataset_name and docs_collection:
             raise ValueError("Cannot specify both dataset_name and docs_collection")
@@ -38,7 +39,10 @@ class AgentBuilder:
             self.collection = docs_collection.collection_name
             self.target_property_name = docs_collection.content_key
             self.id_property = docs_collection.id_key
-            
+
+        # NOTE: Might need to add `_Default` for the QueryAgent to avoid the use of the alias    
+        # NOTE: Or maybe not, this might just work as is.
+        
         # Handle built-in datasets
         elif dataset_name == "enron":
             self.collection = "EnronEmails"
@@ -90,8 +94,9 @@ class AgentBuilder:
                 collections=[self.collection],
                 agents_host=self.agents_host,
             )
+        # NOTE: Change to `use` for Collection Alias
         elif self.agent_name == "hybrid-search":
-            self.weaviate_collection = self.weaviate_client.collections.get(self.collection)
+            self.weaviate_collection = self.weaviate_client.collections.use(self.collection)
         else:
             raise ValueError(f"Unknown agent_name: {self.agent_name}. Must be 'query-agent-search-only' or 'hybrid-search'")
 
@@ -116,7 +121,7 @@ class AgentBuilder:
                 print(f"AsyncQueryAgent initialized for collection: {self.collection}")
                 print(f"Using agents host: {self.agents_host}")
             elif self.agent_name == "hybrid-search":
-                self.weaviate_collection = self.weaviate_client.collections.get(self.collection)
+                self.weaviate_collection = self.weaviate_client.collections.use(self.collection)
             else:
                 raise ValueError(f"Unknown agent_name: {self.agent_name}. Must be 'query-agent-search-only' or 'hybrid-search'")
                 

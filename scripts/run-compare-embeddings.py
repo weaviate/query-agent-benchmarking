@@ -1,0 +1,3 @@
+import query_agent_benchmarking
+
+query_agent_benchmarking.compare_embeddings()

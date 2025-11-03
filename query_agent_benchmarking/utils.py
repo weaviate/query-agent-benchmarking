@@ -1,5 +1,6 @@
 import os
 import yaml
+import re
 from typing import Dict, Any
 
 import weaviate
@@ -66,10 +67,31 @@ def pretty_print_in_memory_document(in_memory_document: str):
     print("="*60)
     print("\n\n")
     
+def pascalize_name(raw: str) -> str:
+    # Keep letters/digits, split on non-alnum, PascalCase tokens: "beir/scifact" -> "BeirScifact"
+    tokens = re.split(r"[^0-9A-Za-z]+", raw)
+    return "".join(t.capitalize() for t in tokens if t)
+
 def load_config(config_path: str):
     with open(config_path) as f:
         config = yaml.safe_load(f)
     return config
+
+def merge_configs(file_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge file-based config with programmatic overrides."""
+    merged = file_config.copy()
+    
+    # Filter out None values from override_config
+    filtered_overrides = {k: v for k, v in override_config.items() if v is not None}
+    
+    # Special handling: if docs_collection is provided, remove dataset from merged config
+    if 'docs_collection' in filtered_overrides and 'dataset' in merged:
+        del merged['dataset']
+    
+    # Apply overrides
+    merged.update(filtered_overrides)
+    
+    return merged
 
 def get_weaviate_client():
     return weaviate.connect_to_weaviate_cloud(

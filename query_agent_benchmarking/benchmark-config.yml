@@ -1,4 +1,7 @@
-agent_name: ["hybrid-search", "query-agent-search-only"]
+agent_name: "hybrid-search"
+embedding_models: 
+- "Snowflake/snowflake-arctic-embed-l-v2.0"
+- "Snowflake/snowflake-arctic-embed-m-v1.5"
 agents_host: https://api.agents.weaviate.io
 dataset: bright/biology
 use_async: True
