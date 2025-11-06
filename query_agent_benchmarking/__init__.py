@@ -19,6 +19,7 @@ __all__ = [
     "run_evals",
     "add_hard_negatives",
     "database_loader",
+    "in_memory_dataset_loader",
     "compare_embeddings",
     "DocsCollection",
     "QueriesCollection",
