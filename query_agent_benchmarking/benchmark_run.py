@@ -1,10 +1,7 @@
 import asyncio
-from datetime import datetime
-import json
 import os
 from pathlib import Path
 from typing import Optional, Dict, Any, Union, List
-import yaml
 
 import weaviate
 
@@ -24,38 +21,24 @@ from query_agent_benchmarking.query_agent_benchmark import (
     analyze_results,
     aggregate_metrics
 )
-from query_agent_benchmarking.utils import pretty_print_in_memory_query
+from query_agent_benchmarking.result_serialization import (
+    save_trial_results,
+    save_trial_metrics,
+    save_aggregated_results,
+)
+from query_agent_benchmarking.utils import (
+    pretty_print_in_memory_query, 
+    load_config, 
+    merge_configs,
+    print_results_comparison,
+)
 from query_agent_benchmarking.config import supported_datasets
 
 
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "benchmark-config.yml"
 
 
-def load_config(config_path: str) -> Dict[str, Any]:
-    """Load configuration from YAML file."""
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
-    return config
-
-
-def merge_configs(file_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
-    """Merge file-based config with programmatic overrides."""
-    merged = file_config.copy()
-    
-    # Filter out None values from override_config
-    filtered_overrides = {k: v for k, v in override_config.items() if v is not None}
-    
-    # Special handling: if docs_collection is provided, remove dataset from merged config
-    if 'docs_collection' in filtered_overrides and 'dataset' in merged:
-        del merged['dataset']
-    
-    # Apply overrides
-    merged.update(filtered_overrides)
-    
-    return merged
-
-
-async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
+async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
     agents_host = config.get("agents_host", "https://api.agents.weaviate.io")
     use_async = config.get("use_async", True)
     
@@ -112,6 +95,9 @@ async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
             "'docs_collection' + 'queries' (for custom)"
         )
     
+
+    config["dataset_identifier"] = dataset_identifier
+
     print(f"There are \033[92m{len(queries)}\033[0m total queries in this dataset.\n")
     print("\033[92mFirst Query\033[0m")
     pretty_print_in_memory_query(queries[0])
@@ -167,6 +153,12 @@ async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
                 query_agent=query_agent,
             )
 
+        save_trial_results(
+            results=results,
+            config=config,
+            trial_number=trial+1,
+        )
+
         # Analyze results
         weaviate_client = weaviate.connect_to_weaviate_cloud(
             cluster_url=os.getenv("WEAVIATE_URL"),
@@ -179,25 +171,21 @@ async def _run_eval_async(config: Dict[str, Any]) -> Dict[str, Any]:
             dataset_name=dataset_name, 
         )
         print(metrics)
+        save_trial_metrics(
+            metrics=metrics,
+            config=config,
+            trial_number=trial+1,
+        )
 
         weaviate_client.close()
         metrics_across_trials.append(metrics)
 
     # Aggregate and save results
     aggregated_metrics = aggregate_metrics(metrics_across_trials)
-    aggregated_metrics["timestamp"] = datetime.now().isoformat()
-    
-    # Save results
-    output_path = config.get("output_path")
-    if output_path is None:
-        dataset_name_for_file = dataset_identifier.replace("/", "-")
-        output_path = f"{dataset_name_for_file}-{config['agent_name']}-{num_trials}-results.json"
-    
-    with open(output_path, "w") as f:
-        json.dump(aggregated_metrics, f, indent=2)
-    
-    print(f"\n\033[92mResults saved to {output_path}\033[0m")
-    
+    save_aggregated_results(
+        aggregated_metrics=aggregated_metrics,
+        config=config,
+    )
     return aggregated_metrics
 
 
@@ -206,6 +194,7 @@ def run_eval(
     dataset: Optional[str] = None,
     docs_collection: Optional[DocsCollection] = None,
     queries: Optional[Union[QueriesCollection, List[InMemoryQuery]]] = None,
+    embeddings: Optional[list[str]] = None,
     agent_name: Optional[str] = None,
     num_trials: Optional[int] = None,
     use_subset: Optional[bool] = None,
@@ -218,63 +207,6 @@ def run_eval(
     random_seed: Optional[int] = None,
     **kwargs
 ) -> Dict[str, Any]:
-    """
-    Run evaluation benchmark for query agents.
-    
-    Works with both built-in datasets and custom collections.
-    
-    Args:
-        config_path: Path to YAML config file (default: benchmark-config.yml in package dir)
-        
-        # Built-in dataset mode:
-        dataset: Dataset name (e.g., "bright/biology")
-        
-        # Custom collection mode:
-        docs_collection: DocsCollection object specifying the document collection
-        queries: Queries in one of two formats:
-            - QueriesCollection: Loads from Weaviate
-            - List[InMemoryQuery]: Pre-built query objects
-        
-        # Common parameters:
-        agent_name: Name of the agent to benchmark
-        num_trials: Number of trials to run
-        use_subset: Whether to use a subset of queries
-        num_samples: Number of samples to use if use_subset=True
-        batch_size: Batch size for async queries
-        max_concurrent: Max concurrent requests for async queries
-        use_async: Whether to use async mode
-        agents_host: URL of the agents host
-        output_path: Custom path for output JSON file
-        random_seed: Random seed for subset selection
-        **kwargs: Additional config parameters
-    
-    Returns:
-        Dict containing aggregated metrics
-    
-    Examples:
-        # Built-in dataset with default config
-        >>> run_eval()
-        
-        # Built-in dataset with overrides
-        >>> run_eval(dataset="bright/biology", num_trials=3)
-        
-        # Custom collection with Weaviate queries
-        >>> docs = DocsCollection(name="MyDocs", id_key="id")
-        >>> queries = QueriesCollection(
-        ...     name="MyQueries",
-        ...     id_key="id"
-        ... )
-        >>> run_eval(docs_collection=docs, queries=queries, agent_name="my-agent")
-        
-        # Custom collection with in-memory queries
-        >>> docs = DocsCollection(name="MyDocs")
-        >>> queries = [
-        ...     InMemoryQuery(question="What is X?", query_id="q1", dataset_ids=["doc1"]),
-        ...     InMemoryQuery(question="Explain Y", query_id="q2", dataset_ids=["doc2"])
-        ... ]
-        >>> run_eval(docs_collection=docs, queries=queries, agent_name="my-agent")
-    """
-    
     if config_path is None:
         config_path = DEFAULT_CONFIG_PATH
     
@@ -286,6 +218,7 @@ def run_eval(
         "dataset": dataset,
         "docs_collection": docs_collection,
         "queries": queries,
+        "embeddings": embeddings,
         "agent_name": agent_name,
         "num_trials": num_trials,
         "use_subset": use_subset,
@@ -303,4 +236,74 @@ def run_eval(
     final_config = merge_configs(file_config, override_config)
     
     # Run evaluation
-    return asyncio.run(_run_eval_async(final_config))
+    return asyncio.run(_run_eval(final_config))
+
+def run_evals(
+    config_path: Optional[str] = None,
+    dataset: Optional[str] = None,
+    docs_collection: Optional[DocsCollection] = None,
+    queries: Optional[Union[QueriesCollection, List[InMemoryQuery]]] = None,
+    agent_names: Optional[Union[str, List[str]]] = None,
+    num_trials: Optional[int] = None,
+    use_subset: Optional[bool] = None,
+    num_samples: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    max_concurrent: Optional[int] = None,
+    use_async: Optional[bool] = None,
+    agents_host: Optional[str] = None,
+    output_path: Optional[str] = None,
+    random_seed: Optional[int] = None,
+    **kwargs
+) -> Dict[str, Dict[str, Any]]:
+    """Run evaluation benchmark for multiple query agents."""
+    
+    if config_path is None:
+        config_path = DEFAULT_CONFIG_PATH
+    
+    file_config = load_config(config_path)
+    
+    # Get agents from parameter or config
+    agents = agent_names or file_config.get("agent_name")
+    if agents is None:
+        raise ValueError("No agent_names provided. Must specify via parameter or in config file.")
+    
+    # Convert to list if string
+    agents = [agents] if isinstance(agents, str) else agents
+    
+    # Build override config once (shared by all agents except agent_name)
+    override_config = {
+        "dataset": dataset,
+        "docs_collection": docs_collection,
+        "queries": queries,
+        "num_trials": num_trials,
+        "use_subset": use_subset,
+        "num_samples": num_samples,
+        "batch_size": batch_size,
+        "max_concurrent": max_concurrent,
+        "use_async": use_async,
+        "agents_host": agents_host,
+        "random_seed": random_seed,
+        **kwargs
+    }
+    
+    # Run evaluation for each agent
+    all_results = {}
+    for agent in agents:
+        # Set agent-specific overrides
+        agent_override = override_config.copy()
+        agent_override["agent_name"] = agent
+        
+        # Handle output path
+        if output_path:
+            path = Path(output_path)
+            agent_override["output_path"] = str(path.parent / f"{path.stem}_{agent}{path.suffix}")
+        
+        # Run evaluation
+        try:
+            all_results[agent] = asyncio.run(_run_eval(merge_configs(file_config, agent_override)))
+        except Exception as e:
+            all_results[agent] = {"error": str(e)}
+    
+    print_results_comparison(all_results)
+
+    return all_results

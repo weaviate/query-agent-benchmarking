@@ -7,7 +7,7 @@ from weaviate.classes.config import DataType, Property, Configure
 from weaviate.agents.classes import Operations
 from weaviate.agents.transformation import TransformationAgent
 
-from query_agent_benchmarking.query_gen_prompts import bright_query_gen
+from query_agent_benchmarking.experimental.query_gen_prompts import bright_query_gen
 
 def create_benchmark(
     docs_source_collection: str,

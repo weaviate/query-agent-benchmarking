@@ -23,6 +23,10 @@ class QueriesCollection(BaseModel):
     query_content_key: str
     gold_ids_key: str
 
+# Result Models
+
+
+# WIP: Not sure this is the best way to store the hard negatives
 # This tells the query-agent-benchmarking package how to store the hard negatives for each query
 class HardNegativesCollection(BaseModel):
     collection_name: str
