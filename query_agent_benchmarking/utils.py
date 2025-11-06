@@ -72,6 +72,9 @@ def pascalize_name(raw: str) -> str:
     tokens = re.split(r"[^0-9A-Za-z]+", raw)
     return "".join(t.capitalize() for t in tokens if t)
 
+def add_tag_to_name(original_name: str, tag: str) -> str:
+    return f"{original_name}_{tag}"
+
 def load_config(config_path: str):
     with open(config_path) as f:
         config = yaml.safe_load(f)

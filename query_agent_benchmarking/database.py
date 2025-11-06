@@ -16,6 +16,7 @@ from query_agent_benchmarking.utils import (
     load_config,
     pretty_print_in_memory_document,
     pascalize_name,
+    add_tag_to_name,
 )
 
 @dataclass()
@@ -27,14 +28,6 @@ class DatasetSpec:
     properties: Tuple[wvcc.Property, ...]
     vectorizer_config: Any
     item_to_props: Callable[[Mapping[str, Any]], Dict[str, Any]]
-
-def pascalize_name(raw: str) -> str:
-    # Keep letters/digits, split on non-alnum, PascalCase tokens: "beir/scifact" -> "BeirScifact"
-    tokens = re.split(r"[^0-9A-Za-z]+", raw)
-    return "".join(t.capitalize() for t in tokens if t)
-
-def add_tag_to_name(original_name: str, tag: str) -> str:
-    return f"{original_name}_{tag}"
 
 TEXT = wvcc.DataType.TEXT
 FIELD = wvcc.Tokenization.FIELD
