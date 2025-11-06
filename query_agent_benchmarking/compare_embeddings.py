@@ -8,7 +8,7 @@ import weaviate
 
 from query_agent_benchmarking.database import create_collection_with_vectorizer, resolve_spec
 from query_agent_benchmarking.benchmark_run import _run_eval
-from query_agent_benchmarking.utils import load_config, merge_configs, print_results_comparison, pascalize_name
+from query_agent_benchmarking.utils import load_config, merge_configs, print_results_comparison
 
 def compare_embeddings(
     config_path: Optional[str] = None,

@@ -1,10 +1,7 @@
 import asyncio
-from datetime import datetime
-import json
 import os
 from pathlib import Path
 from typing import Optional, Dict, Any, Union, List
-import yaml
 
 import weaviate
 
