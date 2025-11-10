@@ -5,6 +5,7 @@ import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
 from query_agent_benchmarking.models import ObjectID, DocsCollection
+from query_agent_benchmarking.utils import pascalize_name
 
 class AgentBuilder:
     """
@@ -53,21 +54,23 @@ class AgentBuilder:
             self.target_property_name = "contents"
             self.id_property = "dataset_id"
         elif dataset_name.startswith("freshstack-"):
-            subset = dataset_name.split("-")[1].capitalize()
-            self.collection = f"Freshstack{subset}"
+            subset = dataset_name.split("-")[1]
+            self.collection = f"Freshstack{pascalize_name(subset)}"
             self.target_property_name = "docs_text"
             self.id_property = "dataset_id"
         elif dataset_name.startswith("beir/"):
-            self.collection = f"Beir{dataset_name.split('beir/')[1].replace('-', '_').replace('/', '_').capitalize()}"
+            subset = dataset_name.split('beir/')[1]
+            self.collection = f"Beir{pascalize_name(subset)}"
             self.target_property_name = "content"
             self.id_property = "dataset_id"
         elif dataset_name.startswith("lotte/"):
             lotte_subset = dataset_name.split("/")[1]
-            self.collection = f"Lotte{lotte_subset.capitalize()}"
+            self.collection = f"Lotte{pascalize_name(lotte_subset)}"
             self.target_property_name = "content"
             self.id_property = "dataset_id"
         elif dataset_name.startswith("bright/"):
-            self.collection = f"Bright{dataset_name.split('/')[1].capitalize()}"
+            subset = dataset_name.split('/')[1]
+            self.collection = f"Bright{pascalize_name(subset)}"
             self.target_property_name = "content"
             self.id_property = "dataset_id"
         else:

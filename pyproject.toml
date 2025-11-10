@@ -11,8 +11,8 @@ requires-python = ">=3.9"
 dependencies = [
   "dspy>=2.6.27",
   "sentence-transformers>=5.0.0",
-  "weaviate-client[agents]>=4.15.4",
-  "weaviate-agents>=1.0.0",
+  "weaviate-client>=4.17.0",
+  "weaviate-agents>=1.1.0",
   "pandas>=2.3.1",
   "datasets>=4.0.0",
   "ir-datasets>=0.5.11",
