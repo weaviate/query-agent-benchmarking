@@ -155,7 +155,7 @@ async def _run_eval_with_temp_collection(
         if alias_info is None:
             weaviate_client.alias.create(
                 alias_name=alias_collection_name,
-                new_target_collection=temp_collection_name
+                target_collection=temp_collection_name
             )
         else:
             weaviate_client.alias.update(
