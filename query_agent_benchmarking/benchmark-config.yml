@@ -1,5 +1,5 @@
 agent_name: "hybrid-search"
-dataset: bright/biology
+dataset: bright/economics
 
 use_async: True
 max_concurrent: 5
