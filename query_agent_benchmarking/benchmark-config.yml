@@ -1,5 +1,5 @@
 agent_name: "hybrid-search"
-dataset: irpapers/text
+dataset: irpapers/images
 
 use_async: True
 max_concurrent: 5
