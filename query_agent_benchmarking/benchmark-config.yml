@@ -1,5 +1,5 @@
 agent_name: "hybrid-search"
-dataset: bright/robotics
+dataset: irpapers/text
 
 use_async: True
 max_concurrent: 5

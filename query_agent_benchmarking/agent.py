@@ -73,6 +73,14 @@ class AgentBuilder:
             self.collection = f"Bright{pascalize_name(subset)}"
             self.target_property_name = "content"
             self.id_property = "dataset_id"
+        elif dataset_name == "irpapers/images":
+            self.collection = "IRPapersImages"
+            self.target_property_name = "content"
+            self.id_property = "dataset_id"
+        elif dataset_name == "irpapers/text":
+            self.collection = "IRPapersText"
+            self.target_property_name = "content"
+            self.id_property = "dataset_id"
         else:
             raise ValueError(f"Unknown dataset: {dataset_name}")
 

@@ -4,6 +4,7 @@ import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from pydantic import AnyHttpUrl
 from typing import Any, Callable, Dict, Iterable, Mapping, Sequence, Tuple, Optional
 
 import weaviate.collections.classes.config as wvcc
@@ -25,10 +26,12 @@ class DatasetSpec:
     # e.g. "bright/biology" -> "BrightBiology"
     name_fn: Callable[[str], str]
     properties: Tuple[wvcc.Property, ...]
-    vectorizer_config: Any
+    vector_config: Any
     item_to_props: Callable[[Mapping[str, Any]], Dict[str, Any]]
 
 TEXT = wvcc.DataType.TEXT
+BLOB = wvcc.DataType.BLOB
+INT = wvcc.DataType.INT
 FIELD = wvcc.Tokenization.FIELD
 
 REGISTRY: list[Tuple[Callable[[str], bool], DatasetSpec]] = [
@@ -48,7 +51,7 @@ REGISTRY: list[Tuple[Callable[[str], bool], DatasetSpec]] = [
                     tokenization=FIELD,
                 ),
             ),
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            vector_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             item_to_props=lambda item: {
                 "email_body": item["email_body"],
                 "dataset_id": str(item["dataset_id"]),
@@ -72,7 +75,7 @@ REGISTRY: list[Tuple[Callable[[str], bool], DatasetSpec]] = [
                     tokenization=FIELD,
                 ),
             ),
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            vector_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             item_to_props=lambda item: {
                 "title": item["title"],
                 "content": item["content"],
@@ -96,7 +99,7 @@ REGISTRY: list[Tuple[Callable[[str], bool], DatasetSpec]] = [
                     tokenization=FIELD,
                 ),
             ),
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            vector_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             item_to_props=lambda item: {
                 "content": item["content"],
                 "dataset_id": str(item["dataset_id"]),
@@ -119,7 +122,7 @@ REGISTRY: list[Tuple[Callable[[str], bool], DatasetSpec]] = [
                     tokenization=FIELD,
                 ),
             ),
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            vector_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             item_to_props=lambda item: {
                 "content": item["text"],
                 "dataset_id": str(item["doc_id"]),
@@ -144,7 +147,7 @@ REGISTRY: list[Tuple[Callable[[str], bool], DatasetSpec]] = [
                     tokenization=FIELD,
                 ),
             ),
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            vector_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             item_to_props=lambda item: {
                 "contents": item["contents"],
                 "title": item["title"],
@@ -169,9 +172,71 @@ REGISTRY: list[Tuple[Callable[[str], bool], DatasetSpec]] = [
                     tokenization=FIELD,
                 ),
             ),
-            vectorizer_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
+            vector_config=wvcc.Configure.Vectorizer.text2vec_weaviate(),
             item_to_props=lambda item: {
                 "docs_text": item["text"],
+                "dataset_id": str(item["dataset_id"]),
+            },
+        ),
+    ),
+    # irpapers/images
+    (
+        lambda d: d == "irpapers/images",
+        DatasetSpec(
+            name_fn=lambda d: "IRPapersImages",
+            properties=(
+                wvcc.Property(name="base64_str", data_type=BLOB),
+                wvcc.Property(
+                    name="dataset_id",
+                    data_type=TEXT,
+                    index_searchable=False,
+                    index_filterable=True,
+                    skip_vectorization=True,
+                    tokenization=FIELD,
+                ),
+                wvcc.Property(
+                    name="pdf_id",
+                    data_type=TEXT,
+                    skip_vectorization=True,
+                ),
+                wvcc.Property(
+                    name="pdf_title",
+                    data_type=TEXT,
+                    skip_vectorization=True,
+                ),
+            ),
+            vector_config=wvcc.Configure.MultiVectors.multi2vec_weaviate(
+                base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
+                image_fields=["base64_str"],
+                model="ModernVBERT/colmodernvbert",
+            ),
+            item_to_props=lambda item: {
+                "base64_str": item["base64_str"],
+                "dataset_id": str(item["dataset_id"]),
+                "pdf_id": str(item["pdf_id"]),
+                "pdf_title": item["pdf_title"],
+            },
+        ),
+    ),
+    # irpapers/text
+    (
+        lambda d: d == "irpapers/text",
+        DatasetSpec(
+            name_fn=lambda d: "IRPapersText",
+            properties=(
+                wvcc.Property(name="content", data_type=TEXT),
+                wvcc.Property(
+                    name="dataset_id",
+                    data_type=TEXT,
+                    index_searchable=False,
+                    index_filterable=True,
+                    skip_vectorization=True,
+                    tokenization=FIELD,
+                ),
+            ),
+            vector_config=wvcc.Configure.Vectors.text2vec_weaviate(),
+            item_to_props=lambda item: {
+                "content": item["transcription"],
                 "dataset_id": str(item["dataset_id"]),
             },
         ),
@@ -188,7 +253,7 @@ def _drop_and_create_collection(
     weaviate_client: weaviate.WeaviateClient,
     name: str,
     properties: Sequence[wvcc.Property],
-    vectorizer_config: Any,
+    vector_config: Any,
     recreate: bool = True,
 ) -> None:
     if recreate and weaviate_client.collections.exists(name):
@@ -196,7 +261,7 @@ def _drop_and_create_collection(
     if not weaviate_client.collections.exists(name):
         weaviate_client.collections.create(
             name=name,
-            vectorizer_config=vectorizer_config,
+            vector_config=vector_config,
             properties=list(properties),
         )
 
@@ -205,23 +270,23 @@ def _batch_insert(
     collection: str,
     items: Iterable[Mapping[str, Any]],
     item_to_props: Callable[[Mapping[str, Any]], Dict[str, Any]],
-    batch_size: int = 100,
-    concurrent_requests: int = 4,
+    batch_size: int = 20,
 ):
     start = time.perf_counter()
     total = 0
-    with weaviate_client.batch.fixed_size(batch_size=batch_size, concurrent_requests=concurrent_requests) as batch:
+    print(f"Inserting {len(items)} objects into collection '{collection}'...")
+    with weaviate_client.batch.fixed_size(batch_size=batch_size) as batch:
         for i, item in enumerate(items, start=1):
             props = item_to_props(item)
             batch.add_object(collection=collection, properties=props)
-            if i % 1000 == 0:
+            if i % batch_size == 0:
                 elapsed = time.perf_counter() - start
-                print(f"Inserted {i} objects ({(elapsed):.1f} s, {(i / max(elapsed, 1e-9)):.1f} objs/s)")
+                print(f"\033[92mInserted {i} objects ({(elapsed):.1f} s, {(i / max(elapsed, 1e-9)):.1f} objs/s)\033[0m")
             total = i
     elapsed = time.perf_counter() - start
     print(f"Inserted {total} objects in {(elapsed):.2f} s ({(total / max(elapsed, 1e-9)):.1f} objs/s)")
 
-def get_vectorizer_config(embedding_model: Optional[str] = None) -> Any:
+def get_vector_config(embedding_model: Optional[str] = None) -> Any:
     """
     Factory function to create text2vec_weaviate vectorizer config.
     
@@ -240,7 +305,7 @@ def get_vectorizer_config(embedding_model: Optional[str] = None) -> Any:
         # Default config without specifying model
         return wvcc.Configure.Vectorizer.text2vec_weaviate()
 
-def create_collection_with_vectorizer(
+def create_collection_with_vector_config(
     weaviate_client: weaviate.WeaviateClient,
     dataset_name: str,
     tag: str = "Default",
@@ -265,7 +330,7 @@ def create_collection_with_vectorizer(
     spec = resolve_spec(dataset_name)
     alias_collection_name = spec.name_fn(dataset_name)
     collection_name = add_tag_to_name(alias_collection_name, tag)
-    vectorizer_config = get_vectorizer_config(embedding_model)
+    vector_config = get_vector_config(embedding_model)
     
     model_info = f" with model {embedding_model}" if embedding_model else " with default model"
     print(f"Creating collection '{collection_name}'{model_info}...")
@@ -273,7 +338,7 @@ def create_collection_with_vectorizer(
         weaviate_client,
         collection_name,
         properties=spec.properties,
-        vectorizer_config=vectorizer_config,
+        vector_config=vector_config,
         recreate=True,
     )
 
@@ -298,17 +363,18 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
         objects, _ = in_memory_dataset_loader(dataset_name)
 
         print("\033[92mFirst Document:\033[0m")
-        pretty_print_in_memory_document(objects[0]["content"])
+        pretty_print_in_memory_document(objects[0])
 
         spec = resolve_spec(dataset_name)
         alias_collection_name = spec.name_fn(dataset_name)
         collection_name = add_tag_to_name(alias_collection_name, tag)
 
+        print(f"\n\033[96mCreating collection '{collection_name}'...\033[0m")
         _drop_and_create_collection(
             weaviate_client,
             collection_name,
             properties=spec.properties,
-            vectorizer_config=spec.vectorizer_config,
+            vector_config=spec.vector_config,
             recreate=recreate,
         )
 
@@ -316,7 +382,7 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
         if alias_info is None:
             weaviate_client.alias.create(
                 alias_name=alias_collection_name,
-                new_target_collection=collection_name,
+                target_collection=collection_name,
             )
         else:
             weaviate_client.alias.update(

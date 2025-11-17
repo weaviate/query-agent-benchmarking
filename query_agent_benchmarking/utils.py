@@ -56,14 +56,16 @@ def pretty_print_in_memory_query(in_memory_query: InMemoryQuery):
     print("\n\n")
 
 # Note, there isn't a unified document model yet, e.g. InMemoryDocument...
-def pretty_print_in_memory_document(in_memory_document: str):
+def pretty_print_in_memory_document(in_memory_document_object: dict):
     """
     Pretty prints a dictionary with colored keys and formatted output.
     
     Args:
         dict_to_print: Dictionary to be printed
     """
-    print(f"\t\033[96mDocument\033[0m: {in_memory_document}")
+    print(f"Dataset ID: {in_memory_document_object['dataset_id']}")
+    if "content" in in_memory_document_object:
+        print(f"\t\033[96mDocument\033[0m: {in_memory_document_object['content']}")
     print("="*60)
     print("\n\n")
     

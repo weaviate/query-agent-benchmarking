@@ -204,6 +204,12 @@ async def analyze_results(
                 {"func": calculate_recall_at_k, "params": {"k": 20}},
                 {"func": calculate_nDCG_at_k, "params": {"k": 10}},
             ]
+        elif dataset_name.startswith("irpapers/"):
+            metrics = [
+                {"func": calculate_recall_at_k, "params": {"k": 1}},
+                {"func": calculate_recall_at_k, "params": {"k": 5}},
+                {"func": calculate_recall_at_k, "params": {"k": 20}},
+            ]
         else:
             raise ValueError(f"Unknown dataset: {dataset_name}")
     
