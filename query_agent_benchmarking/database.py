@@ -193,33 +193,26 @@ REGISTRY: list[Tuple[Callable[[str], bool], DatasetSpec]] = [
                     index_filterable=True,
                     skip_vectorization=True,
                     tokenization=FIELD,
-                ),
-                wvcc.Property(
-                    name="pdf_id",
-                    data_type=TEXT,
-                    skip_vectorization=True,
-                ),
-                wvcc.Property(
-                    name="pdf_title",
-                    data_type=TEXT,
-                    skip_vectorization=True,
-                ),
+                )
             ),
             vector_config=wvcc.Configure.MultiVectors.multi2vec_weaviate(
                 base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
                 image_fields=["base64_str"],
                 model="ModernVBERT/colmodernvbert",
                 encoding=wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(
-                    ksim=6,
-                    dprojections=16,
-                    repetitions=20,
+                    ksim=1,
+                    dprojections=1,
+                    repetitions=1,
                 ),
+                vector_index_config=wvcc.Configure.VectorIndex.hnsw(
+                    flat_search_cutoff=0,
+                    ef=10,
+                ),
+                quantizer=wvcc.Configure.VectorIndex.Quantizer.none()
             ),
             item_to_props=lambda item: {
                 "base64_str": item["base64_str"],
                 "dataset_id": str(item["dataset_id"]),
-                "pdf_id": str(item["pdf_id"]),
-                "pdf_title": item["pdf_title"],
             },
         ),
     ),
