@@ -199,6 +199,11 @@ REGISTRY: list[Tuple[Callable[[str], bool], DatasetSpec]] = [
                 base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
                 image_fields=["base64_str"],
                 model="ModernVBERT/colmodernvbert",
+                encoding=wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(
+                    ksim=4,
+                    dprojections=16,
+                    repetitions=40,
+                ),
             ),
             item_to_props=lambda item: {
                 "base64_str": item["base64_str"],

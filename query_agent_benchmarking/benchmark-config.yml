@@ -1,11 +1,11 @@
 agent_name: "hybrid-search"
-dataset: irpapers/images
+dataset: irpapers/text
 
 use_async: True
 max_concurrent: 5
 
 use_subset: False
-num_samples: 5
+num_samples: 10
 
 num_trials: 1
 batch_size: 5
