@@ -196,14 +196,12 @@ REGISTRY: list[Tuple[Callable[[str], bool], DatasetSpec]] = [
                 )
             ),
             vector_config=wvcc.Configure.MultiVectors.multi2vec_weaviate(
-                base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
                 image_fields=["base64_str"],
                 model="ModernVBERT/colmodernvbert",
-                encoding=wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(
-                    ksim=4,
-                    dprojections=16,
-                    repetitions=40,
-                ),
+                encoding=wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(),
+                vector_index_config=wvcc.Configure.VectorIndex.hnsw(
+                    dynamic_ef_factor=32,
+                )
             ),
             item_to_props=lambda item: {
                 "base64_str": item["base64_str"],
