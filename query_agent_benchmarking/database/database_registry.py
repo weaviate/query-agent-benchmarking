@@ -54,7 +54,7 @@ REGISTRY: list[DatasetSpec] = [
         .with_blob_property("base64_str")
         .with_dataset_id()
         .with_multi2vec_weaviate(
-            image_fields=["base64_str"],
+            image_field="base64_str",
             model="ModernVBERT/colmodernvbert",
         )
         .build()),

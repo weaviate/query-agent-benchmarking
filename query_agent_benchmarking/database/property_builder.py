@@ -128,13 +128,13 @@ class DatasetSpecBuilder:
 
     def with_multi2vec_weaviate(
         self,
-        image_fields: list[str],
+        image_field: str,
         model: str,
         dynamic_ef_factor: int = 32,
     ) -> "DatasetSpecBuilder":
         """Use multi2vec_weaviate vectorizer for images."""
         self._vector_config = wvcc.Configure.MultiVectors.multi2vec_weaviate(
-            image_fields=image_fields,
+            image_field=image_field,
             model=model,
             encoding=wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(),
             vector_index_config=wvcc.Configure.VectorIndex.hnsw(
