@@ -4,7 +4,6 @@ import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from pydantic import AnyHttpUrl
 from typing import Any, Callable, Dict, Iterable, Mapping, Sequence, Tuple, Optional
 
 import weaviate.collections.classes.config as wvcc
