@@ -27,6 +27,8 @@ def in_memory_dataset_loader(dataset_name: str):
         return _in_memory_dataset_loader_freshstack(subset="laravel")
     elif dataset_name == "freshstack-yolo":
         return _in_memory_dataset_loader_freshstack(subset="yolo")
+    elif dataset_name.startswith("irpapers/"):
+        return _in_memory_dataset_loader_irpapers()
     else:
         return None
 
@@ -174,6 +176,19 @@ def _in_memory_dataset_loader_freshstack(subset: str):
     
     return docs, questions
     """
+
+def _in_memory_dataset_loader_irpapers():
+    docs = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-docs")
+    _questions = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-queries")
+    questions: list[InMemoryQuery] = []
+    for question in _questions:
+        questions.append(InMemoryQuery(
+            question=question["question"],
+            query_id=random.randint(1, 1000000),
+            dataset_ids=[question["dataset_id"]]
+        ))
+
+    return docs, questions
 
 def _load_dataset_from_hf_hub(filepath, subset=None, train=True):
     ds = load_dataset(filepath, subset)

@@ -8,6 +8,8 @@ supported_datasets = (
     "bright/psychology",
     "bright/robotics",
     "enron",
+    "irpapers/images",
+    "irpapers/text",
     "lotte/lifestyle/test/forum",
     "lotte/lifestyle/test/search",
     "lotte/recreation/test/forum",

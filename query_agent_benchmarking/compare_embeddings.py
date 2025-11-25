@@ -6,7 +6,7 @@ from pathlib import Path
 import hashlib
 import weaviate
 
-from query_agent_benchmarking.database import create_collection_with_vectorizer, resolve_spec
+from query_agent_benchmarking.database import create_collection_with_vector_config, resolve_spec
 from query_agent_benchmarking.benchmark_run import _run_eval
 from query_agent_benchmarking.utils import load_config, merge_configs, print_results_comparison
 
@@ -144,7 +144,7 @@ async def _run_eval_with_temp_collection(
     )
     
     try:
-        create_collection_with_vectorizer(
+        create_collection_with_vector_config(
             weaviate_client=weaviate_client,
             dataset_name=dataset_name,
             tag=model_hash,
