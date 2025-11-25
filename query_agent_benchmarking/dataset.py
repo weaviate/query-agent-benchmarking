@@ -29,6 +29,8 @@ def in_memory_dataset_loader(dataset_name: str):
         return _in_memory_dataset_loader_freshstack(subset="yolo")
     elif dataset_name.startswith("irpapers/"):
         return _in_memory_dataset_loader_irpapers()
+    elif dataset_name == "multihoprag":
+        return _in_memory_dataset_loader_multihoprag()
     else:
         return None
 
@@ -188,6 +190,26 @@ def _in_memory_dataset_loader_irpapers():
             dataset_ids=[question["dataset_id"]]
         ))
 
+    return docs, questions
+
+def _in_memory_dataset_loader_multihoprag():
+    print("Loading MultiHopRAG dataset...")
+    
+    docs = _load_dataset_from_hf_hub(filepath="yixuantt/MultiHopRAG", subset="corpus")
+    _questions = _load_dataset_from_hf_hub(filepath="yixuantt/MultiHopRAG", subset="MultiHopRAG")
+    
+    for i, doc in enumerate(docs):
+        doc["dataset_id"] = str(i)
+    
+    questions: list[InMemoryQuery] = []
+    for question in _questions:
+        questions.append(InMemoryQuery(
+            question=question["query"],
+            query_id=random.randint(1, 1000000),
+            dataset_ids=[]
+        ))
+    
+    print(f"Loaded {len(docs)} documents and {len(questions)} questions")
     return docs, questions
 
 def _load_dataset_from_hf_hub(filepath, subset=None, train=True):
