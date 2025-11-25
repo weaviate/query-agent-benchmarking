@@ -23,7 +23,7 @@ def _drop_and_create_collection(
     client: weaviate.WeaviateClient,
     name: str,
     properties: Sequence[wvcc.Property],
-    vector_config: Any,
+    vectorizer_config: Any,
     recreate: bool = True,
 ) -> None:
     """Drop (if exists) and create a Weaviate collection."""
@@ -32,7 +32,7 @@ def _drop_and_create_collection(
     if not client.collections.exists(name):
         client.collections.create(
             name=name,
-            vector_config=vector_config,
+            vectorizer_config=vectorizer_config,
             properties=list(properties),
         )
 
@@ -124,7 +124,7 @@ def create_collection_with_vector_config(
         client,
         collection_name,
         properties=spec.properties,
-        vector_config=vector_config,
+        vectorizer_config=vectorizer_config,
         recreate=True,
     )
 
@@ -167,7 +167,7 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
             client,
             collection_name,
             properties=spec.properties,
-            vector_config=spec.vector_config,
+            vectorizer_config=spec.vector_config,
             recreate=recreate,
         )
 
