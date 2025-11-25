@@ -65,6 +65,13 @@ REGISTRY: list[DatasetSpec] = [
         .with_dataset_id()
         .with_text2vec_weaviate()
         .build()),
+
+    (DatasetSpecBuilder("multihoprag")
+        .with_static_name("MultiHopRAG")
+        .with_text_property("content", source_field="body")
+        .with_dataset_id()
+        .with_text2vec_weaviate()
+        .build()),
 ]
 
 
