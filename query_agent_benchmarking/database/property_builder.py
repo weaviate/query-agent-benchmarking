@@ -4,13 +4,16 @@ from typing import Any, Callable, Dict, Mapping, Optional
 import weaviate.collections.classes.config as wvcc
 
 from .spec import DatasetSpec
-from .utils import pascalize_name
 
 # Property type constants
 TEXT = wvcc.DataType.TEXT
 BLOB = wvcc.DataType.BLOB
 INT = wvcc.DataType.INT
 FIELD = wvcc.Tokenization.FIELD
+
+def pascalize_name(name: str) -> str:
+    """Convert a name to PascalCase."""
+    return "".join(word.capitalize() for word in name.replace("-", "_").split("_"))
 
 
 def dataset_id_property() -> wvcc.Property:
