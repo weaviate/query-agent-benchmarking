@@ -10,8 +10,8 @@ import weaviate
 import weaviate.collections.classes.config as wvcc
 
 from .database_registry import resolve_spec
-from .dataset import in_memory_dataset_loader
-from .utils import (
+from ..dataset import in_memory_dataset_loader
+from ..utils import (
     get_weaviate_client,
     load_config,
     pretty_print_in_memory_document,
@@ -146,13 +146,13 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
         recreate: Whether to drop existing collection before creating
         tag: Suffix to add to collection name
     """
-    config_path = Path(os.path.dirname(__file__), "benchmark-config.yml")
+    config_path = Path(__file__).parent / "database_loader_config.yml"
     config = load_config(config_path)
 
     client = get_weaviate_client()
 
     try:
-        dataset_name: str = config["dataset"]
+        dataset_name: str = config["dataset_name"]
         objects, _ = in_memory_dataset_loader(dataset_name)
 
         print("\033[92mFirst Document:\033[0m")
