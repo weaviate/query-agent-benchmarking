@@ -1,0 +1,7 @@
+dataset_name: irpapers/images
+
+# MUVERA+HNSW parameters
+ksim: 4
+dprojections: 16
+repetitions: 10
+ef: 500
