@@ -1,9 +1,7 @@
-"""Dataset specification registry for Weaviate collections."""
 from .spec import DatasetSpec
 from .property_builder import DatasetSpecBuilder
 
-
-REGISTRY: list[DatasetSpec] = [
+BenchmarkRegistry: list[DatasetSpec] = [
     (DatasetSpecBuilder("enron")
         .with_static_name("EnronEmails")
         .with_text_property("email_body")
@@ -55,7 +53,6 @@ REGISTRY: list[DatasetSpec] = [
         .with_dataset_id()
         .with_multi2vec_weaviate(
             image_field="base64_str",
-            model="ModernVBERT/colmodernvbert",
         )
         .build()),
 
@@ -77,7 +74,7 @@ REGISTRY: list[DatasetSpec] = [
 
 def resolve_spec(dataset_name: str) -> DatasetSpec:
     """Find the spec that matches the given dataset name."""
-    for spec in REGISTRY:
+    for spec in BenchmarkRegistry:
         if spec.matches(dataset_name):
             return spec
     raise ValueError(f"Unsupported dataset_name: {dataset_name}")

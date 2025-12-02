@@ -1,11 +1,12 @@
-"""Fluent builder for DatasetSpec."""
+from pathlib import Path
 from typing import Any, Callable, Dict, Mapping, Optional
+import yaml
 
+from pydantic import AnyHttpUrl
 import weaviate.collections.classes.config as wvcc
 
 from .spec import DatasetSpec
 
-# Property type constants
 TEXT = wvcc.DataType.TEXT
 BLOB = wvcc.DataType.BLOB
 INT = wvcc.DataType.INT
@@ -31,7 +32,7 @@ def dataset_id_property() -> wvcc.Property:
 class DatasetSpecBuilder:
     """Fluent builder for DatasetSpec."""
 
-    def __init__(self, pattern: str):
+    def __init__(self, pattern: str, config_path: Optional[str | Path] = None):
         self._pattern = pattern
         self._name_fn: Optional[Callable[[str], str]] = None
         self._properties: list[wvcc.Property] = []
@@ -39,8 +40,20 @@ class DatasetSpecBuilder:
         self._field_mappings: dict[str, str] = {}
         self._id_field: str = "dataset_id"
         self._custom_mapper: Optional[Callable[[Mapping[str, Any]], Dict[str, Any]]] = None
+        self._config: dict[str, Any] = self._load_config(config_path)
 
-    # --- Name configuration ---
+    def _load_config(self, path: Optional[str | Path] = None) -> dict[str, Any]:
+        """Load configuration from a YAML file."""
+        if path is None:
+            path = Path("database_loader_config.yml")
+        else:
+            path = Path(path)
+
+        if not path.exists():
+            return {}
+
+        with open(path) as f:
+            return yaml.safe_load(f) or {}
 
     def with_name(self, name_fn: Callable[[str], str]) -> "DatasetSpecBuilder":
         """Set a custom collection name function."""
@@ -65,8 +78,6 @@ class DatasetSpecBuilder:
         """
         self._name_fn = lambda d: f"{prefix}{pascalize_name(d.split(split_char)[split_index])}"
         return self
-
-    # --- Properties ---
 
     def with_text_property(
         self,
@@ -129,16 +140,20 @@ class DatasetSpecBuilder:
     def with_multi2vec_weaviate(
         self,
         image_field: str,
-        model: str,
-        dynamic_ef_factor: int = 32,
+        model: str = "ModernVBERT/colmodernvbert",
     ) -> "DatasetSpecBuilder":
         """Use multi2vec_weaviate vectorizer for images."""
         self._vector_config = wvcc.Configure.MultiVectors.multi2vec_weaviate(
+            base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
             image_field=image_field,
             model=model,
-            encoding=wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(),
+            encoding=wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(
+                ksim=self._config.get("ksim", 4),
+                dprojections=self._config.get("dprojections", 16),
+                repetitions=self._config.get("repetitions", 10),
+            ),
             vector_index_config=wvcc.Configure.VectorIndex.hnsw(
-                dynamic_ef_factor=dynamic_ef_factor,
+                ef=self._config.get("ef", 500),
             ),
         )
         return self

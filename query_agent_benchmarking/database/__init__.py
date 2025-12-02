@@ -1,7 +1,7 @@
 """Database schema and loading utilities for Weaviate collections."""
 from .spec import DatasetSpec
 from .property_builder import DatasetSpecBuilder
-from .database_registry import REGISTRY, resolve_spec
+from .database_registry import BenchmarkRegistry, resolve_spec
 from .database_loader import (
     database_loader,
     create_collection_with_vector_config,
@@ -11,7 +11,7 @@ from .database_loader import (
 __all__ = [
     "DatasetSpec",
     "DatasetSpecBuilder",
-    "REGISTRY",
+    "BenchmarkRegistry",
     "resolve_spec",
     "database_loader",
     "create_collection_with_vector_config",
