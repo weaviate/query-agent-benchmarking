@@ -1,10 +1,9 @@
 """Database loading and collection management utilities."""
 from __future__ import annotations
 
-import os
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, Mapping, Optional, Sequence
+from typing import Any, Callable, Dict, Mapping, Optional, Sequence
 
 import weaviate
 import weaviate.collections.classes.config as wvcc
@@ -115,7 +114,7 @@ def create_collection_with_vector_config(
     spec = resolve_spec(dataset_name)
     alias_collection_name = spec.name_fn(dataset_name)
     collection_name = add_tag_to_name(alias_collection_name, tag)
-    vector_config = get_vector_config(embedding_model)
+    vectorizer_config = get_vector_config(embedding_model)
 
     model_info = f" with model {embedding_model}" if embedding_model else " with default model"
     print(f"Creating collection '{collection_name}'{model_info}...")
