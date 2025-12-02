@@ -35,15 +35,16 @@ class AgentBuilder:
         if not dataset_name and not docs_collection:
             raise ValueError("Must specify either dataset_name or docs_collection")
         
+
+        self.dataset_name = dataset_name # for irpapers/images query toggle
+        
         # Handle custom DocsCollection
         if docs_collection:
             self.collection = docs_collection.collection_name
             self.target_property_name = docs_collection.content_key
             self.id_property = docs_collection.id_key
-
         # NOTE: Might need to add `_Default` for the QueryAgent to avoid the use of the alias    
-        # NOTE: Or maybe not, this might just work as is.
-        
+        # NOTE: Or maybe not, this might just work as is.        
         # Handle built-in datasets
         elif dataset_name == "enron":
             self.collection = "EnronEmails"
@@ -179,10 +180,16 @@ class AgentBuilder:
                     results.append(ObjectID(object_id=obj.properties[self.id_property]))
                 return results
             elif self.agent_name == "hybrid-search":
-                response = await self.weaviate_collection.query.hybrid(
-                    query=query,
-                    limit=20
-                )
+                if self.dataset_name == "irpapers/images":
+                    response = await self.weaviate_collection.query.near_text(
+                        query=query,
+                        limit=20
+                    )
+                else:
+                    response = await self.weaviate_collection.query.hybrid(
+                        query=query,
+                        limit=20
+                    )
                 results = []
                 for obj in response.objects:
                     results.append(ObjectID(object_id=str(obj.properties[self.id_property])))
