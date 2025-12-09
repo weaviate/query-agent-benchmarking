@@ -4,6 +4,7 @@ from typing import Optional
 import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
+from weaviate.config import AdditionalConfig, Timeout
 from query_agent_benchmarking.models import ObjectID, DocsCollection
 from query_agent_benchmarking.utils import pascalize_name
 
@@ -74,11 +75,11 @@ class AgentBuilder:
             self.collection = f"Bright{pascalize_name(subset)}"
             self.target_property_name = "content"
             self.id_property = "dataset_id"
-        elif dataset_name == "irpapers/images":
+        elif dataset_name.startswith("irpapers/images"):
             self.collection = "IRPapersImages"
             self.target_property_name = "content"
             self.id_property = "dataset_id"
-        elif dataset_name == "irpapers/text":
+        elif dataset_name.startswith("irpapers/text"):
             self.collection = "IRPapersText"
             self.target_property_name = "content"
             self.id_property = "dataset_id"
@@ -119,6 +120,9 @@ class AgentBuilder:
             self.weaviate_client = weaviate.use_async_with_weaviate_cloud(
                     cluster_url=self.cluster_url,
                     auth_credentials=Auth.api_key(self.api_key),
+                    additional_config=AdditionalConfig(
+                        timeout=Timeout(query=6000)
+                    ),
                 )
                 
             await self.weaviate_client.connect()
@@ -180,7 +184,7 @@ class AgentBuilder:
                     results.append(ObjectID(object_id=obj.properties[self.id_property]))
                 return results
             elif self.agent_name == "hybrid-search":
-                if self.dataset_name == "irpapers/images":
+                if self.dataset_name.startswith("irpapers/images"):
                     response = await self.weaviate_collection.query.near_text(
                         query=query,
                         limit=20

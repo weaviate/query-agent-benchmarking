@@ -10,6 +10,8 @@ supported_datasets = (
     "enron",
     "irpapers/images",
     "irpapers/text",
+    "irpapers/images/visual-queries",
+    "irpapers/text/visual-queries",
     "lotte/lifestyle/test/forum",
     "lotte/lifestyle/test/search",
     "lotte/recreation/test/forum",
