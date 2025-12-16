@@ -12,6 +12,7 @@ from .database_registry import resolve_spec
 from ..dataset import in_memory_dataset_loader
 from ..utils import (
     get_weaviate_client,
+    get_provider_headers,
     load_config,
     pretty_print_in_memory_document,
     add_tag_to_name,
@@ -75,19 +76,52 @@ def _batch_insert(
     return total
 
 
-def get_vector_config(embedding_model: Optional[str] = None) -> Any:
+def _parse_embedding_model(embedding_model: str) -> tuple[str, str]:
     """
-    Factory function to create text2vec_weaviate vectorizer config.
+    Parse embedding model string into provider and model name.
     
     Args:
-        embedding_model: Specific model to use. If None, uses default.
+        embedding_model: Format "provider/model" (e.g., "cohere/embed-4")
+                       or just "model" (defaults to "weaviate" provider)
+    
+    Returns:
+        Tuple of (provider, model_name)
+    """
+    if "/" in embedding_model:
+        provider, model_name = embedding_model.split("/", 1)
+        return provider.lower(), model_name
+    return "weaviate", embedding_model
+
+
+def get_vector_config(embedding_model: Optional[str] = None) -> Any:
+    """
+    Factory function to create vectorizer config based on provider.
+    
+    Args:
+        embedding_model: Model string in format "provider/model" (e.g., "cohere/embed-4")
+                        or just "model" for weaviate. If None, uses default weaviate.
     
     Returns:
         Vectorizer configuration object
     """
-    if embedding_model:
-        return wvcc.Configure.Vectorizer.text2vec_weaviate(model=embedding_model)
-    return wvcc.Configure.Vectorizer.text2vec_weaviate()
+    if not embedding_model:
+        return wvcc.Configure.Vectorizer.text2vec_weaviate()
+    
+    provider, model_name = _parse_embedding_model(embedding_model)
+    
+    # Weaviate uses Configure.Vectorizer (returns correct type)
+    # Third-party providers use Configure.Vectors (returns _VectorConfigCreate)
+    if provider == "weaviate":
+        return wvcc.Configure.Vectorizer.text2vec_weaviate(model=model_name)
+    elif provider == "cohere":
+        return wvcc.Configure.Vectors.text2vec_cohere(model=model_name)
+    elif provider == "voyageai":
+        return wvcc.Configure.Vectors.text2vec_voyageai(model=model_name)
+    else:
+        raise ValueError(
+            f"Unsupported embedding provider: '{provider}'. "
+            f"Supported providers: ['weaviate', 'cohere', 'voyageai']"
+        )
 
 
 def create_collection_with_vector_config(
@@ -148,7 +182,14 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
     config_path = Path(__file__).parent / "database_loader_config.yml"
     config = load_config(config_path)
 
-    client = get_weaviate_client()
+    # Get provider headers if using a third-party embedding provider
+    headers = {}
+    embedding_model = config.get("embedding_model")
+    if embedding_model:
+        provider, _ = _parse_embedding_model(embedding_model)
+        headers = get_provider_headers(provider)
+
+    client = get_weaviate_client(headers=headers)
 
     try:
         dataset_name: str = config["dataset_name"]

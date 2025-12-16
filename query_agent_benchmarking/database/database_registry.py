@@ -51,16 +51,14 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_static_name("IRPapersImages")
         .with_blob_property("base64_str")
         .with_dataset_id()
-        .with_multi2vec_weaviate(
-            image_field="base64_str",
-        )
+        .with_multi2vec(image_field="base64_str")
         .build()),
 
     (DatasetSpecBuilder("irpapers/text")
         .with_static_name("IRPapersText")
         .with_text_property("content", source_field="transcription")
         .with_dataset_id()
-        .with_text2vec_weaviate()
+        .with_text2vec()
         .build()),
 
     (DatasetSpecBuilder("multihoprag")

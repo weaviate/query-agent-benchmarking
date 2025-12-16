@@ -98,10 +98,50 @@ def merge_configs(file_config: Dict[str, Any], override_config: Dict[str, Any]) 
     
     return merged
 
-def get_weaviate_client():
+def get_provider_headers(provider: str) -> Dict[str, str]:
+    """
+    Get API key headers for third-party embedding providers.
+    
+    Args:
+        provider: The provider name ("cohere", "voyageai", or "weaviate")
+    
+    Returns:
+        Dictionary of headers with API keys from environment variables
+    """
+    header_map = {
+        "cohere": ("X-Cohere-Api-Key", "COHERE_API_KEY"),
+        "voyageai": ("X-VoyageAI-Api-Key", "VOYAGEAI_API_KEY"),
+    }
+    
+    if provider not in header_map:
+        return {}
+    
+    header_name, env_var = header_map[provider]
+    api_key = os.getenv(env_var)
+    
+    if not api_key:
+        raise ValueError(
+            f"Missing API key for provider '{provider}'. "
+            f"Please set the {env_var} environment variable."
+        )
+    
+    return {header_name: api_key}
+
+
+def get_weaviate_client(headers: Dict[str, str] = None):
+    """
+    Connect to Weaviate Cloud with optional headers for third-party providers.
+    
+    Args:
+        headers: Optional dictionary of headers (e.g., API keys for Cohere, VoyageAI)
+    
+    Returns:
+        Connected Weaviate client
+    """
     return weaviate.connect_to_weaviate_cloud(
         cluster_url=os.getenv("WEAVIATE_URL"),
-        auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY"))
+        auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
+        headers=headers or {}
     )
 
 def print_results_comparison(all_results: Dict[str, Dict[str, Any]]) -> None:

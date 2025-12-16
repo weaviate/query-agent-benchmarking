@@ -1,12 +1,20 @@
 import os
-from typing import Optional
+from typing import Optional, Dict
 
 import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
 from weaviate.config import AdditionalConfig, Timeout
 from query_agent_benchmarking.models import ObjectID, DocsCollection
-from query_agent_benchmarking.utils import pascalize_name
+from query_agent_benchmarking.utils import pascalize_name, get_provider_headers
+
+
+def _parse_embedding_model(embedding_model: str) -> tuple[str, str]:
+    """Parse embedding model string into provider and model name."""
+    if "/" in embedding_model:
+        provider, model_name = embedding_model.split("/", 1)
+        return provider.lower(), model_name
+    return "weaviate", embedding_model
 
 class AgentBuilder:
     """
@@ -20,6 +28,7 @@ class AgentBuilder:
         docs_collection: Optional[DocsCollection] = None,
         agents_host: Optional[str] = None,
         use_async: bool = False,
+        embedding_model: Optional[str] = None,
     ):
         self.use_async = use_async
         self.agent = None
@@ -28,6 +37,12 @@ class AgentBuilder:
         self.cluster_url = os.getenv("WEAVIATE_URL")
         self.api_key = os.getenv("WEAVIATE_API_KEY")
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        
+        # Get provider headers for third-party embedding providers
+        self.headers: Dict[str, str] = {}
+        if embedding_model:
+            provider, _ = _parse_embedding_model(embedding_model)
+            self.headers = get_provider_headers(provider)
         
         # NOTE: Update this to use `docs_collection` if both `dataset_name` and `docs_collection` are provided.
         # Require either dataset_name or docs_collection, but not both
@@ -100,6 +115,7 @@ class AgentBuilder:
         self.weaviate_client = weaviate.connect_to_weaviate_cloud(
             cluster_url=self.cluster_url,
             auth_credentials=weaviate.auth.AuthApiKey(self.api_key),
+            headers=self.headers,
         )
         if self.agent_name == "query-agent-search-only":
             self.agent = QueryAgent(
@@ -120,6 +136,7 @@ class AgentBuilder:
             self.weaviate_client = weaviate.use_async_with_weaviate_cloud(
                     cluster_url=self.cluster_url,
                     auth_credentials=Auth.api_key(self.api_key),
+                    headers=self.headers,
                     additional_config=AdditionalConfig(
                         timeout=Timeout(query=6000)
                     ),

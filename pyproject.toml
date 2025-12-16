@@ -11,7 +11,7 @@ requires-python = ">=3.9"
 dependencies = [
   "dspy>=2.6.27",
   "sentence-transformers>=5.0.0",
-  "weaviate-client @ git+https://github.com/weaviate/weaviate-python-client@multi2multivec-weaviate",
+  "weaviate-client>=4.18.3", 
   "weaviate-agents>=1.1.0",
   "pandas>=2.3.1",
   "datasets>=4.0.0",

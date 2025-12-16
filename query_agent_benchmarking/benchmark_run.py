@@ -111,12 +111,14 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
         print(f"Using a subset of {config['num_samples']} queries.")
 
     # Build agent
+    embedding_model = config.get("embedding_model")
     if dataset_name:
         query_agent = AgentBuilder(
             agent_name=config["agent_name"],
             dataset_name=dataset_name,
             agents_host=agents_host,
             use_async=use_async,
+            embedding_model=embedding_model,
         )
     else:
         query_agent = AgentBuilder(
@@ -124,6 +126,7 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
             docs_collection=docs_collection,
             agents_host=agents_host,
             use_async=use_async,
+            embedding_model=embedding_model,
         )
 
     num_trials = config.get("num_trials", 1)
@@ -204,6 +207,7 @@ def run_eval(
     agents_host: Optional[str] = None,
     output_path: Optional[str] = None,
     random_seed: Optional[int] = None,
+    embedding_model: Optional[str] = None,
     **kwargs
 ) -> Dict[str, Any]:
     if config_path is None:
@@ -227,6 +231,7 @@ def run_eval(
         "agents_host": agents_host,
         "output_path": output_path,
         "random_seed": random_seed,
+        "embedding_model": embedding_model,
         **kwargs
     }
     
@@ -251,6 +256,7 @@ def run_evals(
     agents_host: Optional[str] = None,
     output_path: Optional[str] = None,
     random_seed: Optional[int] = None,
+    embedding_model: Optional[str] = None,
     **kwargs
 ) -> Dict[str, Dict[str, Any]]:
     """Run evaluation benchmark for multiple query agents."""
@@ -281,6 +287,7 @@ def run_evals(
         "use_async": use_async,
         "agents_host": agents_host,
         "random_seed": random_seed,
+        "embedding_model": embedding_model,
         **kwargs
     }
     
