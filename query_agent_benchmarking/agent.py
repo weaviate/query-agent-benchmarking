@@ -8,14 +8,6 @@ from weaviate.config import AdditionalConfig, Timeout
 from query_agent_benchmarking.models import ObjectID, DocsCollection
 from query_agent_benchmarking.utils import pascalize_name, get_provider_headers, parse_embedding_model
 
-
-def parse_embedding_model(embedding_model: str) -> tuple[str, str]:
-    """Parse embedding model string into provider and model name."""
-    if "/" in embedding_model:
-        provider, model_name = embedding_model.split("/", 1)
-        return provider.lower(), model_name
-    return "weaviate", embedding_model
-
 class AgentBuilder:
     """
     * `agent_name == "query-agent-search-only"`  ➜  Wraps the Weaviate QueryAgent in Search Only Mode.
