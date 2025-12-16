@@ -26,7 +26,6 @@ def add_hard_negatives(
         auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
     )
 
-
     _queries_collection = weaviate_client.collections.get(queries_collection.collection_name)
     _docs_collection = weaviate_client.collections.get(docs_collection.collection_name)
 

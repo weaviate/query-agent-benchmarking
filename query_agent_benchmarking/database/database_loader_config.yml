@@ -1,6 +1,7 @@
 dataset_name: irpapers/images
 
 # MUVERA+HNSW parameters
+use_MUVERA_encoding: True
 ksim: 4
 dprojections: 16
 repetitions: 10

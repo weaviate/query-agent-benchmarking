@@ -45,7 +45,8 @@ class DatasetSpecBuilder:
     def _load_config(self, path: Optional[str | Path] = None) -> dict[str, Any]:
         """Load configuration from a YAML file."""
         if path is None:
-            path = Path("database_loader_config.yml")
+            # Resolve relative to this file's directory, not the current working directory
+            path = Path(__file__).parent / "database_loader_config.yml"
         else:
             path = Path(path)
 
@@ -143,19 +144,26 @@ class DatasetSpecBuilder:
         model: str = "ModernVBERT/colmodernvbert",
     ) -> "DatasetSpecBuilder":
         """Use multi2vec_weaviate vectorizer for images."""
-        self._vector_config = wvcc.Configure.MultiVectors.multi2vec_weaviate(
-            base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
-            image_field=image_field,
-            model=model,
-            encoding=wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(
-                ksim=self._config.get("ksim", 4),
-                dprojections=self._config.get("dprojections", 16),
-                repetitions=self._config.get("repetitions", 10),
-            ),
-            vector_index_config=wvcc.Configure.VectorIndex.hnsw(
-                ef=self._config.get("ef", 500),
-            ),
-        )
+        if self._config.get("use_MUVERA_encoding") == True:
+            self._vector_config = wvcc.Configure.MultiVectors.multi2vec_weaviate(
+                base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
+                image_field=image_field,
+                model=model,
+                encoding=wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(
+                    ksim=self._config.get("ksim", 4),
+                    dprojections=self._config.get("dprojections", 16),
+                    repetitions=self._config.get("repetitions", 10),
+                ),
+                vector_index_config=wvcc.Configure.VectorIndex.hnsw(
+                    ef=self._config.get("ef", 500),
+                ),
+            )
+        else:
+            self._vector_config = wvcc.Configure.MultiVectors.multi2vec_weaviate(
+                base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
+                image_field=image_field,
+                model=model,
+            )
         return self
 
     def with_custom_vector_config(self, config: Any) -> "DatasetSpecBuilder":
