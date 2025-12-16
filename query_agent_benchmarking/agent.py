@@ -6,10 +6,10 @@ from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
 from weaviate.config import AdditionalConfig, Timeout
 from query_agent_benchmarking.models import ObjectID, DocsCollection
-from query_agent_benchmarking.utils import pascalize_name, get_provider_headers
+from query_agent_benchmarking.utils import pascalize_name, get_provider_headers, parse_embedding_model
 
 
-def _parse_embedding_model(embedding_model: str) -> tuple[str, str]:
+def parse_embedding_model(embedding_model: str) -> tuple[str, str]:
     """Parse embedding model string into provider and model name."""
     if "/" in embedding_model:
         provider, model_name = embedding_model.split("/", 1)
@@ -41,7 +41,7 @@ class AgentBuilder:
         # Get provider headers for third-party embedding providers
         self.headers: Dict[str, str] = {}
         if embedding_model:
-            provider, _ = _parse_embedding_model(embedding_model)
+            provider, _ = parse_embedding_model(embedding_model)
             self.headers = get_provider_headers(provider)
         
         # NOTE: Update this to use `docs_collection` if both `dataset_name` and `docs_collection` are provided.

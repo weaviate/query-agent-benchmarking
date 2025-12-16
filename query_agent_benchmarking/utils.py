@@ -127,7 +127,13 @@ def get_provider_headers(provider: str) -> Dict[str, str]:
     
     return {header_name: api_key}
 
-
+def parse_embedding_model(embedding_model: str) -> tuple[str, str]:
+    """Parse embedding model string into provider and model name."""
+    if "/" in embedding_model:
+        provider, model_name = embedding_model.split("/", 1)
+        return provider.lower(), model_name
+    return "weaviate", embedding_model
+    
 def get_weaviate_client(headers: Dict[str, str] = None):
     """
     Connect to Weaviate Cloud with optional headers for third-party providers.
