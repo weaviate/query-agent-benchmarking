@@ -7,7 +7,7 @@ import hashlib
 import weaviate
 
 from query_agent_benchmarking.database import create_collection_with_vector_config, resolve_spec
-from query_agent_benchmarking.benchmark_run import _run_eval
+from query_agent_benchmarking.search_benchmark_run import _run_search_eval
 from query_agent_benchmarking.utils import load_config, merge_configs, print_results_comparison
 
 def compare_embeddings(
@@ -170,7 +170,7 @@ async def _run_eval_with_temp_collection(
         config_for_eval = config.copy()
         config_for_eval["embeddings"] = [embedding_model]
         
-        result = await _run_eval(config_for_eval)
+        result = await _run_search_eval(config_for_eval)
         
         return result
         

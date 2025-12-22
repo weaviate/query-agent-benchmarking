@@ -1,0 +1,27 @@
+{
+  "num_trials": 1,
+  "trials": [
+    {
+      "trial": 1,
+      "avg_alignment_score": 0.8,
+      "avg_query_time": 17.55216827392578
+    }
+  ],
+  "avg_alignment_score_mean": 0.8,
+  "avg_alignment_score_std": 0.0,
+  "avg_alignment_score_min": 0.8,
+  "avg_alignment_score_max": 0.8,
+  "avg_query_time_mean": 17.55216827392578,
+  "avg_query_time_std": 0.0,
+  "avg_query_time_min": 17.55216827392578,
+  "avg_query_time_max": 17.55216827392578,
+  "timestamp": "2025-12-22T11:39:32.771383",
+  "config": {
+    "dataset": "irpapers/text",
+    "agent_name": "query-agent-ask",
+    "num_trials": 1,
+    "use_async": true,
+    "batch_size": 5,
+    "max_concurrent": 5
+  }
+}

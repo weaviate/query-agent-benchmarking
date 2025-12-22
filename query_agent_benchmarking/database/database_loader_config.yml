@@ -2,7 +2,7 @@ dataset_name: irpapers/text
 
 embedding_model: "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
 
-# MUVERA+HNSW parameters (only used with weaviate provider)
+# MUVERA+HNSW parameters
 use_MUVERA_encoding: False
 ksim: 4
 dprojections: 16

@@ -1,18 +1,38 @@
-agent_name: "hybrid-search"
+# =============================================================================
+# Search Mode Settings
+# =============================================================================
+search_agent_name: "hybrid-search"
 dataset: irpapers/text
 
-embedding_model: "voyageai/voyage-3-large"
+embedding_model: "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
 
+# =============================================================================
+# Ask Mode Settings
+# =============================================================================
+ask_agent_name: "query-agent-ask"
+queries: "irpapers/text"
+
+# LLM Judge configuration
+judge_model: "openai/gpt-4.1"
+ensemble_k: 3
+
+# =============================================================================
+# Shared Settings
+# =============================================================================
 use_async: True
 max_concurrent: 5
 
-use_subset: False
-num_samples: 10
+use_subset: True
+num_samples: 5
 
 num_trials: 1
 batch_size: 5
 
 agents_host: https://api.agents.weaviate.io
+
+# =============================================================================
+# Embedding Model Comparison
+# =============================================================================
 ablate_embedding_models: 
 - "Snowflake/snowflake-arctic-embed-l-v2.0"
 - "Snowflake/snowflake-arctic-embed-m-v1.5"

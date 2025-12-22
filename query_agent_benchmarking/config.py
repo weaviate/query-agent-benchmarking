@@ -1,4 +1,4 @@
-supported_datasets = (
+supported_search_datasets = (
     "beir/fiqa/test",
     "beir/nq",
     "beir/scifact/test",
@@ -19,6 +19,11 @@ supported_datasets = (
     "wixqa"
 )
 
+supported_ask_datasets = (
+    "irpapers/text",    # Uses IRPapersText_Default collection
+    "irpapers/images",  # Uses IRPapersImages_Default collection
+)
+
 supported_embedding_models = (
     "cohere/embed-v4.0",
     "voyageai/voyage-3-large",
@@ -27,6 +32,13 @@ supported_embedding_models = (
 )
 
 def print_supported_datasets():
-    print("Supported datasets:")
-    for dataset in supported_datasets:
-        print(f"- {dataset}")
+    """Print all supported search datasets."""
+    print("Supported search datasets:")
+    for dataset in supported_search_datasets:
+        print(f"  - {dataset}")
+
+def print_supported_ask_datasets():
+    """Print all supported ask datasets."""
+    print("Supported ask datasets:")
+    for dataset in supported_ask_datasets:
+        print(f"  - {dataset}")

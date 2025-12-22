@@ -17,7 +17,7 @@ queries_collection = QueriesCollection(
     gold_ids_key="dataset_ids",
 )
 
-query_agent_benchmarking.run_eval(
+query_agent_benchmarking.run_search_eval(
     docs_collection=docs_collection,
     queries=queries_collection,
 )

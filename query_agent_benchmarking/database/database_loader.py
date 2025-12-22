@@ -32,7 +32,7 @@ def _drop_and_create_collection(
     if not client.collections.exists(name):
         client.collections.create(
             name=name,
-            vector_config=vectorizer_config,
+            vectorizer_config=vectorizer_config,
             properties=list(properties),
         )
 
