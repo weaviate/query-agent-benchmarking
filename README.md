@@ -15,7 +15,7 @@ uv run python query_agent_benchmarking/populate-db.py
 
 Run eval:
 ```
-uv run python scripts/run-benchmark.py
+uv run python scripts/run-search-benchmark.py
 ```
 
 See `benchmarker/config.yml` to change the dataset populated in your Weaviate instance, as well as ablate `hybrid-search` or `query-agent-search-only`, as well as the number of samples and concurrency parameters.
