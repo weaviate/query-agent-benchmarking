@@ -1,0 +1,25 @@
+{
+  "avg_alignment_score": 0.8,
+  "alignment_scores": [
+    1,
+    1,
+    1,
+    1,
+    0
+  ],
+  "avg_query_time": 17.55216827392578,
+  "query_times": [
+    16.006447315216064,
+    32.0876259803772,
+    10.382703065872192,
+    12.354912996292114,
+    16.929152011871338
+  ],
+  "misaligned_indices": [
+    4
+  ],
+  "total_input_tokens": 9291,
+  "total_output_tokens": 180,
+  "judge_model": "openai/gpt-4.1",
+  "ensemble_k": 3
+}

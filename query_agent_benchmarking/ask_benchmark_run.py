@@ -1,0 +1,302 @@
+"""
+Ask benchmark runner - evaluates question answering performance.
+
+This module provides the entry point for running ask mode benchmarks,
+which measure how well the system answers questions using LLM-as-judge
+evaluation for semantic alignment.
+"""
+
+import asyncio
+from pathlib import Path
+from typing import Optional, Dict, Any, Union, List
+
+from query_agent_benchmarking.agent import AskAgentBuilder
+from query_agent_benchmarking.models import (
+    DocsCollection,
+    AskQueriesCollection,
+    InMemoryAskQuery,
+)
+from query_agent_benchmarking.dataset import (
+    in_memory_ask_dataset_loader,
+    load_ask_queries_from_weaviate,
+)
+from query_agent_benchmarking.query_agent_benchmark import (
+    run_ask_queries,
+    run_ask_queries_async,
+    analyze_ask_results,
+    aggregate_metrics
+)
+from query_agent_benchmarking.result_serialization import (
+    save_trial_metrics,
+    save_aggregated_results,
+)
+from query_agent_benchmarking.utils import (
+    load_config, 
+    merge_configs,
+)
+from query_agent_benchmarking.config import supported_ask_datasets
+
+
+DEFAULT_CONFIG_PATH = Path(__file__).parent / "benchmark-config.yml"
+
+
+async def _run_ask_eval(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Internal async implementation for ask evaluation."""
+    agents_host = config.get("agents_host", "https://api.agents.weaviate.io")
+    use_async = config.get("use_async", True)
+    
+    # Get query data
+    dataset_name = config.get("dataset")
+    docs_collection = config.get("docs_collection")
+    queries_input = config.get("queries")
+    
+    # Load queries
+    if queries_input:
+        if isinstance(queries_input, AskQueriesCollection):
+            # Custom Weaviate collection
+            queries = load_ask_queries_from_weaviate(
+                collection_name=queries_input.collection_name,
+                query_content_key=queries_input.query_content_key,
+                answer_key=queries_input.answer_key,
+                oracle_context_id_key=queries_input.oracle_context_id_key,
+            )
+        elif isinstance(queries_input, list):
+            # Direct list of InMemoryAskQuery objects
+            if not queries_input:
+                raise ValueError("Queries list cannot be empty")
+            if not all(isinstance(q, InMemoryAskQuery) for q in queries_input):
+                raise ValueError(
+                    "All queries must be InMemoryAskQuery objects. "
+                    f"Found: {set(type(q).__name__ for q in queries_input)}"
+                )
+            queries = queries_input
+        elif isinstance(queries_input, str):
+            # Built-in dataset name - loader handles all key mappings internally
+            if queries_input in supported_ask_datasets:
+                queries = in_memory_ask_dataset_loader(queries_input)
+            else:
+                raise ValueError(
+                    f"Unknown ask dataset: '{queries_input}'. "
+                    f"Supported datasets: {supported_ask_datasets}. "
+                    f"For custom datasets, use AskQueriesCollection or List[InMemoryAskQuery]."
+                )
+        else:
+            raise ValueError(
+                f"Queries must be a built-in dataset name (str), AskQueriesCollection, or List[InMemoryAskQuery]. "
+                f"Got: {type(queries_input)}"
+            )
+    else:
+        raise ValueError("Must provide 'queries' for ask evaluation")
+    
+    # Determine dataset identifier
+    if docs_collection:
+        dataset_identifier = docs_collection.collection_name
+    elif dataset_name:
+        dataset_identifier = dataset_name
+    else:
+        dataset_identifier = "custom"
+    
+    config["dataset_identifier"] = dataset_identifier
+
+    print(f"There are \033[92m{len(queries)}\033[0m total ask queries.\n")
+    print("\033[92mFirst Query\033[0m")
+    print(f"  Question: {queries[0].question[:100]}...")
+    print(f"  Ground Truth Answer: {queries[0].ground_truth_answer[:100]}...")
+    if queries[0].oracle_context_id:
+        print(f"  Oracle Context ID: {queries[0].oracle_context_id}")
+
+    # Handle subset if requested
+    if config.get("use_subset", False):
+        import random
+        random.seed(config.get("random_seed", 24))
+        random.shuffle(queries)
+        queries = queries[:config["num_samples"]]
+        print(f"Using a subset of {config['num_samples']} queries.")
+
+    # Build agent
+    embedding_model = config.get("embedding_model")
+    agent_name = config.get("ask_agent_name", "query-agent-ask")
+    
+    # Add agent_name to config for result serialization
+    config["agent_name"] = agent_name
+    
+    if docs_collection:
+        ask_agent = AskAgentBuilder(
+            agent_name=agent_name,
+            docs_collection=docs_collection,
+            agents_host=agents_host,
+            use_async=use_async,
+            embedding_model=embedding_model,
+        )
+    elif dataset_name:
+        ask_agent = AskAgentBuilder(
+            agent_name=agent_name,
+            dataset_name=dataset_name,
+            agents_host=agents_host,
+            use_async=use_async,
+            embedding_model=embedding_model,
+        )
+    else:
+        raise ValueError("Must provide 'dataset' or 'docs_collection' for agent initialization")
+
+    # LLM Judge configuration
+    judge_model = config.get("judge_model", "openai/gpt-4.1")
+    ensemble_k = config.get("ensemble_k", 3)
+    
+    num_trials = config.get("num_trials", 1)
+    metrics_across_trials = []
+
+    # Run trials
+    for trial in range(num_trials):
+        print(f"\033[92mRunning ask trial {trial+1}/{num_trials}\033[0m")
+
+        if use_async:        
+            print("\033[92mRunning ask queries async!\033[0m")
+            await ask_agent.initialize_async()
+            
+            try:
+                results = await run_ask_queries_async(
+                    queries=queries,
+                    ask_agent=ask_agent,
+                    batch_size=config.get("batch_size", 10),
+                    max_concurrent=config.get("max_concurrent", 5)
+                )
+            finally:
+                await ask_agent.close_async()
+        else:
+            print("\n\033[94mRunning synchronous ask benchmark\033[0m")
+            results = run_ask_queries(
+                queries=queries,
+                ask_agent=ask_agent,
+            )
+
+        # Analyze results with LLM judge
+        metrics = await analyze_ask_results(
+            results=results,
+            judge_model=judge_model,
+            ensemble_k=ensemble_k,
+        )
+        
+        print(f"\n\033[92mTrial {trial+1} Results:\033[0m")
+        print(f"  Alignment Score: {metrics['avg_alignment_score']:.2%}")
+        print(f"  Avg Query Time: {metrics['avg_query_time']:.2f}s")
+        
+        save_trial_metrics(
+            metrics=metrics,
+            config=config,
+            trial_number=trial+1,
+        )
+
+        metrics_across_trials.append(metrics)
+
+    # Aggregate and save results
+    aggregated_metrics = aggregate_metrics(metrics_across_trials)
+    save_aggregated_results(
+        aggregated_metrics=aggregated_metrics,
+        config=config,
+    )
+    return aggregated_metrics
+
+
+def run_ask_eval(
+    queries: Optional[Union[AskQueriesCollection, List[InMemoryAskQuery], str]] = None,
+    config_path: Optional[str] = None,
+    dataset: Optional[str] = None,
+    docs_collection: Optional[DocsCollection] = None,
+    agent_name: Optional[str] = None,
+    judge_model: Optional[str] = None,
+    ensemble_k: Optional[int] = None,
+    num_trials: Optional[int] = None,
+    use_subset: Optional[bool] = None,
+    num_samples: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    max_concurrent: Optional[int] = None,
+    use_async: Optional[bool] = None,
+    agents_host: Optional[str] = None,
+    output_path: Optional[str] = None,
+    random_seed: Optional[int] = None,
+    embedding_model: Optional[str] = None,
+    **kwargs
+) -> Dict[str, Any]:
+    """
+    Run an ask benchmark evaluation.
+    
+    Evaluates question answering performance using LLM-as-judge for semantic alignment.
+    All parameters can be read from benchmark-config.yml if not provided.
+    
+    Args:
+        queries: Built-in dataset name (e.g., "irpapers-visual-queries"),
+                 AskQueriesCollection for custom Weaviate collections,
+                 or List[InMemoryAskQuery] for direct query objects.
+        config_path: Path to YAML config file. Defaults to built-in config.
+        dataset: Name of built-in dataset for agent initialization (e.g., "irpapers/images").
+        docs_collection: DocsCollection for custom datasets.
+        agent_name: Agent to use ("query-agent-ask" or "external").
+        judge_model: LLM model for the judge (e.g., "openai/gpt-4.1").
+        ensemble_k: Number of ensemble votes for judge.
+        num_trials: Number of evaluation trials to run.
+        use_subset: Whether to use a random subset of queries.
+        num_samples: Number of samples if use_subset is True.
+        batch_size: Batch size for async processing.
+        max_concurrent: Max concurrent requests for async.
+        use_async: Whether to use async execution.
+        agents_host: Host URL for the agents service.
+        output_path: Path to save results.
+        random_seed: Random seed for reproducibility.
+        embedding_model: Embedding model to use.
+        **kwargs: Additional config overrides.
+        
+    Returns:
+        Dict containing aggregated metrics across trials.
+        
+    Example:
+        >>> from query_agent_benchmarking import run_ask_eval, InMemoryAskQuery
+        >>> 
+        >>> # Using config file (simplest)
+        >>> results = run_ask_eval()
+        >>> 
+        >>> # Using built-in dataset
+        >>> results = run_ask_eval(
+        ...     queries="irpapers-visual-queries",
+        ...     dataset="irpapers/images",
+        ... )
+        >>> 
+        >>> # Using custom queries
+        >>> queries = [
+        ...     InMemoryAskQuery(question="What is HyDE?", ground_truth_answer="..."),
+        ... ]
+        >>> results = run_ask_eval(queries=queries, docs_collection=my_collection)
+    """
+    if config_path is None:
+        config_path = DEFAULT_CONFIG_PATH
+    
+    # Load base config from file
+    file_config = load_config(config_path)
+    
+    # Build override config from parameters
+    override_config = {
+        "queries": queries,
+        "dataset": dataset,
+        "docs_collection": docs_collection,
+        "agent_name": agent_name,
+        "judge_model": judge_model,
+        "ensemble_k": ensemble_k,
+        "num_trials": num_trials,
+        "use_subset": use_subset,
+        "num_samples": num_samples,
+        "batch_size": batch_size,
+        "max_concurrent": max_concurrent,
+        "use_async": use_async,
+        "agents_host": agents_host,
+        "output_path": output_path,
+        "random_seed": random_seed,
+        "embedding_model": embedding_model,
+        **kwargs
+    }
+    
+    # Merge configs
+    final_config = merge_configs(file_config, override_config)
+    
+    # Run evaluation
+    return asyncio.run(_run_ask_eval(final_config))
+

@@ -260,7 +260,7 @@ class DatasetSpecBuilder:
         model: str = "ModernVBERT/colmodernvbert",
     ) -> "DatasetSpecBuilder":
         """Use multi2vec_weaviate vectorizer for images."""
-        if self._config.get("use_MUVERA_encoding") == True:
+        if self._config.get("use_MUVERA_encoding"):
             self._vector_config = wvcc.Configure.MultiVectors.multi2vec_weaviate(
                 base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
                 image_field=image_field,

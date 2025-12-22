@@ -1,3 +1,11 @@
+"""
+Search benchmark runner - evaluates ranked retrieval performance.
+
+This module provides the entry point for running search mode benchmarks,
+which measure how well the system retrieves relevant documents using
+IR metrics like Recall@K, nDCG@K, etc.
+"""
+
 import asyncio
 import os
 from pathlib import Path
@@ -5,7 +13,7 @@ from typing import Optional, Dict, Any, Union, List
 
 import weaviate
 
-from query_agent_benchmarking.agent import AgentBuilder
+from query_agent_benchmarking.agent import SearchAgentBuilder
 from query_agent_benchmarking.dataset import (
     in_memory_dataset_loader,
     load_queries_from_weaviate_collection,
@@ -14,11 +22,12 @@ from query_agent_benchmarking.models import (
     DocsCollection,
     QueriesCollection,
     InMemoryQuery,
+    InMemorySearchQuery,
 )
 from query_agent_benchmarking.query_agent_benchmark import (
-    run_queries,
-    run_queries_async,
-    analyze_results,
+    run_search_queries,
+    run_search_queries_async,
+    analyze_search_results,
     aggregate_metrics
 )
 from query_agent_benchmarking.result_serialization import (
@@ -32,13 +41,14 @@ from query_agent_benchmarking.utils import (
     merge_configs,
     print_results_comparison,
 )
-from query_agent_benchmarking.config import supported_datasets
+from query_agent_benchmarking.config import supported_search_datasets
 
 
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "benchmark-config.yml"
 
 
-async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
+async def _run_search_eval(config: Dict[str, Any]) -> Dict[str, Any]:
+    """Internal async implementation for search evaluation."""
     agents_host = config.get("agents_host", "https://api.agents.weaviate.io")
     use_async = config.get("use_async", True)
     
@@ -49,10 +59,10 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
     
     if dataset_name:
         # Built-in dataset paths
-        if dataset_name not in supported_datasets:
+        if dataset_name not in supported_search_datasets:
             raise ValueError(
                 f"Dataset {dataset_name} is not supported. "
-                f"Supported datasets are: {supported_datasets}"
+                f"Supported datasets are: {supported_search_datasets}"
             )
         
         _, queries = in_memory_dataset_loader(dataset_name)
@@ -72,18 +82,18 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
                 gold_ids_key=queries_input.gold_ids_key,
             )
         elif isinstance(queries_input, list):
-            # Verify all items are InMemoryQuery
+            # Verify all items are InMemoryQuery or InMemorySearchQuery
             if not queries_input:
                 raise ValueError("Queries list cannot be empty")
-            if not all(isinstance(q, InMemoryQuery) for q in queries_input):
+            if not all(isinstance(q, (InMemoryQuery, InMemorySearchQuery)) for q in queries_input):
                 raise ValueError(
-                    "All queries must be InMemoryQuery objects. "
+                    "All queries must be InMemoryQuery or InMemorySearchQuery objects. "
                     f"Found: {set(type(q).__name__ for q in queries_input)}"
                 )
             queries = queries_input
         else:
             raise ValueError(
-                f"Queries must be either QueriesCollection or List[InMemoryQuery]. "
+                f"Queries must be either QueriesCollection or List[InMemoryQuery/InMemorySearchQuery]. "
                 f"Got: {type(queries_input)}"
             )
         
@@ -95,7 +105,6 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
             "'docs_collection' + 'queries' (for custom)"
         )
     
-
     config["dataset_identifier"] = dataset_identifier
 
     print(f"There are \033[92m{len(queries)}\033[0m total queries in this dataset.\n")
@@ -112,17 +121,24 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
 
     # Build agent
     embedding_model = config.get("embedding_model")
+    agent_name = config.get("search_agent_name") or config.get("agent_name")
+    if not agent_name:
+        raise ValueError("No search_agent_name provided in config")
+    
+    # Add agent_name to config for result serialization
+    config["agent_name"] = agent_name
+    
     if dataset_name:
-        query_agent = AgentBuilder(
-            agent_name=config["agent_name"],
+        query_agent = SearchAgentBuilder(
+            agent_name=agent_name,
             dataset_name=dataset_name,
             agents_host=agents_host,
             use_async=use_async,
             embedding_model=embedding_model,
         )
     else:
-        query_agent = AgentBuilder(
-            agent_name=config["agent_name"],
+        query_agent = SearchAgentBuilder(
+            agent_name=agent_name,
             docs_collection=docs_collection,
             agents_host=agents_host,
             use_async=use_async,
@@ -141,7 +157,7 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
             await query_agent.initialize_async()
             
             try:
-                results = await run_queries_async(
+                results = await run_search_queries_async(
                     queries=queries,
                     query_agent=query_agent,
                     batch_size=config.get("batch_size", 10),
@@ -151,7 +167,7 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
                 await query_agent.close_async()
         else:
             print("\n\033[94mRunning synchronous benchmark\033[0m")
-            results = run_queries(
+            results = run_search_queries(
                 queries=queries,
                 query_agent=query_agent,
             )
@@ -168,7 +184,7 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
             auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
         )
 
-        metrics = await analyze_results(
+        metrics = await analyze_search_results(
             results=results,
             ground_truths=queries,
             dataset_name=dataset_name, 
@@ -192,11 +208,11 @@ async def _run_eval(config: Dict[str, Any]) -> Dict[str, Any]:
     return aggregated_metrics
 
 
-def run_eval(
+def run_search_eval(
     config_path: Optional[str] = None,
     dataset: Optional[str] = None,
     docs_collection: Optional[DocsCollection] = None,
-    queries: Optional[Union[QueriesCollection, List[InMemoryQuery]]] = None,
+    queries: Optional[Union[QueriesCollection, List[InMemoryQuery], List[InMemorySearchQuery]]] = None,
     agent_name: Optional[str] = None,
     num_trials: Optional[int] = None,
     use_subset: Optional[bool] = None,
@@ -210,6 +226,32 @@ def run_eval(
     embedding_model: Optional[str] = None,
     **kwargs
 ) -> Dict[str, Any]:
+    """
+    Run a search benchmark evaluation.
+    
+    Evaluates ranked retrieval performance using IR metrics like Recall@K, nDCG@K.
+    
+    Args:
+        config_path: Path to YAML config file. Defaults to built-in config.
+        dataset: Name of built-in dataset (e.g., "beir/scifact", "enron").
+        docs_collection: DocsCollection for custom datasets.
+        queries: Queries as QueriesCollection, List[InMemoryQuery], or List[InMemorySearchQuery].
+        agent_name: Agent to use ("query-agent-search-only" or "hybrid-search").
+        num_trials: Number of evaluation trials to run.
+        use_subset: Whether to use a random subset of queries.
+        num_samples: Number of samples if use_subset is True.
+        batch_size: Batch size for async processing.
+        max_concurrent: Max concurrent requests for async.
+        use_async: Whether to use async execution.
+        agents_host: Host URL for the agents service.
+        output_path: Path to save results.
+        random_seed: Random seed for reproducibility.
+        embedding_model: Embedding model to use.
+        **kwargs: Additional config overrides.
+        
+    Returns:
+        Dict containing aggregated metrics across trials.
+    """
     if config_path is None:
         config_path = DEFAULT_CONFIG_PATH
     
@@ -239,13 +281,14 @@ def run_eval(
     final_config = merge_configs(file_config, override_config)
     
     # Run evaluation
-    return asyncio.run(_run_eval(final_config))
+    return asyncio.run(_run_search_eval(final_config))
 
-def run_evals(
+
+def run_search_evals(
     config_path: Optional[str] = None,
     dataset: Optional[str] = None,
     docs_collection: Optional[DocsCollection] = None,
-    queries: Optional[Union[QueriesCollection, List[InMemoryQuery]]] = None,
+    queries: Optional[Union[QueriesCollection, List[InMemoryQuery], List[InMemorySearchQuery]]] = None,
     agent_names: Optional[Union[str, List[str]]] = None,
     num_trials: Optional[int] = None,
     use_subset: Optional[bool] = None,
@@ -259,7 +302,7 @@ def run_evals(
     embedding_model: Optional[str] = None,
     **kwargs
 ) -> Dict[str, Dict[str, Any]]:
-    """Run evaluation benchmark for multiple query agents."""
+    """Run search benchmark for multiple query agents and compare results."""
     
     if config_path is None:
         config_path = DEFAULT_CONFIG_PATH
@@ -267,9 +310,9 @@ def run_evals(
     file_config = load_config(config_path)
     
     # Get agents from parameter or config
-    agents = agent_names or file_config.get("agent_name")
+    agents = agent_names or file_config.get("search_agent_name") or file_config.get("agent_name")
     if agents is None:
-        raise ValueError("No agent_names provided. Must specify via parameter or in config file.")
+        raise ValueError("No agent_names provided. Must specify via parameter or in config file (search_agent_name).")
     
     # Convert to list if string
     agents = [agents] if isinstance(agents, str) else agents
@@ -305,10 +348,11 @@ def run_evals(
         
         # Run evaluation
         try:
-            all_results[agent] = asyncio.run(_run_eval(merge_configs(file_config, agent_override)))
+            all_results[agent] = asyncio.run(_run_search_eval(merge_configs(file_config, agent_override)))
         except Exception as e:
             all_results[agent] = {"error": str(e)}
     
     print_results_comparison(all_results)
 
     return all_results
+

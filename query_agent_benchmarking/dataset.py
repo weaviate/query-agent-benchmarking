@@ -1,10 +1,12 @@
 import json
 import random
 import os
+from typing import Optional, List
+
 import weaviate
 from datasets import load_dataset
 
-from query_agent_benchmarking.models import InMemoryQuery
+from query_agent_benchmarking.models import InMemoryQuery, InMemoryAskQuery
 
 def in_memory_dataset_loader(dataset_name: str):
     if dataset_name == "enron":
@@ -274,3 +276,90 @@ def split_dataset(dataset, train_ratio=0.8, shuffle=True):
     test_data = dataset[split_idx:]
     
     return train_data, test_data
+
+
+# ============================================================================
+# Ask Query Loaders
+# ============================================================================
+
+def in_memory_ask_dataset_loader(dataset_name: str) -> List[InMemoryAskQuery]:
+    """
+    Load ask queries from a supported dataset.
+    
+    This abstracts away the underlying key mappings - users just specify the dataset name.
+    Similar to in_memory_dataset_loader() for search benchmarks.
+    
+    Note: The dataset_name also determines which Weaviate collection the agent uses:
+    - "irpapers/text" -> IRPapersText_Default
+    - "irpapers/images" -> IRPapersImages_Default
+    """
+    if dataset_name.startswith("irpapers/"):
+        return _in_memory_ask_loader_irpapers(dataset_name)
+    else:
+        raise ValueError(
+            f"Unknown ask dataset: {dataset_name}. "
+            f"Supported ask datasets: irpapers/text, irpapers/images"
+        )
+
+
+def _in_memory_ask_loader_irpapers(dataset_name: str) -> List[InMemoryAskQuery]:
+    """Load the IRPapers ask queries dataset."""
+    print(f"Loading IRPapers ask queries for {dataset_name}...")
+    
+    _questions = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-queries")
+    
+    queries: List[InMemoryAskQuery] = []
+    for item in _questions:
+        queries.append(InMemoryAskQuery(
+            question=item["question"],
+            ground_truth_answer=item["answer"],
+            oracle_context_id=str(item["dataset_id"]),
+        ))
+    
+    print(f"Loaded {len(queries)} ask queries")
+    return queries
+
+def load_ask_queries_from_weaviate(
+    collection_name: str,
+    query_content_key: str,
+    answer_key: str,
+    oracle_context_id_key: Optional[str] = None,
+) -> List[InMemoryAskQuery]:
+    """
+    Load ask queries from a custom Weaviate collection.
+    
+    Use this for custom collections not in the built-in registry.
+    For built-in datasets, use in_memory_ask_dataset_loader() instead.
+    """
+    client = weaviate.connect_to_weaviate_cloud(
+        cluster_url=os.getenv("WEAVIATE_URL"),
+        auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
+    )
+    
+    try:
+        collection = client.collections.get(collection_name)
+        
+        return_props = [query_content_key, answer_key]
+        if oracle_context_id_key:
+            return_props.append(oracle_context_id_key)
+        
+        response = collection.query.fetch_objects(
+            return_properties=return_props,
+            limit=10000  # Adjust as needed
+        )
+        
+        queries = []
+        for obj in response.objects:
+            oracle_id = None
+            if oracle_context_id_key:
+                oracle_id = str(obj.properties.get(oracle_context_id_key))
+            
+            queries.append(InMemoryAskQuery(
+                question=obj.properties[query_content_key],
+                ground_truth_answer=obj.properties[answer_key],
+                oracle_context_id=oracle_id,
+            ))
+        
+        return queries
+    finally:
+        client.close()
