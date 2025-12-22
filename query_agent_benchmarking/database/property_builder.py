@@ -45,7 +45,8 @@ class DatasetSpecBuilder:
     def _load_config(self, path: Optional[str | Path] = None) -> dict[str, Any]:
         """Load configuration from a YAML file."""
         if path is None:
-            path = Path("database_loader_config.yml")
+            # Resolve relative to this file's directory, not the current working directory
+            path = Path(__file__).parent / "database_loader_config.yml"
         else:
             path = Path(path)
 
@@ -129,6 +130,64 @@ class DatasetSpecBuilder:
 
     # --- Vectorizers ---
 
+    def _parse_embedding_model(self, embedding_model: str) -> tuple[str, str]:
+        """
+        Parse embedding model string into provider and model name.
+        
+        Args:
+            embedding_model: Format "provider/model" (e.g., "cohere/embed-4")
+                           or just "model" (defaults to "weaviate" provider)
+        
+        Returns:
+            Tuple of (provider, model_name)
+        """
+        if "/" in embedding_model:
+            provider, model_name = embedding_model.split("/", 1)
+            return provider.lower(), model_name
+        return "weaviate", embedding_model
+
+    def _get_vectorizer_for_provider(self, provider: str, model: str) -> Any:
+        """
+        Get the appropriate vectorizer config based on provider.
+        
+        Args:
+            provider: The provider name ("cohere", "weaviate", or "voyageai")
+            model: The model name to use
+        
+        Returns:
+            Vectorizer configuration object
+        """
+        # Weaviate uses Configure.Vectorizer (returns correct type)
+        # Third-party providers use Configure.Vectors (returns _VectorConfigCreate)
+        if provider == "weaviate":
+            return wvcc.Configure.Vectorizer.text2vec_weaviate(model=model)
+        elif provider == "cohere":
+            return wvcc.Configure.Vectors.text2vec_cohere(model=model)
+        elif provider == "voyageai":
+            return wvcc.Configure.Vectors.text2vec_voyageai(model=model)
+        else:
+            raise ValueError(
+                f"Unsupported embedding provider: '{provider}'. "
+                f"Supported providers: ['weaviate', 'cohere', 'voyageai']"
+            )
+
+    def with_text2vec(self) -> "DatasetSpecBuilder":
+        """
+        Use text2vec vectorizer based on embedding_model from config.
+        
+        Reads the 'embedding_model' config value (e.g., "cohere/embed-4")
+        and selects the appropriate vectorizer provider.
+        """
+        embedding_model = self._config.get("embedding_model")
+        if not embedding_model:
+            # Fall back to default weaviate vectorizer
+            self._vector_config = wvcc.Configure.Vectorizer.text2vec_weaviate()
+            return self
+        
+        provider, model_name = self._parse_embedding_model(embedding_model)
+        self._vector_config = self._get_vectorizer_for_provider(provider, model_name)
+        return self
+
     def with_text2vec_weaviate(self, model: Optional[str] = None) -> "DatasetSpecBuilder":
         """Use text2vec_weaviate vectorizer."""
         if model:
@@ -137,25 +196,90 @@ class DatasetSpecBuilder:
             self._vector_config = wvcc.Configure.Vectorizer.text2vec_weaviate()
         return self
 
+    def with_multi2vec(
+        self,
+        image_field: str,
+        default_model: str = "ModernVBERT/colmodernvbert",
+    ) -> "DatasetSpecBuilder":
+        """
+        Use multi2vec vectorizer based on embedding_model from config.
+        
+        Reads the 'embedding_model' config value (e.g., "cohere/embed-v4.0")
+        and selects the appropriate multi2vec provider.
+        
+        Args:
+            image_field: The property name containing the image blob
+            default_model: Default model if none specified in config (for weaviate)
+        """
+        embedding_model = self._config.get("embedding_model")
+        if not embedding_model:
+            # Fall back to default weaviate multi2vec
+            return self.with_multi2vec_weaviate(image_field, default_model)
+        
+        provider, model_name = self._parse_embedding_model(embedding_model)
+        
+        if provider == "cohere":
+            return self._with_multi2vec_cohere(image_field, model_name)
+        elif provider == "voyageai":
+            return self._with_multi2vec_voyageai(image_field, model_name)
+        elif provider == "weaviate":
+            return self.with_multi2vec_weaviate(image_field, model_name)
+        else:
+            raise ValueError(
+                f"Unsupported multi2vec provider: '{provider}'. "
+                f"Supported providers: ['cohere', 'voyageai', 'weaviate']"
+            )
+
+    def _with_multi2vec_cohere(
+        self,
+        image_field: str,
+        model: str,
+    ) -> "DatasetSpecBuilder":
+        """Use multi2vec_cohere vectorizer for images."""
+        self._vector_config = wvcc.Configure.Vectors.multi2vec_cohere(
+            image_fields=[image_field],
+            model=model,
+        )
+        return self
+
+    def _with_multi2vec_voyageai(
+        self,
+        image_field: str,
+        model: str,
+    ) -> "DatasetSpecBuilder":
+        """Use multi2vec_voyageai vectorizer for images."""
+        self._vector_config = wvcc.Configure.Vectors.multi2vec_voyageai(
+            image_fields=[image_field],
+            model=model,
+        )
+        return self
+
     def with_multi2vec_weaviate(
         self,
         image_field: str,
         model: str = "ModernVBERT/colmodernvbert",
     ) -> "DatasetSpecBuilder":
         """Use multi2vec_weaviate vectorizer for images."""
-        self._vector_config = wvcc.Configure.MultiVectors.multi2vec_weaviate(
-            base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
-            image_field=image_field,
-            model=model,
-            encoding=wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(
-                ksim=self._config.get("ksim", 4),
-                dprojections=self._config.get("dprojections", 16),
-                repetitions=self._config.get("repetitions", 10),
-            ),
-            vector_index_config=wvcc.Configure.VectorIndex.hnsw(
-                ef=self._config.get("ef", 500),
-            ),
-        )
+        if self._config.get("use_MUVERA_encoding") == True:
+            self._vector_config = wvcc.Configure.MultiVectors.multi2vec_weaviate(
+                base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
+                image_field=image_field,
+                model=model,
+                encoding=wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(
+                    ksim=self._config.get("ksim", 4),
+                    dprojections=self._config.get("dprojections", 16),
+                    repetitions=self._config.get("repetitions", 10),
+                ),
+                vector_index_config=wvcc.Configure.VectorIndex.hnsw(
+                    ef=self._config.get("ef", 500),
+                ),
+            )
+        else:
+            self._vector_config = wvcc.Configure.MultiVectors.multi2vec_weaviate(
+                base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
+                image_field=image_field,
+                model=model,
+            )
         return self
 
     def with_custom_vector_config(self, config: Any) -> "DatasetSpecBuilder":

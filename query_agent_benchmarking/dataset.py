@@ -28,7 +28,7 @@ def in_memory_dataset_loader(dataset_name: str):
     elif dataset_name == "freshstack-yolo":
         return _in_memory_dataset_loader_freshstack(subset="yolo")
     elif dataset_name.startswith("irpapers/"):
-        return _in_memory_dataset_loader_irpapers()
+        return _in_memory_dataset_loader_irpapers(dataset_name)
     elif dataset_name == "multihoprag":
         return _in_memory_dataset_loader_multihoprag()
     else:
@@ -179,9 +179,16 @@ def _in_memory_dataset_loader_freshstack(subset: str):
     return docs, questions
     """
 
-def _in_memory_dataset_loader_irpapers():
+def _in_memory_dataset_loader_irpapers(dataset_name: str):
     docs = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-docs")
-    _questions = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-queries")
+
+    parts = dataset_name.split("/") # e.g. `irpapers/images/visual-queries`
+    query_type = parts[2] if len(parts) > 2 else ""
+    if query_type == "visual-queries":
+        _questions = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-visual-queries")
+    else:
+        _questions = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-queries")
+
     questions: list[InMemoryQuery] = []
     for question in _questions:
         questions.append(InMemoryQuery(

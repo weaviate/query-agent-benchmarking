@@ -1,11 +1,12 @@
 import os
-from typing import Optional
+from typing import Optional, Dict
 
 import weaviate
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 from weaviate.auth import Auth
+from weaviate.config import AdditionalConfig, Timeout
 from query_agent_benchmarking.models import ObjectID, DocsCollection
-from query_agent_benchmarking.utils import pascalize_name
+from query_agent_benchmarking.utils import pascalize_name, get_provider_headers, parse_embedding_model
 
 class AgentBuilder:
     """
@@ -19,6 +20,7 @@ class AgentBuilder:
         docs_collection: Optional[DocsCollection] = None,
         agents_host: Optional[str] = None,
         use_async: bool = False,
+        embedding_model: Optional[str] = None,
     ):
         self.use_async = use_async
         self.agent = None
@@ -27,6 +29,12 @@ class AgentBuilder:
         self.cluster_url = os.getenv("WEAVIATE_URL")
         self.api_key = os.getenv("WEAVIATE_API_KEY")
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        
+        # Get provider headers for third-party embedding providers
+        self.headers: Dict[str, str] = {}
+        if embedding_model:
+            provider, _ = parse_embedding_model(embedding_model)
+            self.headers = get_provider_headers(provider)
         
         # NOTE: Update this to use `docs_collection` if both `dataset_name` and `docs_collection` are provided.
         # Require either dataset_name or docs_collection, but not both
@@ -74,11 +82,11 @@ class AgentBuilder:
             self.collection = f"Bright{pascalize_name(subset)}"
             self.target_property_name = "content"
             self.id_property = "dataset_id"
-        elif dataset_name == "irpapers/images":
+        elif dataset_name.startswith("irpapers/images"):
             self.collection = "IRPapersImages"
             self.target_property_name = "content"
             self.id_property = "dataset_id"
-        elif dataset_name == "irpapers/text":
+        elif dataset_name.startswith("irpapers/text"):
             self.collection = "IRPapersText"
             self.target_property_name = "content"
             self.id_property = "dataset_id"
@@ -99,6 +107,7 @@ class AgentBuilder:
         self.weaviate_client = weaviate.connect_to_weaviate_cloud(
             cluster_url=self.cluster_url,
             auth_credentials=weaviate.auth.AuthApiKey(self.api_key),
+            headers=self.headers,
         )
         if self.agent_name == "query-agent-search-only":
             self.agent = QueryAgent(
@@ -119,6 +128,10 @@ class AgentBuilder:
             self.weaviate_client = weaviate.use_async_with_weaviate_cloud(
                     cluster_url=self.cluster_url,
                     auth_credentials=Auth.api_key(self.api_key),
+                    headers=self.headers,
+                    additional_config=AdditionalConfig(
+                        timeout=Timeout(query=6000)
+                    ),
                 )
                 
             await self.weaviate_client.connect()
@@ -180,7 +193,7 @@ class AgentBuilder:
                     results.append(ObjectID(object_id=obj.properties[self.id_property]))
                 return results
             elif self.agent_name == "hybrid-search":
-                if self.dataset_name == "irpapers/images":
+                if self.dataset_name.startswith("irpapers/images"):
                     response = await self.weaviate_collection.query.near_text(
                         query=query,
                         limit=20
