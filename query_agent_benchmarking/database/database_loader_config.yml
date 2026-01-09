@@ -1,6 +1,6 @@
-dataset_name: irpapers/text
+dataset_name: irpapers/images
 
-embedding_model: "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
+embedding_model: "weaviate/ModernVBERT/colmodernvbert"
 
 # MUVERA+HNSW parameters
 use_MUVERA_encoding: False

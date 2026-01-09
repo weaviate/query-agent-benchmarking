@@ -116,6 +116,7 @@ async def _run_ask_eval(config: Dict[str, Any]) -> Dict[str, Any]:
     # Build agent
     embedding_model = config.get("embedding_model")
     agent_name = config.get("ask_agent_name", "query-agent-ask")
+    external_host = config.get("external_host")
     
     # Add agent_name to config for result serialization
     config["agent_name"] = agent_name
@@ -127,6 +128,7 @@ async def _run_ask_eval(config: Dict[str, Any]) -> Dict[str, Any]:
             agents_host=agents_host,
             use_async=use_async,
             embedding_model=embedding_model,
+            external_host=external_host,
         )
     elif dataset_name:
         ask_agent = AskAgentBuilder(
@@ -135,6 +137,7 @@ async def _run_ask_eval(config: Dict[str, Any]) -> Dict[str, Any]:
             agents_host=agents_host,
             use_async=use_async,
             embedding_model=embedding_model,
+            external_host=external_host,
         )
     else:
         raise ValueError("Must provide 'dataset' or 'docs_collection' for agent initialization")
@@ -159,7 +162,7 @@ async def _run_ask_eval(config: Dict[str, Any]) -> Dict[str, Any]:
                     queries=queries,
                     ask_agent=ask_agent,
                     batch_size=config.get("batch_size", 10),
-                    max_concurrent=config.get("max_concurrent", 5)
+                    max_concurrent=config.get("max_concurrent", 5),
                 )
             finally:
                 await ask_agent.close_async()
@@ -168,6 +171,7 @@ async def _run_ask_eval(config: Dict[str, Any]) -> Dict[str, Any]:
             results = run_ask_queries(
                 queries=queries,
                 ask_agent=ask_agent,
+                sleep_between_requests=config.get("sleep_between_requests", 0.0),
             )
 
         # Analyze results with LLM judge
@@ -213,6 +217,8 @@ def run_ask_eval(
     max_concurrent: Optional[int] = None,
     use_async: Optional[bool] = None,
     agents_host: Optional[str] = None,
+    external_host: Optional[str] = None,
+    sleep_between_requests: Optional[float] = None,
     output_path: Optional[str] = None,
     random_seed: Optional[int] = None,
     embedding_model: Optional[str] = None,
@@ -241,6 +247,8 @@ def run_ask_eval(
         max_concurrent: Max concurrent requests for async.
         use_async: Whether to use async execution.
         agents_host: Host URL for the agents service.
+        external_host: Host URL for external mode (e.g., "http://localhost:8000").
+        sleep_between_requests: Seconds to sleep between requests (sync mode only, for rate limiting).
         output_path: Path to save results.
         random_seed: Random seed for reproducibility.
         embedding_model: Embedding model to use.
@@ -288,6 +296,8 @@ def run_ask_eval(
         "max_concurrent": max_concurrent,
         "use_async": use_async,
         "agents_host": agents_host,
+        "external_host": external_host,
+        "sleep_between_requests": sleep_between_requests,
         "output_path": output_path,
         "random_seed": random_seed,
         "embedding_model": embedding_model,

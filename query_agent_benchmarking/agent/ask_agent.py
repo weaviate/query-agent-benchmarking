@@ -1,6 +1,7 @@
 from typing import Optional, Any
 from dataclasses import dataclass
 
+import httpx
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 
 from query_agent_benchmarking.agent.base import BaseAgentBuilder
@@ -20,10 +21,11 @@ class AskAgentBuilder(BaseAgentBuilder):
     
     Supports two agent types:
     * `agent_name == "query-agent-ask"` → Wraps the Weaviate QueryAgent in Ask Mode.
-    * `agent_name == "external"` → Uses external context (oracle_context_id) for RAG.
+    * `agent_name == "external"` → Sends requests to an external host for RAG evaluation.
     
-    The "external" mode allows you to bring your own retrieval system and just use
-    the ask infrastructure for evaluation.
+    The "external" mode allows you to bring your own retrieval + generation system
+    and use the ask infrastructure for evaluation. It sends HTTP POST requests to
+    `external_host` with `question` and optionally `oracle_context_id`.
     """
     
     def __init__(
@@ -34,6 +36,7 @@ class AskAgentBuilder(BaseAgentBuilder):
         agents_host: Optional[str] = None,
         use_async: bool = False,
         embedding_model: Optional[str] = None,
+        external_host: Optional[str] = None,
     ):
         super().__init__(
             dataset_name=dataset_name,
@@ -44,23 +47,25 @@ class AskAgentBuilder(BaseAgentBuilder):
         )
         
         self.agent_name = agent_name
+        self.external_host = external_host
         self.weaviate_collection = None
         
         if not use_async:
             self.initialize_sync()
 
     def initialize_sync(self):
-        self.weaviate_client = self._connect_sync()
-        
         if self.agent_name == "query-agent-ask":
+            self.weaviate_client = self._connect_sync()
             self.agent = QueryAgent(
                 client=self.weaviate_client,
                 collections=[self.collection],
                 agents_host=self.agents_host,
             )
         elif self.agent_name == "external":
-            # External mode - just need the collection for context fetching
-            self.weaviate_collection = self.weaviate_client.collections.use(self.collection)
+            # External mode - no Weaviate connection needed
+            if not self.external_host:
+                raise ValueError("external_host is required for external mode")
+            print(f"External mode initialized with host: {self.external_host}")
         else:
             raise ValueError(
                 f"Unknown agent_name: {self.agent_name}. "
@@ -69,11 +74,10 @@ class AskAgentBuilder(BaseAgentBuilder):
 
     async def initialize_async(self):
         try:
-            self.weaviate_client = self._connect_async()
-            await self.weaviate_client.connect()
-            print("Async Weaviate client connected successfully")
-            
             if self.agent_name == "query-agent-ask":
+                self.weaviate_client = self._connect_async()
+                await self.weaviate_client.connect()
+                print("Async Weaviate client connected successfully")
                 self.agent = AsyncQueryAgent(
                     client=self.weaviate_client,
                     collections=[self.collection],
@@ -82,9 +86,10 @@ class AskAgentBuilder(BaseAgentBuilder):
                 print(f"AsyncQueryAgent (ask mode) initialized for collection: {self.collection}")
                 print(f"Using agents host: {self.agents_host}")
             elif self.agent_name == "external":
-                # External mode - just need the collection for context fetching
-                self.weaviate_collection = self.weaviate_client.collections.use(self.collection)
-                print(f"External mode initialized for collection: {self.collection}")
+                # External mode - no Weaviate connection needed
+                if not self.external_host:
+                    raise ValueError("external_host is required for external mode")
+                print(f"External mode initialized with host: {self.external_host}")
             else:
                 raise ValueError(
                     f"Unknown agent_name: {self.agent_name}. "
@@ -107,8 +112,7 @@ class AskAgentBuilder(BaseAgentBuilder):
         
         Args:
             query: The question to ask.
-            oracle_context_id: Optional context ID for external mode. 
-                               If provided in external mode, fetches this specific context.
+            oracle_context_id: Optional context ID to send to external host.
         """
         if self.agent_name == "query-agent-ask":
             response = self.agent.ask(query)
@@ -118,27 +122,20 @@ class AskAgentBuilder(BaseAgentBuilder):
             )
         
         elif self.agent_name == "external":
-            if oracle_context_id is None:
-                raise ValueError("oracle_context_id is required for external mode")
+            # Build request payload
+            payload = {"question": query}
+            if oracle_context_id is not None:
+                payload["oracle_context_id"] = oracle_context_id
             
-            # Fetch oracle context and use external LLM
-            # This is a placeholder - users should extend this for their use case
-            from weaviate.classes.query import Filter
+            # Send request to external host
+            with httpx.Client(timeout=300.0) as client:
+                response = client.post(self.external_host, json=payload)
+                response.raise_for_status()
+                data = response.json()
             
-            response = self.weaviate_collection.query.fetch_objects(
-                filters=Filter.by_property(self.id_property).like(oracle_context_id),
-                return_properties=[self.target_property_name]
-            )
-            
-            if not response.objects:
-                raise ValueError(f"No object found with {self.id_property}={oracle_context_id}")
-            
-            context = response.objects[0].properties[self.target_property_name]
-            
-            # For external mode, return the context - user should handle LLM call
             return AskResponse(
-                final_answer="[EXTERNAL_MODE] Context fetched. Implement your LLM call.",
-                raw_response={"context": context, "oracle_context_id": oracle_context_id}
+                final_answer=data.get("answer", ""),
+                raw_response=data
             )
 
     async def run_async(
@@ -151,7 +148,7 @@ class AskAgentBuilder(BaseAgentBuilder):
         
         Args:
             query: The question to ask.
-            oracle_context_id: Optional context ID for external mode.
+            oracle_context_id: Optional context ID to send to external host.
         """
         try:
             if self.agent_name == "query-agent-ask":
@@ -162,24 +159,20 @@ class AskAgentBuilder(BaseAgentBuilder):
                 )
             
             elif self.agent_name == "external":
-                if oracle_context_id is None:
-                    raise ValueError("oracle_context_id is required for external mode")
+                # Build request payload
+                payload = {"question": query}
+                if oracle_context_id is not None:
+                    payload["oracle_context_id"] = oracle_context_id
                 
-                from weaviate.classes.query import Filter
-                
-                response = await self.weaviate_collection.query.fetch_objects(
-                    filters=Filter.by_property(self.id_property).like(oracle_context_id),
-                    return_properties=[self.target_property_name]
-                )
-                
-                if not response.objects:
-                    raise ValueError(f"No object found with {self.id_property}={oracle_context_id}")
-                
-                context = response.objects[0].properties[self.target_property_name]
+                # Send async request to external host
+                async with httpx.AsyncClient(timeout=300.0) as client:
+                    response = await client.post(self.external_host, json=payload)
+                    response.raise_for_status()
+                    data = response.json()
                 
                 return AskResponse(
-                    final_answer="[EXTERNAL_MODE] Context fetched. Implement your LLM call.",
-                    raw_response={"context": context, "oracle_context_id": oracle_context_id}
+                    final_answer=data.get("answer", ""),
+                    raw_response=data
                 )
                 
         except Exception as e:

@@ -181,6 +181,7 @@ async def run_search_queries_async(
 def run_ask_queries(
     queries: List[InMemoryAskQuery],
     ask_agent: Any,
+    sleep_between_requests: float = 0.0,
 ) -> List[AskResult]:
     """Synchronous version of ask query execution."""
     results = []
@@ -216,6 +217,10 @@ def run_ask_queries(
             print(f"Latest query: {query.question[:100]}...")
             print(f"Latest answer: {results[i].system_answer[:200]}...")
             print(f"Time taken: {query_time_taken:.2f} seconds")
+        
+        # Sleep between requests for rate limiting
+        if sleep_between_requests > 0 and i < len(queries) - 1:
+            time.sleep(sleep_between_requests)
             
     print(f"\033[95mAsk experiment completed {len(results)} queries in {time.time() - start:.2f} seconds.\033[0m")
     return results
@@ -225,7 +230,7 @@ async def run_ask_queries_async(
     queries: List[InMemoryAskQuery],
     ask_agent: Any,
     batch_size: int = 10,
-    max_concurrent: int = 3
+    max_concurrent: int = 3,
 ) -> List[AskResult]:
     """
     Asynchronous version of ask query execution with concurrent execution.
