@@ -160,7 +160,7 @@ class DatasetSpecBuilder:
         # Weaviate uses Configure.Vectorizer (returns correct type)
         # Third-party providers use Configure.Vectors (returns _VectorConfigCreate)
         if provider == "weaviate":
-            return wvcc.Configure.Vectorizer.text2vec_weaviate(model=model)
+            return wvcc.Configure.Vectors.text2vec_weaviate(model=model)
         elif provider == "cohere":
             return wvcc.Configure.Vectors.text2vec_cohere(model=model)
         elif provider == "voyageai":
@@ -181,19 +181,11 @@ class DatasetSpecBuilder:
         embedding_model = self._config.get("embedding_model")
         if not embedding_model:
             # Fall back to default weaviate vectorizer
-            self._vector_config = wvcc.Configure.Vectorizer.text2vec_weaviate()
+            self._vector_config = wvcc.Configure.Vectors.text2vec_weaviate()
             return self
         
         provider, model_name = self._parse_embedding_model(embedding_model)
         self._vector_config = self._get_vectorizer_for_provider(provider, model_name)
-        return self
-
-    def with_text2vec_weaviate(self, model: Optional[str] = None) -> "DatasetSpecBuilder":
-        """Use text2vec_weaviate vectorizer."""
-        if model:
-            self._vector_config = wvcc.Configure.Vectorizer.text2vec_weaviate(model=model)
-        else:
-            self._vector_config = wvcc.Configure.Vectorizer.text2vec_weaviate()
         return self
 
     def with_multi2vec(

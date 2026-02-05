@@ -6,7 +6,7 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_static_name("EnronEmails")
         .with_text_property("email_body")
         .with_dataset_id()
-        .with_text2vec_weaviate()
+        .with_text2vec()
         .build()),
 
     (DatasetSpecBuilder("beir/*")
@@ -14,21 +14,21 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_text_property("title")
         .with_text_property("content")
         .with_dataset_id(source_field="doc_id")
-        .with_text2vec_weaviate()
+        .with_text2vec()
         .build()),
 
     (DatasetSpecBuilder("bright/*")
         .with_prefix_name("Bright")
         .with_text_property("content")
         .with_dataset_id()
-        .with_text2vec_weaviate()
+        .with_text2vec()
         .build()),
 
     (DatasetSpecBuilder("lotte/*")
         .with_prefix_name("Lotte")
         .with_text_property("content", source_field="text")
         .with_dataset_id(source_field="doc_id")
-        .with_text2vec_weaviate()
+        .with_text2vec()
         .build()),
 
     (DatasetSpecBuilder("wixqa")
@@ -37,14 +37,14 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_text_property("title")
         .with_text_property("article_type", searchable=False, filterable=False)
         .with_dataset_id(source_field="id")
-        .with_text2vec_weaviate()
+        .with_text2vec()
         .build()),
 
     (DatasetSpecBuilder("freshstack-*")
         .with_prefix_name("Freshstack", split_char="-")
         .with_text_property("docs_text", source_field="text")
         .with_dataset_id()
-        .with_text2vec_weaviate()
+        .with_text2vec()
         .build()),
 
     (DatasetSpecBuilder("irpapers/images")
@@ -65,7 +65,7 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_static_name("MultiHopRAG")
         .with_text_property("content", source_field="body")
         .with_dataset_id()
-        .with_text2vec_weaviate()
+        .with_text2vec()
         .build()),
 ]
 

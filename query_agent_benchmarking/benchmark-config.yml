@@ -1,18 +1,16 @@
 # =============================================================================
 # Search Mode Settings
 # =============================================================================
-search_agent_name: "hybrid-search"
-dataset: irpapers/text
+search_agent_name: "external_service"
+dataset: freshstack-langchain
 
 embedding_model: "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
 
 # =============================================================================
 # Ask Mode Settings
 # =============================================================================
-ask_agent_name: "external"
+ask_agent_name: "external_service"
 queries: "irpapers/images"
-
-external_host: http://localhost:8000/ask
 
 # LLM Judge configuration
 judge_model: "openai/gpt-4.1"
@@ -21,9 +19,9 @@ ensemble_k: 3
 # =============================================================================
 # Shared Settings
 # =============================================================================
-use_async: False
-max_concurrent: 2
-sleep_between_requests: 0.5
+use_async: True
+max_concurrent: 5
+sleep_between_requests: 0
 
 use_subset: False
 num_samples: 5
@@ -32,6 +30,7 @@ num_trials: 1
 batch_size: 5
 
 agents_host: https://api.agents.weaviate.io
+external_service_host: http://localhost:8000/search
 
 # =============================================================================
 # Embedding Model Comparison

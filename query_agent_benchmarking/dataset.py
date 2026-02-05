@@ -6,7 +6,7 @@ from typing import Optional, List
 import weaviate
 from datasets import load_dataset
 
-from query_agent_benchmarking.models import InMemoryQuery, InMemoryAskQuery
+from query_agent_benchmarking.models import InMemoryQuery, InMemoryAskQuery, NuggetInfo
 
 def in_memory_dataset_loader(dataset_name: str):
     if dataset_name == "enron":
@@ -137,20 +137,18 @@ def _in_memory_dataset_loader_wixqa():
         ))
     return documents, questions
 
-# Need to check how this benchmark needs to extend the `InMemoryQuery` model
-def _in_memory_dataset_loader_freshstack(subset: str):
-    pass
-    """
+def _in_memory_dataset_loader_freshstack(subset: str):    
     docs = _load_dataset_from_hf_hub(filepath="freshstack/corpus-oct-2024", subset=subset)
     for doc in docs:
         doc['dataset_id'] = doc.pop('_id')
-    questions = _load_dataset_from_hf_hub(
+    raw_questions = _load_dataset_from_hf_hub(
         filepath="freshstack/queries-oct-2024", 
         subset=subset, 
         train=False
     )
 
-    for question in questions:
+    questions = []
+    for question in raw_questions:
         all_relevant_ids = []
         nugget_data = []
         ids_per_nugget = {}
@@ -160,11 +158,11 @@ def _in_memory_dataset_loader_freshstack(subset: str):
             nugget_text = nugget['text']
             relevant_corpus_ids = nugget['relevant_corpus_ids']
             
-            nugget_info = {
-                'nugget_id': nugget_id,
-                'text': nugget_text,
-                'relevant_corpus_ids': relevant_corpus_ids
-            }
+            nugget_info = NuggetInfo(
+                nugget_id=nugget_id,
+                text=nugget_text,
+                relevant_corpus_ids=relevant_corpus_ids
+            )
             nugget_data.append(nugget_info)
             all_relevant_ids.extend(relevant_corpus_ids)
             
@@ -172,14 +170,18 @@ def _in_memory_dataset_loader_freshstack(subset: str):
         
         unique_relevant_ids = list(dict.fromkeys(all_relevant_ids))
         
-        question['dataset_ids'] = unique_relevant_ids
-        question['ids_per_nugget'] = ids_per_nugget
-        question['nugget_data'] = nugget_data
-        question['num_nuggets'] = len(nugget_data)
-        question["question"] = question["query_text"]
+        questions.append(
+            InMemoryQuery(
+                question=question["query_text"],
+                query_id=question["query_id"],
+                dataset_ids=unique_relevant_ids,
+                nugget_data=nugget_data,
+                ids_per_nugget=ids_per_nugget,
+                num_nuggets=len(nugget_data)
+            )
+        )
     
     return docs, questions
-    """
 
 def _in_memory_dataset_loader_irpapers(dataset_name: str):
     docs = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-docs")

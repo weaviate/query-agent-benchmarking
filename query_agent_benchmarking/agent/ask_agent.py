@@ -21,11 +21,11 @@ class AskAgentBuilder(BaseAgentBuilder):
     
     Supports two agent types:
     * `agent_name == "query-agent-ask"` → Wraps the Weaviate QueryAgent in Ask Mode.
-    * `agent_name == "external"` → Sends requests to an external host for RAG evaluation.
+    * `agent_name == "external_service"` → Sends requests to an external host for RAG evaluation.
     
-    The "external" mode allows you to bring your own retrieval + generation system
+    The "external_service" mode allows you to bring your own retrieval + generation system
     and use the ask infrastructure for evaluation. It sends HTTP POST requests to
-    `external_host` with `question` and optionally `oracle_context_id`.
+    `external_service_host` with `question` and optionally `oracle_context_id`.
     """
     
     def __init__(
@@ -36,7 +36,7 @@ class AskAgentBuilder(BaseAgentBuilder):
         agents_host: Optional[str] = None,
         use_async: bool = False,
         embedding_model: Optional[str] = None,
-        external_host: Optional[str] = None,
+        external_service_host: Optional[str] = None,
     ):
         super().__init__(
             dataset_name=dataset_name,
@@ -47,7 +47,7 @@ class AskAgentBuilder(BaseAgentBuilder):
         )
         
         self.agent_name = agent_name
-        self.external_host = external_host
+        self.external_service_host = external_service_host
         self.weaviate_collection = None
         
         if not use_async:
@@ -61,15 +61,15 @@ class AskAgentBuilder(BaseAgentBuilder):
                 collections=[self.collection],
                 agents_host=self.agents_host,
             )
-        elif self.agent_name == "external":
-            # External mode - no Weaviate connection needed
-            if not self.external_host:
-                raise ValueError("external_host is required for external mode")
-            print(f"External mode initialized with host: {self.external_host}")
+        elif self.agent_name == "external_service":
+            # External service mode - no Weaviate connection needed
+            if not self.external_service_host:
+                raise ValueError("external_service_host is required for external_service mode")
+            print(f"External service mode initialized with host: {self.external_service_host}")
         else:
             raise ValueError(
                 f"Unknown agent_name: {self.agent_name}. "
-                "Must be 'query-agent-ask' or 'external'"
+                "Must be 'query-agent-ask' or 'external_service'"
             )
 
     async def initialize_async(self):
@@ -85,15 +85,15 @@ class AskAgentBuilder(BaseAgentBuilder):
                 )
                 print(f"AsyncQueryAgent (ask mode) initialized for collection: {self.collection}")
                 print(f"Using agents host: {self.agents_host}")
-            elif self.agent_name == "external":
-                # External mode - no Weaviate connection needed
-                if not self.external_host:
-                    raise ValueError("external_host is required for external mode")
-                print(f"External mode initialized with host: {self.external_host}")
+            elif self.agent_name == "external_service":
+                # External service mode - no Weaviate connection needed
+                if not self.external_service_host:
+                    raise ValueError("external_service_host is required for external_service mode")
+                print(f"External service mode initialized with host: {self.external_service_host}")
             else:
                 raise ValueError(
                     f"Unknown agent_name: {self.agent_name}. "
-                    "Must be 'query-agent-ask' or 'external'"
+                    "Must be 'query-agent-ask' or 'external_service'"
                 )
                 
         except Exception as e:
@@ -121,7 +121,7 @@ class AskAgentBuilder(BaseAgentBuilder):
                 raw_response=response
             )
         
-        elif self.agent_name == "external":
+        elif self.agent_name == "external_service":
             # Build request payload
             payload = {"question": query}
             if oracle_context_id is not None:
@@ -129,7 +129,7 @@ class AskAgentBuilder(BaseAgentBuilder):
             
             # Send request to external host
             with httpx.Client(timeout=300.0) as client:
-                response = client.post(self.external_host, json=payload)
+                response = client.post(self.external_service_host, json=payload)
                 response.raise_for_status()
                 data = response.json()
             
@@ -158,7 +158,7 @@ class AskAgentBuilder(BaseAgentBuilder):
                     raw_response=response
                 )
             
-            elif self.agent_name == "external":
+            elif self.agent_name == "external_service":
                 # Build request payload
                 payload = {"question": query}
                 if oracle_context_id is not None:
@@ -166,7 +166,7 @@ class AskAgentBuilder(BaseAgentBuilder):
                 
                 # Send async request to external host
                 async with httpx.AsyncClient(timeout=300.0) as client:
-                    response = await client.post(self.external_host, json=payload)
+                    response = await client.post(self.external_service_host, json=payload)
                     response.raise_for_status()
                     data = response.json()
                 

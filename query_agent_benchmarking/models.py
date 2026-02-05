@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict, List, Any
 from pydantic import BaseModel
 
 
@@ -10,16 +10,33 @@ class ObjectID(BaseModel):
 # Query Models
 # ============================================================================
 
+class NuggetInfo(BaseModel):
+    """Information about a single nugget (used by FreshStack)."""
+    nugget_id: str
+    text: str
+    relevant_corpus_ids: List[str]
+
+
 class InMemoryQuery(BaseModel):
     """Base query model - kept for backwards compatibility."""
     question: str
     dataset_ids: list[str]
+    query_id: Optional[str] = None
+    # FreshStack nugget fields (optional)
+    nugget_data: Optional[List[NuggetInfo]] = None
+    ids_per_nugget: Optional[Dict[str, List[str]]] = None
+    num_nuggets: Optional[int] = None
 
 
 class InMemorySearchQuery(BaseModel):
     """Query model for search benchmarks (ranked retrieval evaluation)."""
     question: str
     dataset_ids: list[str]  # Ground truth document IDs for recall/nDCG calculation
+    query_id: Optional[str] = None
+    # FreshStack nugget fields (optional)
+    nugget_data: Optional[List[NuggetInfo]] = None
+    ids_per_nugget: Optional[Dict[str, List[str]]] = None
+    num_nuggets: Optional[int] = None
 
 
 class InMemoryAskQuery(BaseModel):

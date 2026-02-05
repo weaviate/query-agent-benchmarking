@@ -128,6 +128,8 @@ async def _run_search_eval(config: Dict[str, Any]) -> Dict[str, Any]:
     # Add agent_name to config for result serialization
     config["agent_name"] = agent_name
     
+    external_service_host = config.get("external_service_host")
+    
     if dataset_name:
         query_agent = SearchAgentBuilder(
             agent_name=agent_name,
@@ -135,6 +137,7 @@ async def _run_search_eval(config: Dict[str, Any]) -> Dict[str, Any]:
             agents_host=agents_host,
             use_async=use_async,
             embedding_model=embedding_model,
+            external_service_host=external_service_host,
         )
     else:
         query_agent = SearchAgentBuilder(
@@ -143,6 +146,7 @@ async def _run_search_eval(config: Dict[str, Any]) -> Dict[str, Any]:
             agents_host=agents_host,
             use_async=use_async,
             embedding_model=embedding_model,
+            external_service_host=external_service_host,
         )
 
     num_trials = config.get("num_trials", 1)
@@ -221,6 +225,7 @@ def run_search_eval(
     max_concurrent: Optional[int] = None,
     use_async: Optional[bool] = None,
     agents_host: Optional[str] = None,
+    external_service_host: Optional[str] = None,
     output_path: Optional[str] = None,
     random_seed: Optional[int] = None,
     embedding_model: Optional[str] = None,
@@ -236,7 +241,7 @@ def run_search_eval(
         dataset: Name of built-in dataset (e.g., "beir/scifact", "enron").
         docs_collection: DocsCollection for custom datasets.
         queries: Queries as QueriesCollection, List[InMemoryQuery], or List[InMemorySearchQuery].
-        agent_name: Agent to use ("query-agent-search-only" or "hybrid-search").
+        agent_name: Agent to use ("query-agent-search-only", "hybrid-search", or "external_service").
         num_trials: Number of evaluation trials to run.
         use_subset: Whether to use a random subset of queries.
         num_samples: Number of samples if use_subset is True.
@@ -244,6 +249,7 @@ def run_search_eval(
         max_concurrent: Max concurrent requests for async.
         use_async: Whether to use async execution.
         agents_host: Host URL for the agents service.
+        external_service_host: Host URL for external mode (e.g., "http://localhost:8000").
         output_path: Path to save results.
         random_seed: Random seed for reproducibility.
         embedding_model: Embedding model to use.
@@ -271,6 +277,7 @@ def run_search_eval(
         "max_concurrent": max_concurrent,
         "use_async": use_async,
         "agents_host": agents_host,
+        "external_service_host": external_service_host,
         "output_path": output_path,
         "random_seed": random_seed,
         "embedding_model": embedding_model,
@@ -297,6 +304,7 @@ def run_search_evals(
     max_concurrent: Optional[int] = None,
     use_async: Optional[bool] = None,
     agents_host: Optional[str] = None,
+    external_service_host: Optional[str] = None,
     output_path: Optional[str] = None,
     random_seed: Optional[int] = None,
     embedding_model: Optional[str] = None,
@@ -329,6 +337,7 @@ def run_search_evals(
         "max_concurrent": max_concurrent,
         "use_async": use_async,
         "agents_host": agents_host,
+        "external_service_host": external_service_host,
         "random_seed": random_seed,
         "embedding_model": embedding_model,
         **kwargs

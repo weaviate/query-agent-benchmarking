@@ -109,10 +109,8 @@ def get_vector_config(embedding_model: Optional[str] = None) -> Any:
     
     provider, model_name = _parse_embedding_model(embedding_model)
     
-    # Weaviate uses Configure.Vectorizer (returns correct type)
-    # Third-party providers use Configure.Vectors (returns _VectorConfigCreate)
     if provider == "weaviate":
-        return wvcc.Configure.Vectorizer.text2vec_weaviate(model=model_name)
+        return wvcc.Configure.Vectors.text2vec_weaviate(model=model_name)
     elif provider == "cohere":
         return wvcc.Configure.Vectors.text2vec_cohere(model=model_name)
     elif provider == "voyageai":

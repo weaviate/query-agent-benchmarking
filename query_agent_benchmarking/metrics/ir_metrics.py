@@ -121,9 +121,23 @@ def calculate_nDCG_at_k(
     
     return ndcg
 
+def _get_nugget_id(nugget, index: int) -> str:
+    """Extract nugget ID from either a dict or NuggetInfo object."""
+    if hasattr(nugget, 'nugget_id'):
+        return nugget.nugget_id
+    return nugget.get('id', nugget.get('nugget_id', f'nugget_{index}'))
+
+
+def _get_nugget_relevant_ids(nugget) -> list[str]:
+    """Extract relevant corpus IDs from either a dict or NuggetInfo object."""
+    if hasattr(nugget, 'relevant_corpus_ids'):
+        return [str(id) for id in nugget.relevant_corpus_ids]
+    return [str(id) for id in nugget.get('relevant_corpus_ids', [])]
+
+
 def calculate_coverage(
     retrieved_ids: list[str], 
-    nugget_data: list[dict], 
+    nugget_data: list, 
     k: int = 100, 
     verbose: bool = False
 ):
@@ -133,7 +147,7 @@ def calculate_coverage(
     
     Args:
         retrieved_ids: List of retrieved document IDs in ranked order
-        nugget_data: List of nugget information, each with 'relevant_corpus_ids' field
+        nugget_data: List of nugget information (dicts or NuggetInfo objects)
         k: Number of top documents to consider (default: 20)
     
     Returns:
@@ -148,8 +162,8 @@ def calculate_coverage(
     nugget_coverage_details = []
     
     for i, nugget in enumerate(nugget_data):
-        nugget_id = nugget.get('id', f'nugget_{i}')
-        nugget_relevant_ids = [str(id) for id in nugget.get('relevant_corpus_ids', [])]
+        nugget_id = _get_nugget_id(nugget, i)
+        nugget_relevant_ids = _get_nugget_relevant_ids(nugget)
         
         covered = any(doc_id in retrieved_ids for doc_id in nugget_relevant_ids)
         
@@ -174,7 +188,7 @@ def calculate_coverage(
 
 def calculate_alpha_ndcg(
     retrieved_ids: list[str], 
-    nugget_data: list[dict], 
+    nugget_data: list, 
     alpha: float = 0.5, 
     k: int = 10, 
     verbose: bool = False
@@ -186,7 +200,7 @@ def calculate_alpha_ndcg(
     
     Args:
         retrieved_ids: List of retrieved document IDs in ranked order
-        nugget_data: List of nugget information, each with 'relevant_corpus_ids' field
+        nugget_data: List of nugget information (dicts or NuggetInfo objects)
         alpha: Penalization factor for redundancy (0-1). 
                0 = maximum penalty for redundancy, 1 = no penalty
         k: Cutoff for evaluation (default: 10)
@@ -209,8 +223,8 @@ def calculate_alpha_ndcg(
         doc_nuggets = []
         
         for j, nugget in enumerate(nugget_data):
-            nugget_id = nugget.get('id', f'nugget_{j}')
-            nugget_relevant_ids = [str(id) for id in nugget.get('relevant_corpus_ids', [])]
+            nugget_id = _get_nugget_id(nugget, j)
+            nugget_relevant_ids = _get_nugget_relevant_ids(nugget)
             
             if doc_id in nugget_relevant_ids:
                 if nugget_id not in covered_nuggets:

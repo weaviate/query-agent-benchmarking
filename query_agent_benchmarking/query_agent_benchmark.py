@@ -354,7 +354,10 @@ async def analyze_search_results(
             ]
         elif dataset_name.startswith("freshstack-"):
             metrics = [
-                {"func": calculate_coverage, "params": {"k": 1000}},
+                {"func": calculate_recall_at_k, "params": {"k": 50}},
+                {"func": calculate_coverage, "params": {"k": 5}},
+                {"func": calculate_coverage, "params": {"k": 10}},
+                {"func": calculate_coverage, "params": {"k": 20}},
                 {"func": calculate_alpha_ndcg, "params": {"alpha": 0.5, "k": 10}},
             ]
         elif dataset_name.startswith("beir/"):
@@ -391,8 +394,8 @@ async def analyze_search_results(
     metric_results = {}
     for config in metrics:
         name = config["func"].__name__.replace("calculate_", "")
-        if "recall" in name and "k" in config["params"]:
-            key = f"recall_at_{config['params']['k']}"
+        if "k" in config["params"]:
+            key = f"{name}_at_{config['params']['k']}"
         else:
             key = name
         metric_results[key] = []
@@ -414,8 +417,8 @@ async def analyze_search_results(
             
             # Determine the key for storing the result
             key = func_name.replace("calculate_", "")
-            if "recall" in key and "k" in params:
-                key = f"recall_at_{params['k']}"
+            if "k" in params:
+                key = f"{key}_at_{params['k']}"
 
             # Call metric function with the correct arguments
             score = 0.0
@@ -426,19 +429,14 @@ async def analyze_search_results(
                     **params
                 )
             elif func_name in ["calculate_coverage", "calculate_alpha_ndcg"]:
-                pass
-                """
-                if ground_truth.get(nugget_data):
-                    for idx, nugget in enumerate(ground_truth.nugget_data):
-                        if 'id' not in nugget:
-                            nugget['id'] = f"nugget_{idx}"
-                
-                score = metric_func(
-                    retrieved_ids=retrieved_ids, 
-                    nuggets=ground_truth.nugget_data, 
-                    **params
-                )
-                """
+                if ground_truth.nugget_data:
+                    score = metric_func(
+                        retrieved_ids=retrieved_ids, 
+                        nugget_data=ground_truth.nugget_data, 
+                        **params
+                    )
+                else:
+                    score = 0.0
             elif "nDCG" in func_name or "ndcg" in func_name.lower():
                 # Handle nDCG calculation
                 score = metric_func(
