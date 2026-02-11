@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Dict
+from typing import Optional
 from abc import ABC, abstractmethod
 
 import weaviate
@@ -7,7 +7,8 @@ from weaviate.auth import Auth
 from weaviate.config import AdditionalConfig, Timeout
 
 from query_agent_benchmarking.models import DocsCollection
-from query_agent_benchmarking.utils import pascalize_name, get_provider_headers, parse_embedding_model
+from query_agent_benchmarking.database.database_registry import resolve_spec
+from query_agent_benchmarking.utils import get_provider_headers, parse_embedding_model
 
 
 class BaseAgentBuilder(ABC):
@@ -33,7 +34,7 @@ class BaseAgentBuilder(ABC):
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         
         # Get provider headers for third-party embedding providers
-        self.headers: Dict[str, str] = {}
+        self.headers: dict[str, str] = {}
         if embedding_model:
             provider, _ = parse_embedding_model(embedding_model)
             self.headers = get_provider_headers(provider)
@@ -49,53 +50,13 @@ class BaseAgentBuilder(ABC):
         # Handle custom DocsCollection
         if docs_collection:
             self.collection = docs_collection.collection_name
-            self.target_property_name = docs_collection.content_key
             self.id_property = docs_collection.id_key
         else:
-            self._setup_builtin_dataset(dataset_name)
+            spec = resolve_spec(dataset_name)
+            self.collection = f"{spec.name_fn(dataset_name)}_Default"
+            self.id_property = "dataset_id"
 
         self.agents_host = agents_host or "https://api.agents.weaviate.io"
-
-    def _setup_builtin_dataset(self, dataset_name: str):
-        """Configure collection settings for built-in datasets."""
-        if dataset_name == "enron":
-            self.collection = "EnronEmails_Default"
-            self.target_property_name = ""
-            self.id_property = "dataset_id"
-        elif dataset_name == "wixqa":
-            self.collection = "WixKB_Default"
-            self.target_property_name = "contents"
-            self.id_property = "dataset_id"
-        elif dataset_name.startswith("freshstack-"):
-            subset = dataset_name.split("-")[1]
-            self.collection = f"Freshstack{pascalize_name(subset)}_Default"
-            self.target_property_name = "docs_text"
-            self.id_property = "dataset_id"
-        elif dataset_name.startswith("beir/"):
-            subset = dataset_name.split('beir/')[1]
-            self.collection = f"Beir{pascalize_name(subset)}_Default"
-            self.target_property_name = "content"
-            self.id_property = "dataset_id"
-        elif dataset_name.startswith("lotte/"):
-            lotte_subset = dataset_name.split("/")[1]
-            self.collection = f"Lotte{pascalize_name(lotte_subset)}_Default"
-            self.target_property_name = "content"
-            self.id_property = "dataset_id"
-        elif dataset_name.startswith("bright/"):
-            subset = dataset_name.split('/')[1]
-            self.collection = f"Bright{pascalize_name(subset)}_Default"
-            self.target_property_name = "content"
-            self.id_property = "dataset_id"
-        elif dataset_name.startswith("irpapers/images"):
-            self.collection = "IRPapersImages_Default"
-            self.target_property_name = "content"
-            self.id_property = "dataset_id"
-        elif dataset_name.startswith("irpapers/text"):
-            self.collection = "IRPapersText_Default"
-            self.target_property_name = "content"
-            self.id_property = "dataset_id"
-        else:
-            raise ValueError(f"Unknown dataset: {dataset_name}")
 
     def _connect_sync(self) -> weaviate.WeaviateClient:
         """Create synchronous Weaviate connection."""

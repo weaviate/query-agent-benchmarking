@@ -1,14 +1,12 @@
 import asyncio
-import os
-from typing import Dict, Any, Optional
+from typing import Any, Optional
 from pathlib import Path
 
 import hashlib
-import weaviate
 
 from query_agent_benchmarking.database import create_collection_with_vector_config, resolve_spec
 from query_agent_benchmarking.search_benchmark_run import _run_search_eval
-from query_agent_benchmarking.utils import load_config, merge_configs, print_results_comparison
+from query_agent_benchmarking.utils import load_config, merge_configs, print_results_comparison, get_weaviate_client
 
 def compare_embeddings(
     config_path: Optional[str] = None,
@@ -25,7 +23,7 @@ def compare_embeddings(
     output_path: Optional[str] = None,
     random_seed: Optional[int] = None,
     **kwargs
-) -> Dict[str, Dict[str, Any]]:
+) -> dict[str, dict[str, Any]]:
     """
     Compare multiple embedding models by creating temporary collections.
     
@@ -112,9 +110,9 @@ def compare_embeddings(
     return all_results
 
 async def _run_eval_with_temp_collection(
-    config: Dict[str, Any], 
+    config: dict[str, Any], 
     embedding_model: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Run evaluation with temporary collection for specified embedding model."""
     
     dataset_name = config.get("dataset")
@@ -138,10 +136,7 @@ async def _run_eval_with_temp_collection(
     print(f"{'='*60}\n")
     
     # Create the temporary collection
-    weaviate_client = weaviate.connect_to_weaviate_cloud(
-        cluster_url=os.getenv("WEAVIATE_URL"),
-        auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
-    )
+    weaviate_client = get_weaviate_client()
     
     try:
         create_collection_with_vector_config(
@@ -176,10 +171,7 @@ async def _run_eval_with_temp_collection(
         
     finally:
         # Cleanup: delete temp collection and restore alias
-        weaviate_client = weaviate.connect_to_weaviate_cloud(
-            cluster_url=os.getenv("WEAVIATE_URL"),
-            auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
-        )
+        weaviate_client = get_weaviate_client()
         
         try:
             print(f"\n{'='*60}")

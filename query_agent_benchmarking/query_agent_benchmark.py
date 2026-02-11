@@ -7,7 +7,7 @@ used by both search_benchmark_run.py and ask_benchmark_run.py.
 
 import asyncio
 import time
-from typing import Any, Optional, List
+from typing import Any, Optional
 from tqdm import tqdm
 import numpy as np
 
@@ -20,7 +20,7 @@ from query_agent_benchmarking.metrics.ir_metrics import (
 )
 from query_agent_benchmarking.metrics.lmjudge_alignment import LMJudge
 from query_agent_benchmarking.models import (
-    QueryResult, 
+    QueryResult,
     InMemoryQuery,
     InMemoryAskQuery,
     AskResult,
@@ -28,13 +28,78 @@ from query_agent_benchmarking.models import (
 
 
 # ============================================================================
+# Dataset-to-Metrics Registry
+# ============================================================================
+
+_DEFAULT_METRICS = [
+    {"func": calculate_recall_at_k, "params": {"k": 1}},
+    {"func": calculate_recall_at_k, "params": {"k": 5}},
+    {"func": calculate_recall_at_k, "params": {"k": 20}},
+    {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+]
+
+DATASET_METRICS: dict[str, list[dict]] = {
+    "enron": [
+        {"func": calculate_recall_at_k, "params": {"k": 1}},
+        {"func": calculate_recall_at_k, "params": {"k": 5}},
+        {"func": calculate_recall_at_k, "params": {"k": 20}},
+    ],
+    "wixqa": [
+        {"func": calculate_recall_at_k, "params": {"k": 1}},
+        {"func": calculate_recall_at_k, "params": {"k": 5}},
+        {"func": calculate_recall_at_k, "params": {"k": 20}},
+    ],
+    "freshstack-": [
+        {"func": calculate_recall_at_k, "params": {"k": 50}},
+        {"func": calculate_coverage, "params": {"k": 5}},
+        {"func": calculate_coverage, "params": {"k": 10}},
+        {"func": calculate_coverage, "params": {"k": 20}},
+        {"func": calculate_alpha_ndcg, "params": {"alpha": 0.5, "k": 10}},
+    ],
+    "beir/": [
+        {"func": calculate_recall_at_k, "params": {"k": 1}},
+        {"func": calculate_recall_at_k, "params": {"k": 5}},
+        {"func": calculate_recall_at_k, "params": {"k": 20}},
+        {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+    ],
+    "lotte/": [
+        {"func": calculate_recall_at_k, "params": {"k": 1}},
+        {"func": calculate_recall_at_k, "params": {"k": 5}},
+        {"func": calculate_recall_at_k, "params": {"k": 20}},
+        {"func": calculate_success_at_k, "params": {"k": 5}},
+    ],
+    "bright/": [
+        {"func": calculate_recall_at_k, "params": {"k": 1}},
+        {"func": calculate_recall_at_k, "params": {"k": 5}},
+        {"func": calculate_recall_at_k, "params": {"k": 20}},
+        {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+    ],
+    "irpapers/": [
+        {"func": calculate_recall_at_k, "params": {"k": 1}},
+        {"func": calculate_recall_at_k, "params": {"k": 5}},
+        {"func": calculate_recall_at_k, "params": {"k": 20}},
+    ],
+}
+
+
+def _resolve_metrics(dataset_name: Optional[str]) -> list[dict]:
+    """Resolve the metrics config for a given dataset name using prefix matching."""
+    if dataset_name is None:
+        return _DEFAULT_METRICS
+    for prefix, metrics in DATASET_METRICS.items():
+        if dataset_name == prefix or dataset_name.startswith(prefix):
+            return metrics
+    raise ValueError(f"Unknown dataset: {dataset_name}")
+
+
+# ============================================================================
 # Search Mode Functions
 # ============================================================================
 
 def run_search_queries(
-    queries: List[InMemoryQuery],
+    queries: list[InMemoryQuery],
     query_agent: Any,
-) -> List[QueryResult]:
+) -> list[QueryResult]:
     """Synchronous version of search query execution."""
     results = []
     start = time.time()
@@ -64,11 +129,11 @@ def run_search_queries(
 
 
 async def run_search_queries_async(
-    queries: List[InMemoryQuery],
+    queries: list[InMemoryQuery],
     query_agent: Any,
     batch_size: int = 10,
     max_concurrent: int = 3
-) -> List[QueryResult]:
+) -> list[QueryResult]:
     """
     Asynchronous version of search query execution with concurrent execution.
     
@@ -179,10 +244,10 @@ async def run_search_queries_async(
 # ============================================================================
 
 def run_ask_queries(
-    queries: List[InMemoryAskQuery],
+    queries: list[InMemoryAskQuery],
     ask_agent: Any,
     sleep_between_requests: float = 0.0,
-) -> List[AskResult]:
+) -> list[AskResult]:
     """Synchronous version of ask query execution."""
     results = []
     start = time.time()
@@ -227,11 +292,11 @@ def run_ask_queries(
 
 
 async def run_ask_queries_async(
-    queries: List[InMemoryAskQuery],
+    queries: list[InMemoryAskQuery],
     ask_agent: Any,
     batch_size: int = 10,
     max_concurrent: int = 3,
-) -> List[AskResult]:
+) -> list[AskResult]:
     """
     Asynchronous version of ask query execution with concurrent execution.
     
@@ -325,70 +390,14 @@ async def run_ask_queries_async(
 # ============================================================================
 
 async def analyze_search_results(
-    results: List[QueryResult],
-    ground_truths: List[InMemoryQuery],
+    results: list[QueryResult],
+    ground_truths: list[InMemoryQuery],
     dataset_name: Optional[str] = None,
 ):
     """Analyze search results with dataset-specific IR metrics."""
     
-    # Define metrics with their specific parameters for each dataset
-    if dataset_name is None:
-        metrics = [
-            {"func": calculate_recall_at_k, "params": {"k": 1}},
-            {"func": calculate_recall_at_k, "params": {"k": 5}},
-            {"func": calculate_recall_at_k, "params": {"k": 20}},
-            {"func": calculate_nDCG_at_k, "params": {"k": 10}},
-        ]
-    else:
-        if dataset_name == "enron":
-            metrics = [
-                {"func": calculate_recall_at_k, "params": {"k": 1}},
-                {"func": calculate_recall_at_k, "params": {"k": 5}},
-                {"func": calculate_recall_at_k, "params": {"k": 20}},
-            ]
-        elif dataset_name == "wixqa":
-            metrics = [
-                {"func": calculate_recall_at_k, "params": {"k": 1}},
-                {"func": calculate_recall_at_k, "params": {"k": 5}},
-                {"func": calculate_recall_at_k, "params": {"k": 20}},
-            ]
-        elif dataset_name.startswith("freshstack-"):
-            metrics = [
-                {"func": calculate_recall_at_k, "params": {"k": 50}},
-                {"func": calculate_coverage, "params": {"k": 5}},
-                {"func": calculate_coverage, "params": {"k": 10}},
-                {"func": calculate_coverage, "params": {"k": 20}},
-                {"func": calculate_alpha_ndcg, "params": {"alpha": 0.5, "k": 10}},
-            ]
-        elif dataset_name.startswith("beir/"):
-            metrics = [
-                {"func": calculate_recall_at_k, "params": {"k": 1}},
-                {"func": calculate_recall_at_k, "params": {"k": 5}},
-                {"func": calculate_recall_at_k, "params": {"k": 20}},
-                {"func": calculate_nDCG_at_k, "params": {"k": 10}},
-            ]
-        elif dataset_name.startswith("lotte/"):
-            metrics = [
-                {"func": calculate_recall_at_k, "params": {"k": 1}},
-                {"func": calculate_recall_at_k, "params": {"k": 5}},
-                {"func": calculate_recall_at_k, "params": {"k": 20}},
-                {"func": calculate_success_at_k, "params": {"k": 5}},
-            ]
-        elif dataset_name.startswith("bright/"):
-            metrics = [
-                {"func": calculate_recall_at_k, "params": {"k": 1}},
-                {"func": calculate_recall_at_k, "params": {"k": 5}},
-                {"func": calculate_recall_at_k, "params": {"k": 20}},
-                {"func": calculate_nDCG_at_k, "params": {"k": 10}},
-            ]
-        elif dataset_name.startswith("irpapers/"):
-            metrics = [
-                {"func": calculate_recall_at_k, "params": {"k": 1}},
-                {"func": calculate_recall_at_k, "params": {"k": 5}},
-                {"func": calculate_recall_at_k, "params": {"k": 20}},
-            ]
-        else:
-            raise ValueError(f"Unknown dataset: {dataset_name}")
+    # Resolve dataset-specific metrics from the registry
+    metrics = _resolve_metrics(dataset_name)
     
     # Initialize result storage with descriptive keys
     metric_results = {}
@@ -505,7 +514,7 @@ async def analyze_search_results(
 # ============================================================================
 
 async def analyze_ask_results(
-    results: List[AskResult],
+    results: list[AskResult],
     judge_model: str = "openai/gpt-4.1",
     ensemble_k: int = 3,
 ) -> dict:

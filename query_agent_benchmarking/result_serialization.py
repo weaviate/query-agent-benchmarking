@@ -1,13 +1,13 @@
 import os
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Any
 import json
 from query_agent_benchmarking.models import QueryResult
 
 
 def save_trial_results(
-    results: List[QueryResult],
-    config: Dict[str, Any],
+    results: list[QueryResult],
+    config: dict[str, Any],
     trial_number: int,
 ) -> None:
     """
@@ -66,8 +66,8 @@ def save_trial_results(
 
 
 def save_trial_metrics(
-    metrics: Dict[str, Any],
-    config: Dict[str, Any],
+    metrics: dict[str, Any],
+    config: dict[str, Any],
     trial_number: int,
 ) -> None:
     """
@@ -103,8 +103,8 @@ def save_trial_metrics(
         json.dump(metrics, f, indent=2)
     
 def save_aggregated_results(
-    aggregated_metrics: Dict[str, Any],
-    config: Dict[str, Any],
+    aggregated_metrics: dict[str, Any],
+    config: dict[str, Any],
 ) -> None:
     """
     Save aggregated metrics across all trials.

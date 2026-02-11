@@ -7,11 +7,8 @@ IR metrics like Recall@K, nDCG@K, etc.
 """
 
 import asyncio
-import os
 from pathlib import Path
-from typing import Optional, Dict, Any, Union, List
-
-import weaviate
+from typing import Optional, Any, Union
 
 from query_agent_benchmarking.agent import SearchAgentBuilder
 from query_agent_benchmarking.dataset import (
@@ -47,7 +44,7 @@ from query_agent_benchmarking.config import supported_search_datasets
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "benchmark-config.yml"
 
 
-async def _run_search_eval(config: Dict[str, Any]) -> Dict[str, Any]:
+async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
     """Internal async implementation for search evaluation."""
     agents_host = config.get("agents_host", "https://api.agents.weaviate.io")
     use_async = config.get("use_async", True)
@@ -183,15 +180,10 @@ async def _run_search_eval(config: Dict[str, Any]) -> Dict[str, Any]:
         )
 
         # Analyze results
-        weaviate_client = weaviate.connect_to_weaviate_cloud(
-            cluster_url=os.getenv("WEAVIATE_URL"),
-            auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
-        )
-
         metrics = await analyze_search_results(
             results=results,
             ground_truths=queries,
-            dataset_name=dataset_name, 
+            dataset_name=dataset_name,
         )
         print(metrics)
         save_trial_metrics(
@@ -199,8 +191,6 @@ async def _run_search_eval(config: Dict[str, Any]) -> Dict[str, Any]:
             config=config,
             trial_number=trial+1,
         )
-
-        weaviate_client.close()
         metrics_across_trials.append(metrics)
 
     # Aggregate and save results
@@ -216,7 +206,7 @@ def run_search_eval(
     config_path: Optional[str] = None,
     dataset: Optional[str] = None,
     docs_collection: Optional[DocsCollection] = None,
-    queries: Optional[Union[QueriesCollection, List[InMemoryQuery], List[InMemorySearchQuery]]] = None,
+    queries: Optional[Union[QueriesCollection, list[InMemoryQuery], list[InMemorySearchQuery]]] = None,
     agent_name: Optional[str] = None,
     num_trials: Optional[int] = None,
     use_subset: Optional[bool] = None,
@@ -230,7 +220,7 @@ def run_search_eval(
     random_seed: Optional[int] = None,
     embedding_model: Optional[str] = None,
     **kwargs
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Run a search benchmark evaluation.
     
@@ -240,7 +230,7 @@ def run_search_eval(
         config_path: Path to YAML config file. Defaults to built-in config.
         dataset: Name of built-in dataset (e.g., "beir/scifact", "enron").
         docs_collection: DocsCollection for custom datasets.
-        queries: Queries as QueriesCollection, List[InMemoryQuery], or List[InMemorySearchQuery].
+        queries: Queries as QueriesCollection, list[InMemoryQuery], or list[InMemorySearchQuery].
         agent_name: Agent to use ("query-agent-search-only", "hybrid-search", or "external_service").
         num_trials: Number of evaluation trials to run.
         use_subset: Whether to use a random subset of queries.
@@ -295,8 +285,8 @@ def run_search_evals(
     config_path: Optional[str] = None,
     dataset: Optional[str] = None,
     docs_collection: Optional[DocsCollection] = None,
-    queries: Optional[Union[QueriesCollection, List[InMemoryQuery], List[InMemorySearchQuery]]] = None,
-    agent_names: Optional[Union[str, List[str]]] = None,
+    queries: Optional[Union[QueriesCollection, list[InMemoryQuery], list[InMemorySearchQuery]]] = None,
+    agent_names: Optional[Union[str, list[str]]] = None,
     num_trials: Optional[int] = None,
     use_subset: Optional[bool] = None,
     num_samples: Optional[int] = None,
@@ -309,7 +299,7 @@ def run_search_evals(
     random_seed: Optional[int] = None,
     embedding_model: Optional[str] = None,
     **kwargs
-) -> Dict[str, Dict[str, Any]]:
+) -> dict[str, dict[str, Any]]:
     """Run search benchmark for multiple query agents and compare results."""
     
     if config_path is None:

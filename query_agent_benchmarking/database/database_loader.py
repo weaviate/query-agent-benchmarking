@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, Mapping, Optional, Sequence
+from typing import Any, Callable, Mapping, Optional, Sequence
 
 import weaviate
 import weaviate.collections.classes.config as wvcc
@@ -14,6 +14,7 @@ from ..utils import (
     get_weaviate_client,
     get_provider_headers,
     load_config,
+    parse_embedding_model,
     pretty_print_in_memory_document,
     add_tag_to_name,
 )
@@ -41,7 +42,7 @@ def _batch_insert(
     client: weaviate.WeaviateClient,
     collection: str,
     items: Sequence[Mapping[str, Any]],
-    item_to_props: Callable[[Mapping[str, Any]], Dict[str, Any]],
+    item_to_props: Callable[[Mapping[str, Any]], dict[str, Any]],
     batch_size: int = 20,
     verbose: bool = True,
 ) -> int:
@@ -76,23 +77,6 @@ def _batch_insert(
     return total
 
 
-def _parse_embedding_model(embedding_model: str) -> tuple[str, str]:
-    """
-    Parse embedding model string into provider and model name.
-    
-    Args:
-        embedding_model: Format "provider/model" (e.g., "cohere/embed-4")
-                       or just "model" (defaults to "weaviate" provider)
-    
-    Returns:
-        Tuple of (provider, model_name)
-    """
-    if "/" in embedding_model:
-        provider, model_name = embedding_model.split("/", 1)
-        return provider.lower(), model_name
-    return "weaviate", embedding_model
-
-
 def get_vector_config(embedding_model: Optional[str] = None) -> Any:
     """
     Factory function to create vectorizer config based on provider.
@@ -107,7 +91,7 @@ def get_vector_config(embedding_model: Optional[str] = None) -> Any:
     if not embedding_model:
         return wvcc.Configure.Vectorizer.text2vec_weaviate()
     
-    provider, model_name = _parse_embedding_model(embedding_model)
+    provider, model_name = parse_embedding_model(embedding_model)
     
     if provider == "weaviate":
         return wvcc.Configure.Vectors.text2vec_weaviate(model=model_name)
@@ -184,7 +168,7 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
     headers = {}
     embedding_model = config.get("embedding_model")
     if embedding_model:
-        provider, _ = _parse_embedding_model(embedding_model)
+        provider, _ = parse_embedding_model(embedding_model)
         headers = get_provider_headers(provider)
 
     client = get_weaviate_client(headers=headers)
