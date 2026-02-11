@@ -199,7 +199,7 @@ def _in_memory_dataset_loader_irpapers(dataset_name: str):
     for question in _questions:
         questions.append(InMemoryQuery(
             question=question["question"],
-            query_id=random.randint(1, 1000000),
+            query_id=str(random.randint(1, 1000000)),
             dataset_ids=[question["dataset_id"]]
         ))
 
@@ -218,7 +218,7 @@ def _in_memory_dataset_loader_multihoprag():
     for question in _questions:
         questions.append(InMemoryQuery(
             question=question["query"],
-            query_id=random.randint(1, 1000000),
+            query_id=str(random.randint(1, 1000000)),
             dataset_ids=[]
         ))
     
@@ -293,13 +293,16 @@ def in_memory_ask_dataset_loader(dataset_name: str) -> list[InMemoryAskQuery]:
     Note: The dataset_name also determines which Weaviate collection the agent uses:
     - "irpapers/text" -> IRPapersText_Default
     - "irpapers/images" -> IRPapersImages_Default
+    - "multihoprag" -> MultiHopRAG_Default
     """
     if dataset_name.startswith("irpapers/"):
         return _in_memory_ask_loader_irpapers(dataset_name)
+    elif dataset_name == "multihoprag":
+        return _in_memory_ask_loader_multihoprag()
     else:
         raise ValueError(
             f"Unknown ask dataset: {dataset_name}. "
-            f"Supported ask datasets: irpapers/text, irpapers/images"
+            f"Supported ask datasets: irpapers/text, irpapers/images, multihoprag"
         )
 
 
@@ -315,6 +318,24 @@ def _in_memory_ask_loader_irpapers(dataset_name: str) -> list[InMemoryAskQuery]:
             question=item["question"],
             ground_truth_answer=item["answer"],
             oracle_context_id=str(item["dataset_id"]),
+        ))
+    
+    print(f"Loaded {len(queries)} ask queries")
+    return queries
+
+
+def _in_memory_ask_loader_multihoprag() -> list[InMemoryAskQuery]:
+    """Load the MultiHop-RAG ask queries dataset."""
+    print("Loading MultiHop-RAG ask queries...")
+    
+    _questions = _load_dataset_from_hf_hub(filepath="yixuantt/MultiHopRAG", subset="MultiHopRAG")
+    
+    queries: list[InMemoryAskQuery] = []
+    for item in _questions:
+        queries.append(InMemoryAskQuery(
+            question=item["query"],
+            ground_truth_answer=item["answer"],
+            oracle_context_id=None,  # MultiHop-RAG doesn't provide oracle context IDs
         ))
     
     print(f"Loaded {len(queries)} ask queries")

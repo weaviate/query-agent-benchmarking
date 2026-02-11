@@ -37,6 +37,7 @@ class AskAgentBuilder(BaseAgentBuilder):
         use_async: bool = False,
         embedding_model: Optional[str] = None,
         external_service_host: Optional[str] = None,
+        system_prompt: Optional[str] = None,
     ):
         super().__init__(
             dataset_name=dataset_name,
@@ -44,6 +45,7 @@ class AskAgentBuilder(BaseAgentBuilder):
             agents_host=agents_host,
             use_async=use_async,
             embedding_model=embedding_model,
+            system_prompt=system_prompt,
         )
         
         self.agent_name = agent_name
@@ -56,11 +58,14 @@ class AskAgentBuilder(BaseAgentBuilder):
     def initialize_sync(self):
         if self.agent_name == "query-agent-ask":
             self.weaviate_client = self._connect_sync()
-            self.agent = QueryAgent(
+            agent_kwargs = dict(
                 client=self.weaviate_client,
                 collections=[self.collection],
                 agents_host=self.agents_host,
             )
+            if self.system_prompt:
+                agent_kwargs["system_prompt"] = self.system_prompt
+            self.agent = QueryAgent(**agent_kwargs)
         elif self.agent_name == "external_service":
             # External service mode - no Weaviate connection needed
             if not self.external_service_host:
@@ -78,11 +83,14 @@ class AskAgentBuilder(BaseAgentBuilder):
                 self.weaviate_client = self._connect_async()
                 await self.weaviate_client.connect()
                 print("Async Weaviate client connected successfully")
-                self.agent = AsyncQueryAgent(
+                agent_kwargs = dict(
                     client=self.weaviate_client,
                     collections=[self.collection],
-                    agents_host=self.agents_host
+                    agents_host=self.agents_host,
                 )
+                if self.system_prompt:
+                    agent_kwargs["system_prompt"] = self.system_prompt
+                self.agent = AsyncQueryAgent(**agent_kwargs)
                 print(f"AsyncQueryAgent (ask mode) initialized for collection: {self.collection}")
                 print(f"Using agents host: {self.agents_host}")
             elif self.agent_name == "external_service":

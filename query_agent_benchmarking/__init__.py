@@ -48,6 +48,8 @@ from .metrics import (
     # LLM Judge
     LMJudge,
     calculate_alignment_score,
+    # Exact Match
+    calculate_exact_match,
 )
 
 from .experimental.create_benchmark import create_benchmark
@@ -100,6 +102,8 @@ __all__ = [
     # Metrics - LLM Judge
     "LMJudge",
     "calculate_alignment_score",
+    # Metrics - Exact Match
+    "calculate_exact_match",
     # Result serialization
     "save_trial_results",
     "save_trial_metrics",

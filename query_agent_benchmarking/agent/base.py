@@ -24,10 +24,12 @@ class BaseAgentBuilder(ABC):
         agents_host: Optional[str] = None,
         use_async: bool = False,
         embedding_model: Optional[str] = None,
+        system_prompt: Optional[str] = None,
     ):
         self.use_async = use_async
         self.agent = None
         self.weaviate_client = None
+        self.system_prompt = system_prompt
         
         self.cluster_url = os.getenv("WEAVIATE_URL")
         self.api_key = os.getenv("WEAVIATE_API_KEY")

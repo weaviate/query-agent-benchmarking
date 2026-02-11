@@ -19,6 +19,7 @@ from query_agent_benchmarking.metrics.ir_metrics import (
     calculate_nDCG_at_k
 )
 from query_agent_benchmarking.metrics.lmjudge_alignment import LMJudge
+from query_agent_benchmarking.metrics.exact_match import calculate_exact_match
 from query_agent_benchmarking.models import (
     QueryResult,
     InMemoryQuery,
@@ -517,23 +518,28 @@ async def analyze_ask_results(
     results: list[AskResult],
     judge_model: str = "openai/gpt-4.1",
     ensemble_k: int = 3,
+    use_exact_match: bool = False,
 ) -> dict:
     """
-    Analyze ask results using LLM-as-judge for semantic alignment.
+    Analyze ask results using LLM-as-judge for semantic alignment or exact match.
     
     Args:
         results: List of AskResult objects from ask query execution.
-        judge_model: LLM model for the judge.
-        ensemble_k: Number of ensemble votes for judge.
+        judge_model: LLM model for the judge (only used if use_exact_match=False).
+        ensemble_k: Number of ensemble votes for judge (only used if use_exact_match=False).
+        use_exact_match: If True, use exact string matching instead of LLM judge.
         
     Returns:
         Dictionary with alignment scores and timing metrics.
     """
-    print(f"\n\033[94mAnalyzing {len(results)} ask results with LLM judge...\033[0m")
-    print(f"Judge model: {judge_model}, Ensemble K: {ensemble_k}")
+    if use_exact_match:
+        print(f"\n\033[94mAnalyzing {len(results)} ask results with exact match...\033[0m")
+    else:
+        print(f"\n\033[94mAnalyzing {len(results)} ask results with LLM judge...\033[0m")
+        print(f"Judge model: {judge_model}, Ensemble K: {ensemble_k}")
     
-    # Initialize the LLM judge
-    judge = LMJudge(model=judge_model, ensemble_k=ensemble_k)
+    # Initialize the LLM judge only if not using exact match
+    judge = None if use_exact_match else LMJudge(model=judge_model, ensemble_k=ensemble_k)
     
     alignment_scores = []
     query_times = []
@@ -541,24 +547,34 @@ async def analyze_ask_results(
     total_input_tokens = 0
     total_output_tokens = 0
     
-    for i, result in enumerate(tqdm(results, desc="Running LLM judge")):
+    desc = "Running exact match" if use_exact_match else "Running LLM judge"
+    for i, result in enumerate(tqdm(results, desc=desc)):
         # Skip error results
         if result.system_answer.startswith("[ERROR]"):
-            print(f"\n\033[91mSkipping judge for query {i} due to error.\033[0m")
+            print(f"\n\033[91mSkipping evaluation for query {i} due to error.\033[0m")
             continue
         
-        # Run judge with details
-        judge_result = judge.evaluate_with_details(
-            question=result.query.question,
-            system_answer=result.system_answer,
-            correct_answer=result.query.ground_truth_answer,
-        )
+        if use_exact_match:
+            # Use exact match
+            aligned = calculate_exact_match(
+                system_answer=result.system_answer,
+                ground_truth_answer=result.query.ground_truth_answer,
+            )
+            alignment_scores.append(1 if aligned else 0)
+        else:
+            # Run judge with details
+            judge_result = judge.evaluate_with_details(
+                question=result.query.question,
+                system_answer=result.system_answer,
+                correct_answer=result.query.ground_truth_answer,
+            )
+            
+            aligned = judge_result["aligned"]
+            alignment_scores.append(1 if aligned else 0)
+            total_input_tokens += judge_result.get("input_tokens", 0)
+            total_output_tokens += judge_result.get("output_tokens", 0)
         
-        aligned = judge_result["aligned"]
-        alignment_scores.append(1 if aligned else 0)
         query_times.append(result.time_taken)
-        total_input_tokens += judge_result.get("input_tokens", 0)
-        total_output_tokens += judge_result.get("output_tokens", 0)
         
         if not aligned:
             misaligned_indices.append(i)
@@ -566,34 +582,44 @@ async def analyze_ask_results(
         # Progress update
         if (i + 1) % 5 == 0:
             current_avg = np.mean(alignment_scores) if alignment_scores else 0
-            print(f"\n\033[93m--- Judge Progress ({i + 1}/{len(results)}) ---\033[0m")
-            print(f"Running alignment score: {current_avg:.2%}")
+            metric_name = "exact match" if use_exact_match else "alignment"
+            print(f"\n\033[93m--- Evaluation Progress ({i + 1}/{len(results)}) ---\033[0m")
+            print(f"Running {metric_name} score: {current_avg:.2%}")
             print(f"Running avg query time: {np.mean(query_times):.2f}s")
     
-    # Calculate final metrics
-    avg_alignment = np.mean(alignment_scores) if alignment_scores else 0
-    avg_query_time = np.mean(query_times) if query_times else 0
-    
+    # Build results dictionary (same structure as search benchmark)
+    metric_name = "exact_match_accuracy" if use_exact_match else "alignment_score"
+    metric_results = {metric_name: alignment_scores}
+
     results_dict = {
-        "avg_alignment_score": avg_alignment,
-        "alignment_scores": alignment_scores,
-        "avg_query_time": avg_query_time,
+        "avg_query_time": np.mean(query_times) if query_times else 0,
         "query_times": query_times,
         "misaligned_indices": misaligned_indices,
         "total_input_tokens": total_input_tokens,
         "total_output_tokens": total_output_tokens,
-        "judge_model": judge_model,
-        "ensemble_k": ensemble_k,
+        "metric": "exact_match" if use_exact_match else "llm_judge",
     }
-    
+
+    for name, scores in metric_results.items():
+        results_dict[f"avg_{name}"] = np.mean(scores) if scores else 0
+        results_dict[f"{name}_scores"] = scores
+
+    if not use_exact_match:
+        results_dict["judge_model"] = judge_model
+        results_dict["ensemble_k"] = ensemble_k
+
     # Print summary
     print("\n\033[92m===== Ask Benchmark Results =====\033[0m")
     print(f"Number of queries evaluated: {len(alignment_scores)}")
-    print(f"Alignment Score: {avg_alignment:.2%}")
+    for name, scores in metric_results.items():
+        if scores:
+            display_name = name.replace("_", " ").title()
+            print(f"Average {display_name}: {np.mean(scores):.2%}")
     print(f"Misaligned queries: {len(misaligned_indices)}")
-    print(f"Average Query Time: {avg_query_time:.2f} seconds")
-    print(f"Total Judge Tokens: {total_input_tokens + total_output_tokens}")
-    
+    print(f"Average Query Time: {results_dict['avg_query_time']:.2f} seconds")
+    if not use_exact_match:
+        print(f"Total Judge Tokens: {total_input_tokens + total_output_tokens}")
+
     return results_dict
 
 
