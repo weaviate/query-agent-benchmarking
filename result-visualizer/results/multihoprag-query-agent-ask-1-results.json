@@ -1,0 +1,27 @@
+{
+  "num_trials": 1,
+  "trials": [
+    {
+      "trial": 1,
+      "avg_query_time": 11.424237899780273,
+      "avg_exact_match_accuracy": 0.4
+    }
+  ],
+  "avg_query_time_mean": 11.424237899780273,
+  "avg_query_time_std": 0.0,
+  "avg_query_time_min": 11.424237899780273,
+  "avg_query_time_max": 11.424237899780273,
+  "avg_exact_match_accuracy_mean": 0.4,
+  "avg_exact_match_accuracy_std": 0.0,
+  "avg_exact_match_accuracy_min": 0.4,
+  "avg_exact_match_accuracy_max": 0.4,
+  "timestamp": "2026-02-11T11:29:31.210959",
+  "config": {
+    "dataset": "multihoprag",
+    "agent_name": "query-agent-ask",
+    "num_trials": 1,
+    "use_async": true,
+    "batch_size": 5,
+    "max_concurrent": 5
+  }
+}

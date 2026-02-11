@@ -59,7 +59,7 @@ from .config import (
     supported_search_datasets,
     supported_ask_datasets,
 )
-from .result_serialization import save_trial_results, save_trial_metrics, save_aggregated_results
+from .result_serialization import save_trial_results, save_ask_trial_results, save_trial_metrics, save_aggregated_results
 
 __all__ = [
     # Main entry points
@@ -106,6 +106,7 @@ __all__ = [
     "calculate_exact_match",
     # Result serialization
     "save_trial_results",
+    "save_ask_trial_results",
     "save_trial_metrics",
     "save_aggregated_results",
 ]

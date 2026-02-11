@@ -28,6 +28,7 @@ from query_agent_benchmarking.query_agent_benchmark import (
 )
 from query_agent_benchmarking.result_serialization import (
     save_trial_metrics,
+    save_ask_trial_results,
     save_aggregated_results,
 )
 from query_agent_benchmarking.utils import (
@@ -200,7 +201,18 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
         score_key = "avg_exact_match_accuracy" if use_exact_match else "avg_alignment_score"
         print(f"  {score_key}: {metrics[score_key]:.2%}")
         print(f"  Avg Query Time: {metrics['avg_query_time']:.2f}s")
-        
+
+        # Extract per-query scores for trial results
+        scores_key = "exact_match_accuracy_scores" if use_exact_match else "alignment_score_scores"
+        alignment_scores = metrics.get(scores_key, [])
+
+        save_ask_trial_results(
+            results=results,
+            config=config,
+            trial_number=trial+1,
+            alignment_scores=alignment_scores,
+        )
+
         save_trial_metrics(
             metrics=metrics,
             config=config,
