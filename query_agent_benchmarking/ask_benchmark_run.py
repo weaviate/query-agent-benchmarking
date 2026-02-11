@@ -8,7 +8,7 @@ evaluation for semantic alignment.
 
 import asyncio
 from pathlib import Path
-from typing import Optional, Dict, Any, Union, List
+from typing import Optional, Any, Union
 
 from query_agent_benchmarking.agent import AskAgentBuilder
 from query_agent_benchmarking.models import (
@@ -40,7 +40,7 @@ from query_agent_benchmarking.config import supported_ask_datasets
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "benchmark-config.yml"
 
 
-async def _run_ask_eval(config: Dict[str, Any]) -> Dict[str, Any]:
+async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     """Internal async implementation for ask evaluation."""
     agents_host = config.get("agents_host", "https://api.agents.weaviate.io")
     use_async = config.get("use_async", True)
@@ -78,11 +78,11 @@ async def _run_ask_eval(config: Dict[str, Any]) -> Dict[str, Any]:
                 raise ValueError(
                     f"Unknown ask dataset: '{queries_input}'. "
                     f"Supported datasets: {supported_ask_datasets}. "
-                    f"For custom datasets, use AskQueriesCollection or List[InMemoryAskQuery]."
+                    f"For custom datasets, use AskQueriesCollection or list[InMemoryAskQuery]."
                 )
         else:
             raise ValueError(
-                f"Queries must be a built-in dataset name (str), AskQueriesCollection, or List[InMemoryAskQuery]. "
+                f"Queries must be a built-in dataset name (str), AskQueriesCollection, or list[InMemoryAskQuery]. "
                 f"Got: {type(queries_input)}"
             )
     else:
@@ -203,7 +203,7 @@ async def _run_ask_eval(config: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def run_ask_eval(
-    queries: Optional[Union[AskQueriesCollection, List[InMemoryAskQuery], str]] = None,
+    queries: Optional[Union[AskQueriesCollection, list[InMemoryAskQuery], str]] = None,
     config_path: Optional[str] = None,
     dataset: Optional[str] = None,
     docs_collection: Optional[DocsCollection] = None,
@@ -223,7 +223,7 @@ def run_ask_eval(
     random_seed: Optional[int] = None,
     embedding_model: Optional[str] = None,
     **kwargs
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Run an ask benchmark evaluation.
     
@@ -233,7 +233,7 @@ def run_ask_eval(
     Args:
         queries: Built-in dataset name (e.g., "irpapers-visual-queries"),
                  AskQueriesCollection for custom Weaviate collections,
-                 or List[InMemoryAskQuery] for direct query objects.
+                 or list[InMemoryAskQuery] for direct query objects.
         config_path: Path to YAML config file. Defaults to built-in config.
         dataset: Name of built-in dataset for agent initialization (e.g., "irpapers/images").
         docs_collection: DocsCollection for custom datasets.

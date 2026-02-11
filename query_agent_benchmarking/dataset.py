@@ -1,10 +1,10 @@
 import json
 import random
-import os
-from typing import Optional, List
+from typing import Optional
 
-import weaviate
 from datasets import load_dataset
+
+from query_agent_benchmarking.utils import get_weaviate_client
 
 from query_agent_benchmarking.models import InMemoryQuery, InMemoryAskQuery, NuggetInfo
 
@@ -113,29 +113,31 @@ def _in_memory_dataset_loader_lotte(dataset_name: str):
 def _in_memory_dataset_loader_enron():
     emails = _load_dataset_from_hf_hub("weaviate/enron-qa-emails-dasovich-j")
     questions = _load_dataset_from_hf_hub("weaviate/enron-qa-questions-dasovich-j")
+    parsed_questions = []
     for question in questions:
         dataset_ids = question.pop('dataset_id')
         # Need to convert these to strings
-        questions.append(
+        parsed_questions.append(
             InMemoryQuery(
                 question=question["question"],
                 query_id=question["query_id"],
                 dataset_ids=[dataset_ids] if not isinstance(dataset_ids, list) else dataset_ids
             )
         )
-    return emails, questions
+    return emails, parsed_questions
 
 def _in_memory_dataset_loader_wixqa():
     documents = _load_dataset_from_hf_hub(filepath="Wix/WixQA",subset="wix_kb_corpus")
     questions = _load_dataset_from_hf_hub(filepath="Wix/WixQA",subset="wixqa_expertwritten")
+    parsed_questions = []
     for question in questions:
         article_ids = question.pop('article_ids')
-        questions.append(InMemoryQuery(
+        parsed_questions.append(InMemoryQuery(
             question=question["question"],
             query_id=question["query_id"],
             dataset_ids=[article_ids] if not isinstance(article_ids, list) else article_ids
         ))
-    return documents, questions
+    return documents, parsed_questions
 
 def _in_memory_dataset_loader_freshstack(subset: str):    
     docs = _load_dataset_from_hf_hub(filepath="freshstack/corpus-oct-2024", subset=subset)
@@ -248,10 +250,7 @@ def load_queries_from_weaviate_collection(
     query_content_key: str, 
     gold_ids_key: str
 ):
-    weaviate_client = weaviate.connect_to_weaviate_cloud(
-        cluster_url=os.getenv("WEAVIATE_URL"),
-        auth_credentials=weaviate.auth.AuthApiKey(api_key=os.getenv("WEAVIATE_API_KEY"))
-    )
+    weaviate_client = get_weaviate_client()
 
     query_collection = weaviate_client.collections.get(collection_name)
     
@@ -284,7 +283,7 @@ def split_dataset(dataset, train_ratio=0.8, shuffle=True):
 # Ask Query Loaders
 # ============================================================================
 
-def in_memory_ask_dataset_loader(dataset_name: str) -> List[InMemoryAskQuery]:
+def in_memory_ask_dataset_loader(dataset_name: str) -> list[InMemoryAskQuery]:
     """
     Load ask queries from a supported dataset.
     
@@ -304,13 +303,13 @@ def in_memory_ask_dataset_loader(dataset_name: str) -> List[InMemoryAskQuery]:
         )
 
 
-def _in_memory_ask_loader_irpapers(dataset_name: str) -> List[InMemoryAskQuery]:
+def _in_memory_ask_loader_irpapers(dataset_name: str) -> list[InMemoryAskQuery]:
     """Load the IRPapers ask queries dataset."""
     print(f"Loading IRPapers ask queries for {dataset_name}...")
     
     _questions = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-queries")
     
-    queries: List[InMemoryAskQuery] = []
+    queries: list[InMemoryAskQuery] = []
     for item in _questions:
         queries.append(InMemoryAskQuery(
             question=item["question"],
@@ -326,17 +325,14 @@ def load_ask_queries_from_weaviate(
     query_content_key: str,
     answer_key: str,
     oracle_context_id_key: Optional[str] = None,
-) -> List[InMemoryAskQuery]:
+) -> list[InMemoryAskQuery]:
     """
     Load ask queries from a custom Weaviate collection.
     
     Use this for custom collections not in the built-in registry.
     For built-in datasets, use in_memory_ask_dataset_loader() instead.
     """
-    client = weaviate.connect_to_weaviate_cloud(
-        cluster_url=os.getenv("WEAVIATE_URL"),
-        auth_credentials=weaviate.auth.AuthApiKey(os.getenv("WEAVIATE_API_KEY")),
-    )
+    client = get_weaviate_client()
     
     try:
         collection = client.collections.get(collection_name)

@@ -1,7 +1,7 @@
 import os
 import yaml
 import re
-from typing import Dict, Any
+from typing import Any
 
 import weaviate
 
@@ -25,11 +25,6 @@ def make_json_serializable(obj):
     elif isinstance(obj, dict):
         # Recursively convert dict values
         return {k: make_json_serializable(v) for k, v in obj.items()}
-    elif isinstance(obj, InMemoryQuery):
-        return {
-            "question": obj.question,
-            "dataset_ids": obj.dataset_ids
-        }
     elif isinstance(obj, list):
         # Recursively convert list items
         return [make_json_serializable(item) for item in obj]
@@ -82,7 +77,7 @@ def load_config(config_path: str):
         config = yaml.safe_load(f)
     return config
 
-def merge_configs(file_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
+def merge_configs(file_config: dict[str, Any], override_config: dict[str, Any]) -> dict[str, Any]:
     """Merge file-based config with programmatic overrides."""
     merged = file_config.copy()
     
@@ -98,7 +93,7 @@ def merge_configs(file_config: Dict[str, Any], override_config: Dict[str, Any]) 
     
     return merged
 
-def get_provider_headers(provider: str) -> Dict[str, str]:
+def get_provider_headers(provider: str) -> dict[str, str]:
     """
     Get API key headers for third-party embedding providers.
     
@@ -134,7 +129,7 @@ def parse_embedding_model(embedding_model: str) -> tuple[str, str]:
         return provider.lower(), model_name
     return "weaviate", embedding_model
     
-def get_weaviate_client(headers: Dict[str, str] = None):
+def get_weaviate_client(headers: dict[str, str] = None):
     """
     Connect to Weaviate Cloud with optional headers for third-party providers.
     
@@ -150,7 +145,7 @@ def get_weaviate_client(headers: Dict[str, str] = None):
         headers=headers or {}
     )
 
-def print_results_comparison(all_results: Dict[str, Dict[str, Any]]) -> None:
+def print_results_comparison(all_results: dict[str, dict[str, Any]]) -> None:
     """Print key metrics for each agent."""
     if not all_results:
         return

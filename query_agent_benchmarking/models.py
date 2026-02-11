@@ -1,4 +1,4 @@
-from typing import Optional, Dict, List, Any
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -14,7 +14,7 @@ class NuggetInfo(BaseModel):
     """Information about a single nugget (used by FreshStack)."""
     nugget_id: str
     text: str
-    relevant_corpus_ids: List[str]
+    relevant_corpus_ids: list[str]
 
 
 class InMemoryQuery(BaseModel):
@@ -23,20 +23,12 @@ class InMemoryQuery(BaseModel):
     dataset_ids: list[str]
     query_id: Optional[str] = None
     # FreshStack nugget fields (optional)
-    nugget_data: Optional[List[NuggetInfo]] = None
-    ids_per_nugget: Optional[Dict[str, List[str]]] = None
+    nugget_data: Optional[list[NuggetInfo]] = None
+    ids_per_nugget: Optional[dict[str, list[str]]] = None
     num_nuggets: Optional[int] = None
 
 
-class InMemorySearchQuery(BaseModel):
-    """Query model for search benchmarks (ranked retrieval evaluation)."""
-    question: str
-    dataset_ids: list[str]  # Ground truth document IDs for recall/nDCG calculation
-    query_id: Optional[str] = None
-    # FreshStack nugget fields (optional)
-    nugget_data: Optional[List[NuggetInfo]] = None
-    ids_per_nugget: Optional[Dict[str, List[str]]] = None
-    num_nuggets: Optional[int] = None
+InMemorySearchQuery = InMemoryQuery
 
 
 class InMemoryAskQuery(BaseModel):
@@ -58,12 +50,7 @@ class QueryResult(BaseModel):
     time_taken: float
 
 
-class SearchResult(BaseModel):
-    """Result from a search benchmark query."""
-    query: InMemorySearchQuery
-    query_ground_truth_id: list[str]
-    retrieved_ids: list[ObjectID]
-    time_taken: float
+SearchResult = QueryResult
 
 
 class AskResult(BaseModel):

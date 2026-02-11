@@ -1,21 +1,17 @@
 from pathlib import Path
-from typing import Any, Callable, Dict, Mapping, Optional
+from typing import Any, Callable, Mapping, Optional
 import yaml
 
 from pydantic import AnyHttpUrl
 import weaviate.collections.classes.config as wvcc
 
 from .spec import DatasetSpec
+from ..utils import pascalize_name, parse_embedding_model
 
 TEXT = wvcc.DataType.TEXT
 BLOB = wvcc.DataType.BLOB
 INT = wvcc.DataType.INT
 FIELD = wvcc.Tokenization.FIELD
-
-def pascalize_name(name: str) -> str:
-    """Convert a name to PascalCase."""
-    return "".join(word.capitalize() for word in name.replace("-", "_").split("_"))
-
 
 def dataset_id_property() -> wvcc.Property:
     """Standard dataset_id property for filtering."""
@@ -39,7 +35,7 @@ class DatasetSpecBuilder:
         self._vector_config: Any = None
         self._field_mappings: dict[str, str] = {}
         self._id_field: str = "dataset_id"
-        self._custom_mapper: Optional[Callable[[Mapping[str, Any]], Dict[str, Any]]] = None
+        self._custom_mapper: Optional[Callable[[Mapping[str, Any]], dict[str, Any]]] = None
         self._config: dict[str, Any] = self._load_config(config_path)
 
     def _load_config(self, path: Optional[str | Path] = None) -> dict[str, Any]:
@@ -131,20 +127,8 @@ class DatasetSpecBuilder:
     # --- Vectorizers ---
 
     def _parse_embedding_model(self, embedding_model: str) -> tuple[str, str]:
-        """
-        Parse embedding model string into provider and model name.
-        
-        Args:
-            embedding_model: Format "provider/model" (e.g., "cohere/embed-4")
-                           or just "model" (defaults to "weaviate" provider)
-        
-        Returns:
-            Tuple of (provider, model_name)
-        """
-        if "/" in embedding_model:
-            provider, model_name = embedding_model.split("/", 1)
-            return provider.lower(), model_name
-        return "weaviate", embedding_model
+        """Parse embedding model string into provider and model name."""
+        return parse_embedding_model(embedding_model)
 
     def _get_vectorizer_for_provider(self, provider: str, model: str) -> Any:
         """
@@ -283,7 +267,7 @@ class DatasetSpecBuilder:
 
     def with_custom_mapper(
         self,
-        mapper: Callable[[Mapping[str, Any]], Dict[str, Any]],
+        mapper: Callable[[Mapping[str, Any]], dict[str, Any]],
     ) -> "DatasetSpecBuilder":
         """Override the auto-generated property mapper."""
         self._custom_mapper = mapper
@@ -310,12 +294,12 @@ class DatasetSpecBuilder:
             item_to_props=item_to_props,
         )
 
-    def _build_mapper(self) -> Callable[[Mapping[str, Any]], Dict[str, Any]]:
+    def _build_mapper(self) -> Callable[[Mapping[str, Any]], dict[str, Any]]:
         """Build the property mapper from field mappings."""
         field_mappings = self._field_mappings.copy()
         id_field = self._id_field
 
-        def mapper(item: Mapping[str, Any]) -> Dict[str, Any]:
+        def mapper(item: Mapping[str, Any]) -> dict[str, Any]:
             result = {}
             for prop_name, source_field in field_mappings.items():
                 if source_field in item:
