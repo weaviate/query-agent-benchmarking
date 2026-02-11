@@ -28,6 +28,7 @@ from query_agent_benchmarking.query_agent_benchmark import (
 )
 from query_agent_benchmarking.result_serialization import (
     save_trial_metrics,
+    save_ask_trial_results,
     save_aggregated_results,
 )
 from query_agent_benchmarking.utils import (
@@ -35,6 +36,7 @@ from query_agent_benchmarking.utils import (
     merge_configs,
 )
 from query_agent_benchmarking.config import supported_ask_datasets
+from query_agent_benchmarking.qa_system_prompt_registry import get_system_prompt
 
 
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "benchmark-config.yml"
@@ -113,14 +115,25 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
         queries = queries[:config["num_samples"]]
         print(f"Using a subset of {config['num_samples']} queries.")
 
+    # Determine which metric to use
+    # MultiHop-RAG uses exact match, others use LLM judge
+    use_exact_match = config.get("use_exact_match", False)
+    if isinstance(queries_input, str) and queries_input == "multihoprag":
+        use_exact_match = True
+
+    # Set system prompt from config override, or fall back to registry
+    system_prompt = config.get("system_prompt")
+    if not system_prompt and isinstance(queries_input, str):
+        system_prompt = get_system_prompt(queries_input)
+
     # Build agent
     embedding_model = config.get("embedding_model")
     agent_name = config.get("ask_agent_name", "query-agent-ask")
     external_service_host = config.get("external_service_host")
-    
+
     # Add agent_name to config for result serialization
     config["agent_name"] = agent_name
-    
+
     if docs_collection:
         ask_agent = AskAgentBuilder(
             agent_name=agent_name,
@@ -129,6 +142,7 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
             use_async=use_async,
             embedding_model=embedding_model,
             external_service_host=external_service_host,
+            system_prompt=system_prompt,
         )
     elif dataset_name:
         ask_agent = AskAgentBuilder(
@@ -138,11 +152,12 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
             use_async=use_async,
             embedding_model=embedding_model,
             external_service_host=external_service_host,
+            system_prompt=system_prompt,
         )
     else:
         raise ValueError("Must provide 'dataset' or 'docs_collection' for agent initialization")
 
-    # LLM Judge configuration
+    # LLM Judge configuration (only used if not using exact match)
     judge_model = config.get("judge_model", "openai/gpt-4.1")
     ensemble_k = config.get("ensemble_k", 3)
     
@@ -174,17 +189,30 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
                 sleep_between_requests=config.get("sleep_between_requests", 0.0),
             )
 
-        # Analyze results with LLM judge
+        # Analyze results with appropriate metric
         metrics = await analyze_ask_results(
             results=results,
             judge_model=judge_model,
             ensemble_k=ensemble_k,
+            use_exact_match=use_exact_match,
         )
         
         print(f"\n\033[92mTrial {trial+1} Results:\033[0m")
-        print(f"  Alignment Score: {metrics['avg_alignment_score']:.2%}")
+        score_key = "avg_exact_match_accuracy" if use_exact_match else "avg_alignment_score"
+        print(f"  {score_key}: {metrics[score_key]:.2%}")
         print(f"  Avg Query Time: {metrics['avg_query_time']:.2f}s")
-        
+
+        # Extract per-query scores for trial results
+        scores_key = "exact_match_accuracy_scores" if use_exact_match else "alignment_score_scores"
+        alignment_scores = metrics.get(scores_key, [])
+
+        save_ask_trial_results(
+            results=results,
+            config=config,
+            trial_number=trial+1,
+            alignment_scores=alignment_scores,
+        )
+
         save_trial_metrics(
             metrics=metrics,
             config=config,

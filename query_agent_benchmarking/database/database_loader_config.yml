@@ -1,6 +1,6 @@
-dataset_name: freshstack-langchain
+dataset_name: multihoprag
 
-embedding_model: "voyageai/voyage-3-large"
+embedding_model: ""
 
 # MUVERA+HNSW parameters
 use_MUVERA_encoding: False

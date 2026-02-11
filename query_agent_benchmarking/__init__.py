@@ -48,6 +48,8 @@ from .metrics import (
     # LLM Judge
     LMJudge,
     calculate_alignment_score,
+    # Exact Match
+    calculate_exact_match,
 )
 
 from .experimental.create_benchmark import create_benchmark
@@ -57,7 +59,7 @@ from .config import (
     supported_search_datasets,
     supported_ask_datasets,
 )
-from .result_serialization import save_trial_results, save_trial_metrics, save_aggregated_results
+from .result_serialization import save_trial_results, save_ask_trial_results, save_trial_metrics, save_aggregated_results
 
 __all__ = [
     # Main entry points
@@ -100,8 +102,11 @@ __all__ = [
     # Metrics - LLM Judge
     "LMJudge",
     "calculate_alignment_score",
+    # Metrics - Exact Match
+    "calculate_exact_match",
     # Result serialization
     "save_trial_results",
+    "save_ask_trial_results",
     "save_trial_metrics",
     "save_aggregated_results",
 ]

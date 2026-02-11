@@ -10,6 +10,7 @@ from .lmjudge_alignment import (
     AssessAlignmentScore,
     calculate_alignment_score,
 )
+from .exact_match import calculate_exact_match
 
 __all__ = [
     # IR Metrics
@@ -22,5 +23,7 @@ __all__ = [
     "LMJudge",
     "AssessAlignmentScore",
     "calculate_alignment_score",
+    # Exact Match Metric
+    "calculate_exact_match",
 ]
 

@@ -27,6 +27,7 @@ supported_search_datasets = (
 supported_ask_datasets = (
     "irpapers/text",    # Uses IRPapersText_Default collection
     "irpapers/images",  # Uses IRPapersImages_Default collection
+    "multihoprag",      # Uses MultiHopRAG_Default collection
 )
 
 supported_embedding_models = (
