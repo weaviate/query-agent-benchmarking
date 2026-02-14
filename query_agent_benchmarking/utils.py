@@ -86,9 +86,9 @@ def merge_configs(file_config: dict[str, Any], override_config: dict[str, Any]) 
     # Filter out None values from override_config
     filtered_overrides = {k: v for k, v in override_config.items() if v is not None}
     
-    # Special handling: if docs_collection is provided, remove dataset from merged config
-    if 'docs_collection' in filtered_overrides and 'dataset' in merged:
-        del merged['dataset']
+    # Special handling: if docs_collection is provided, remove search_dataset from merged config
+    if 'docs_collection' in filtered_overrides and 'search_dataset' in merged:
+        del merged['search_dataset']
     
     # Apply overrides
     merged.update(filtered_overrides)

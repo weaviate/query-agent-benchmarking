@@ -10,7 +10,7 @@ from query_agent_benchmarking.utils import load_config, merge_configs, print_res
 
 def compare_embeddings(
     config_path: Optional[str] = None,
-    dataset: Optional[str] = None,
+    search_dataset: Optional[str] = None,
     agent_names: Optional[str | list[str]] = None,
     embedding_models: Optional[list[str]] = None,
     num_trials: Optional[int] = None,
@@ -57,7 +57,7 @@ def compare_embeddings(
     
     # Build override config
     override_config = {
-        "dataset": dataset,
+        "search_dataset": search_dataset,
         "num_trials": num_trials,
         "use_subset": use_subset,
         "num_samples": num_samples,
@@ -115,7 +115,7 @@ async def _run_eval_with_temp_collection(
 ) -> dict[str, Any]:
     """Run evaluation with temporary collection for specified embedding model."""
     
-    dataset_name = config.get("dataset")
+    dataset_name = config.get("search_dataset")
     
     if not dataset_name:
         raise ValueError("Embedding model comparison only works with built-in datasets")

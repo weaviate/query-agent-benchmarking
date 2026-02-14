@@ -50,10 +50,10 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
     use_async = config.get("use_async", True)
     
     # Determine if using built-in dataset or custom collection
-    dataset_name = config.get("dataset")
+    dataset_name = config.get("search_dataset")
     docs_collection = config.get("docs_collection")
     queries_input = config.get("queries")
-    
+
     if dataset_name:
         # Built-in dataset paths
         if dataset_name not in supported_search_datasets:
@@ -61,10 +61,10 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
                 f"Dataset {dataset_name} is not supported. "
                 f"Supported datasets are: {supported_search_datasets}"
             )
-        
+
         _, queries = in_memory_dataset_loader(dataset_name)
         dataset_identifier = dataset_name
-        
+
     elif docs_collection and queries_input:
         # Custom collection path
         if not isinstance(docs_collection, DocsCollection):
@@ -98,7 +98,7 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
         
     else:
         raise ValueError(
-            "Must provide either 'dataset' (for built-in) or "
+            "Must provide either 'search_dataset' (for built-in) or "
             "'docs_collection' + 'queries' (for custom)"
         )
     
@@ -204,7 +204,7 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
 
 def run_search_eval(
     config_path: Optional[str] = None,
-    dataset: Optional[str] = None,
+    search_dataset: Optional[str] = None,
     docs_collection: Optional[DocsCollection] = None,
     queries: Optional[Union[QueriesCollection, list[InMemoryQuery], list[InMemorySearchQuery]]] = None,
     agent_name: Optional[str] = None,
@@ -223,12 +223,12 @@ def run_search_eval(
 ) -> dict[str, Any]:
     """
     Run a search benchmark evaluation.
-    
+
     Evaluates ranked retrieval performance using IR metrics like Recall@K, nDCG@K.
-    
+
     Args:
         config_path: Path to YAML config file. Defaults to built-in config.
-        dataset: Name of built-in dataset (e.g., "beir/scifact", "enron").
+        search_dataset: Name of built-in dataset (e.g., "beir/scifact", "enron").
         docs_collection: DocsCollection for custom datasets.
         queries: Queries as QueriesCollection, list[InMemoryQuery], or list[InMemorySearchQuery].
         agent_name: Agent to use ("query-agent-search-only", "hybrid-search", or "external_service").
@@ -256,7 +256,7 @@ def run_search_eval(
     
     # Build override config from parameters
     override_config = {
-        "dataset": dataset,
+        "search_dataset": search_dataset,
         "docs_collection": docs_collection,
         "queries": queries,
         "agent_name": agent_name,
@@ -273,17 +273,17 @@ def run_search_eval(
         "embedding_model": embedding_model,
         **kwargs
     }
-    
+
     # Merge configs
     final_config = merge_configs(file_config, override_config)
-    
+
     # Run evaluation
     return asyncio.run(_run_search_eval(final_config))
 
 
 def run_search_evals(
     config_path: Optional[str] = None,
-    dataset: Optional[str] = None,
+    search_dataset: Optional[str] = None,
     docs_collection: Optional[DocsCollection] = None,
     queries: Optional[Union[QueriesCollection, list[InMemoryQuery], list[InMemorySearchQuery]]] = None,
     agent_names: Optional[Union[str, list[str]]] = None,
@@ -317,7 +317,7 @@ def run_search_evals(
     
     # Build override config once (shared by all agents except agent_name)
     override_config = {
-        "dataset": dataset,
+        "search_dataset": search_dataset,
         "docs_collection": docs_collection,
         "queries": queries,
         "num_trials": num_trials,

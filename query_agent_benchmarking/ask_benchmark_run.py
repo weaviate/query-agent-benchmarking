@@ -48,7 +48,7 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     use_async = config.get("use_async", True)
     
     # Get query data
-    dataset_name = config.get("dataset")
+    dataset_name = config.get("ask_dataset")
     docs_collection = config.get("docs_collection")
     queries_input = config.get("queries")
     
@@ -155,7 +155,7 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
             system_prompt=system_prompt,
         )
     else:
-        raise ValueError("Must provide 'dataset' or 'docs_collection' for agent initialization")
+        raise ValueError("Must provide 'ask_dataset' or 'docs_collection' for agent initialization")
 
     # LLM Judge configuration (only used if not using exact match)
     judge_model = config.get("judge_model", "openai/gpt-4.1")
@@ -233,7 +233,7 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
 def run_ask_eval(
     queries: Optional[Union[AskQueriesCollection, list[InMemoryAskQuery], str]] = None,
     config_path: Optional[str] = None,
-    dataset: Optional[str] = None,
+    ask_dataset: Optional[str] = None,
     docs_collection: Optional[DocsCollection] = None,
     agent_name: Optional[str] = None,
     judge_model: Optional[str] = None,
@@ -263,7 +263,7 @@ def run_ask_eval(
                  AskQueriesCollection for custom Weaviate collections,
                  or list[InMemoryAskQuery] for direct query objects.
         config_path: Path to YAML config file. Defaults to built-in config.
-        dataset: Name of built-in dataset for agent initialization (e.g., "irpapers/images").
+        ask_dataset: Name of built-in dataset for agent initialization (e.g., "irpapers/images").
         docs_collection: DocsCollection for custom datasets.
         agent_name: Agent to use ("query-agent-ask" or "external").
         judge_model: LLM model for the judge (e.g., "openai/gpt-4.1").
@@ -294,7 +294,7 @@ def run_ask_eval(
         >>> # Using built-in dataset
         >>> results = run_ask_eval(
         ...     queries="irpapers-visual-queries",
-        ...     dataset="irpapers/images",
+        ...     ask_dataset="irpapers/images",
         ... )
         >>> 
         >>> # Using custom queries
@@ -312,7 +312,7 @@ def run_ask_eval(
     # Build override config from parameters
     override_config = {
         "queries": queries,
-        "dataset": dataset,
+        "ask_dataset": ask_dataset,
         "docs_collection": docs_collection,
         "agent_name": agent_name,
         "judge_model": judge_model,
