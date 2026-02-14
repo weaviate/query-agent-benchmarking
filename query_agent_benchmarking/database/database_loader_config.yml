@@ -1,6 +1,6 @@
-dataset_name: multihoprag
+dataset_name: bright/biology
 
-embedding_model: ""
+embedding_model: "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
 
 # MUVERA+HNSW parameters
 use_MUVERA_encoding: False

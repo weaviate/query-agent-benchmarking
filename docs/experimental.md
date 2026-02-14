@@ -1,4 +1,20 @@
-# 4. Hard Negative Miner
+# Experimental
+
+- Generate Evals
+- Hard Negative Miner
+
+### [Experimental] Generate Evals
+
+```python
+import query_agent_benchmarking
+
+query_agent_benchmarking.create_benchmark(
+    docs_source_collection="BrightBiology",
+    benchmark_collection_name="SyntheticBrightBiology",
+)
+```
+
+### [Experimental] Hard Negative Miner
 
 As a quick reminder, in Information Retrieval benchmarking, for each query, we are looking to see where the labeled ground truth, "gold", document is ranked by the search system. Now let's say the search system indeed found the gold document in the top 10, but it is ranked at position 4, :/. That's still pretty encouraging if we are searching out of say, 100s of thousands, millions, ... of objects!
 
