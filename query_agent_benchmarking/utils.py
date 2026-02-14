@@ -73,9 +73,11 @@ def add_tag_to_name(original_name: str, tag: str) -> str:
     return f"{original_name}_{tag}"
 
 def load_config(config_path: str):
+    if config_path is None or not os.path.exists(config_path):
+        return {}
     with open(config_path) as f:
         config = yaml.safe_load(f)
-    return config
+    return config or {}
 
 def merge_configs(file_config: dict[str, Any], override_config: dict[str, Any]) -> dict[str, Any]:
     """Merge file-based config with programmatic overrides."""
