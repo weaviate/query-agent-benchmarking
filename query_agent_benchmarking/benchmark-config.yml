@@ -24,7 +24,7 @@ use_async: True
 max_concurrent: 5
 sleep_between_requests: 0
 
-use_subset: True
+use_subset: False
 num_samples: 50
 
 num_trials: 1
