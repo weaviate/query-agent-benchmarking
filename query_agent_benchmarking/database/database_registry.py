@@ -67,6 +67,13 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_dataset_id()
         .with_text2vec()
         .build()),
+
+    (DatasetSpecBuilder("vidore_v3_hr")
+        .with_static_name("Vidore_v3_hr")
+        .with_text_property("content", source_field="markdown")
+        .with_dataset_id()
+        .with_text2vec()
+        .build()),
 ]
 
 

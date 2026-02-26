@@ -1,4 +1,4 @@
-dataset_name: bright/biology
+dataset_name: vidore_v3_hr
 
 embedding_model: "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
 

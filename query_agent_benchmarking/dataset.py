@@ -33,6 +33,8 @@ def in_memory_dataset_loader(dataset_name: str):
         return _in_memory_dataset_loader_irpapers(dataset_name)
     elif dataset_name == "multihoprag":
         return _in_memory_dataset_loader_multihoprag()
+    elif dataset_name == "vidore_v3_hr":
+        return _in_memory_dataset_loader_vidore()
     else:
         return None
 
@@ -203,6 +205,42 @@ def _in_memory_dataset_loader_irpapers(dataset_name: str):
             dataset_ids=[question["dataset_id"]]
         ))
 
+    return docs, questions
+
+def _in_memory_dataset_loader_vidore():
+    print("Loading ViDoRe dataset...")
+
+    corpus = load_dataset("vidore/vidore_v3_hr", "corpus")["test"]
+    docs = []
+    for item in corpus:
+        docs.append({
+            "markdown": item["markdown"],
+            "dataset_id": str(item["corpus_id"]),
+        })
+
+    raw_qrels = load_dataset("vidore/vidore_v3_hr", "qrels")["test"]
+    qrels = {}
+    for item in raw_qrels:
+        if item["score"] > 0:
+            query_id = str(item["query_id"])
+            if query_id not in qrels:
+                qrels[query_id] = []
+            qrels[query_id].append(str(item["corpus_id"]))
+
+    raw_queries = load_dataset("vidore/vidore_v3_hr", "queries")["test"]
+    questions = []
+    for item in raw_queries:
+        query_id = str(item["query_id"])
+        if query_id in qrels:
+            questions.append(
+                InMemoryQuery(
+                    question=item["query"],
+                    query_id=query_id,
+                    dataset_ids=qrels[query_id],
+                )
+            )
+
+    print(f"Loaded {len(docs)} documents and {len(questions)} questions")
     return docs, questions
 
 def _in_memory_dataset_loader_multihoprag():

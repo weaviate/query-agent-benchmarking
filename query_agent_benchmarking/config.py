@@ -21,6 +21,7 @@ supported_search_datasets = (
     "lotte/lifestyle/test/search",
     "lotte/recreation/test/forum",
     "lotte/recreation/test/search",
+    "vidore_v3_hr",
     "wixqa"
 )
 
