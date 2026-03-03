@@ -6,7 +6,14 @@ import hashlib
 
 from query_agent_benchmarking.database import create_collection_with_vector_config, resolve_spec
 from query_agent_benchmarking.search_benchmark_run import _run_search_eval
-from query_agent_benchmarking.utils import load_config, merge_configs, print_results_comparison, get_weaviate_client
+from query_agent_benchmarking.utils import (
+    load_config,
+    merge_configs,
+    print_results_comparison,
+    get_weaviate_client,
+    parse_embedding_model,
+    get_provider_headers,
+)
 
 def compare_embeddings(
     config_path: Optional[str] = None,
@@ -42,17 +49,21 @@ def compare_embeddings(
     file_config = load_config(config_path)
     
     # Get agents from parameter or config
-    agents = agent_names or file_config.get("agent_name")
+    agents = agent_names or file_config.get("search_agent_name") or file_config.get("agent_name")
     if agents is None:
         raise ValueError("No agent_names provided. Must specify via parameter or in config file.")
     agents = [agents] if isinstance(agents, str) else agents
     
     # Get embedding models from parameter or config
-    embedding_models = embedding_models or file_config.get("embedding_models")
+    embedding_models = (
+        embedding_models
+        or file_config.get("embedding_models")
+        or file_config.get("ablate_embedding_models")
+    )
     if embedding_models is None:
         raise ValueError(
             "No embedding_models provided. Must specify via parameter or "
-            "'embedding_model' list in config file."
+            "'embedding_models' (or legacy 'ablate_embedding_models') in config file."
         )
     
     # Build override config
@@ -136,7 +147,8 @@ async def _run_eval_with_temp_collection(
     print(f"{'='*60}\n")
     
     # Create the temporary collection
-    weaviate_client = get_weaviate_client()
+    provider, _ = parse_embedding_model(embedding_model)
+    weaviate_client = get_weaviate_client(headers=get_provider_headers(provider))
     
     try:
         create_collection_with_vector_config(
@@ -163,7 +175,9 @@ async def _run_eval_with_temp_collection(
     try:
         # Just run eval normally - it will use the alias which now points to temp collection
         config_for_eval = config.copy()
-        config_for_eval["embeddings"] = [embedding_model]
+        config_for_eval["text_embedding_model"] = embedding_model
+        config_for_eval["embedding_model"] = embedding_model
+        config_for_eval["embedding_providers"] = [provider]
         
         result = await _run_search_eval(config_for_eval)
         

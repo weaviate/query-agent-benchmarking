@@ -47,18 +47,13 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_text2vec()
         .build()),
 
-    (DatasetSpecBuilder("irpapers/images")
-        .with_static_name("IRPapersImages")
-        .with_blob_property("base64_str")
-        .with_dataset_id()
-        .with_multi2vec(image_field="base64_str")
-        .build()),
-
-    (DatasetSpecBuilder("irpapers/text")
-        .with_static_name("IRPapersText")
+    (DatasetSpecBuilder("irpapers")
+        .with_static_name("IRPapers")
         .with_text_property("content", source_field="transcription")
+        .with_blob_property("image", source_field="base64_str")
         .with_dataset_id()
-        .with_text2vec()
+        .with_text2vec_provider_named(source_properties=["content"], base_name="text_content")
+        .with_multi2vec(image_field="image", name="image_content", name_by_provider=True)
         .build()),
 
     (DatasetSpecBuilder("multihoprag")
@@ -71,8 +66,10 @@ BenchmarkRegistry: list[DatasetSpec] = [
     (DatasetSpecBuilder("vidore_v3_hr")
         .with_static_name("Vidore_v3_hr")
         .with_text_property("content", source_field="markdown")
+        .with_blob_property("image", source_field="image_base64")
         .with_dataset_id()
-        .with_text2vec()
+        .with_text2vec_provider_named(source_properties=["content"], base_name="text_content")
+        .with_multi2vec(image_field="image", name="image_content", name_by_provider=True)
         .build()),
 ]
 

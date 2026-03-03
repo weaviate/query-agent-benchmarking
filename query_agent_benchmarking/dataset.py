@@ -1,5 +1,7 @@
+import base64
 import json
 import random
+from io import BytesIO
 from typing import Optional
 
 from datasets import load_dataset
@@ -8,35 +10,68 @@ from query_agent_benchmarking.utils import get_weaviate_client
 
 from query_agent_benchmarking.models import InMemoryQuery, InMemoryAskQuery, NuggetInfo
 
-def in_memory_dataset_loader(dataset_name: str):
+
+def in_memory_dataset_loader(
+    dataset_name: str,
+    corpus_only: bool = False,
+    queries_only: bool = False,
+):
+    """
+    Load a built-in dataset into in-memory corpus/query splits.
+
+    Use `corpus_only=True` or `queries_only=True` to return only one side of
+    the split. These flags are mutually exclusive.
+    """
+    _validate_loader_scope(corpus_only=corpus_only, queries_only=queries_only)
+
     if dataset_name == "enron":
-        return _in_memory_dataset_loader_enron()
+        loaded = _in_memory_dataset_loader_enron()
     elif dataset_name == "wixqa":
-        return _in_memory_dataset_loader_wixqa()
+        loaded = _in_memory_dataset_loader_wixqa()
     elif dataset_name.startswith("beir/"):
-        return _in_memory_dataset_loader_beir(dataset_name)
+        loaded = _in_memory_dataset_loader_beir(dataset_name)
     elif dataset_name.startswith("bright/"):
-        return _in_memory_dataset_loader_bright(dataset_name)
+        loaded = _in_memory_dataset_loader_bright(dataset_name)
     elif dataset_name.startswith("lotte/"):
-        return _in_memory_dataset_loader_lotte(dataset_name)
+        loaded = _in_memory_dataset_loader_lotte(dataset_name)
     elif dataset_name == "freshstack-angular":
-        return _in_memory_dataset_loader_freshstack(subset="angular")
+        loaded = _in_memory_dataset_loader_freshstack(subset="angular")
     elif dataset_name == "freshstack-godot":
-        return _in_memory_dataset_loader_freshstack(subset="godot")
+        loaded = _in_memory_dataset_loader_freshstack(subset="godot")
     elif dataset_name == "freshstack-langchain":
-        return _in_memory_dataset_loader_freshstack(subset="langchain")
+        loaded = _in_memory_dataset_loader_freshstack(subset="langchain")
     elif dataset_name == "freshstack-laravel":
-        return _in_memory_dataset_loader_freshstack(subset="laravel")
+        loaded = _in_memory_dataset_loader_freshstack(subset="laravel")
     elif dataset_name == "freshstack-yolo":
-        return _in_memory_dataset_loader_freshstack(subset="yolo")
-    elif dataset_name.startswith("irpapers/"):
-        return _in_memory_dataset_loader_irpapers(dataset_name)
+        loaded = _in_memory_dataset_loader_freshstack(subset="yolo")
+    elif dataset_name == "irpapers":
+        loaded = _in_memory_dataset_loader_irpapers()
     elif dataset_name == "multihoprag":
-        return _in_memory_dataset_loader_multihoprag()
+        loaded = _in_memory_dataset_loader_multihoprag()
     elif dataset_name == "vidore_v3_hr":
-        return _in_memory_dataset_loader_vidore()
+        loaded = _in_memory_dataset_loader_vidore()
     else:
         return None
+
+    return _apply_loader_scope(
+        loaded=loaded,
+        corpus_only=corpus_only,
+        queries_only=queries_only,
+    )
+
+
+def _validate_loader_scope(corpus_only: bool, queries_only: bool) -> None:
+    if corpus_only and queries_only:
+        raise ValueError("`corpus_only` and `queries_only` are mutually exclusive.")
+
+
+def _apply_loader_scope(loaded, corpus_only: bool, queries_only: bool):
+    docs, queries = loaded
+    if corpus_only:
+        return docs, []
+    if queries_only:
+        return [], queries
+    return docs, queries
 
 def _in_memory_dataset_loader_beir(dataset_name: str):
     import ir_datasets
@@ -187,15 +222,10 @@ def _in_memory_dataset_loader_freshstack(subset: str):
     
     return docs, questions
 
-def _in_memory_dataset_loader_irpapers(dataset_name: str):
-    docs = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-docs")
+def _in_memory_dataset_loader_irpapers():
+    docs = _load_dataset_from_hf_hub(filepath="weaviate/irpapers", subset="docs")
 
-    parts = dataset_name.split("/") # e.g. `irpapers/images/visual-queries`
-    query_type = parts[2] if len(parts) > 2 else ""
-    if query_type == "visual-queries":
-        _questions = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-visual-queries")
-    else:
-        _questions = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-queries")
+    _questions = _load_dataset_from_hf_hub(filepath="weaviate/irpapers", subset="queries")
 
     questions: list[InMemoryQuery] = []
     for question in _questions:
@@ -213,9 +243,13 @@ def _in_memory_dataset_loader_vidore():
     corpus = load_dataset("vidore/vidore_v3_hr", "corpus")["test"]
     docs = []
     for item in corpus:
+        buffer = BytesIO()
+        item["image"].save(buffer, format="PNG")
+        image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
         docs.append({
             "markdown": item["markdown"],
             "dataset_id": str(item["corpus_id"]),
+            "image_base64": image_base64,
         })
 
     raw_qrels = load_dataset("vidore/vidore_v3_hr", "qrels")["test"]
@@ -329,27 +363,26 @@ def in_memory_ask_dataset_loader(dataset_name: str) -> list[InMemoryAskQuery]:
     Similar to in_memory_dataset_loader() for search benchmarks.
     
     Note: The dataset_name also determines which Weaviate collection the agent uses:
-    - "irpapers/text" -> IRPapersText_Default
-    - "irpapers/images" -> IRPapersImages_Default
+    - "irpapers" -> IRPapers_Default
     - "multihoprag" -> MultiHopRAG_Default
     """
-    if dataset_name.startswith("irpapers/"):
-        return _in_memory_ask_loader_irpapers(dataset_name)
+    if dataset_name == "irpapers":
+        return _in_memory_ask_loader_irpapers()
     elif dataset_name == "multihoprag":
         return _in_memory_ask_loader_multihoprag()
     else:
         raise ValueError(
             f"Unknown ask dataset: {dataset_name}. "
-            f"Supported ask datasets: irpapers/text, irpapers/images, multihoprag"
+            f"Supported ask datasets: irpapers, multihoprag"
         )
 
 
-def _in_memory_ask_loader_irpapers(dataset_name: str) -> list[InMemoryAskQuery]:
+def _in_memory_ask_loader_irpapers() -> list[InMemoryAskQuery]:
     """Load the IRPapers ask queries dataset."""
-    print(f"Loading IRPapers ask queries for {dataset_name}...")
+    print("Loading IRPapers ask queries...")
     
-    _questions = _load_dataset_from_hf_hub(filepath="weaviate/irpapers-queries")
-    
+    _questions = _load_dataset_from_hf_hub(filepath="weaviate/irpapers", subset="queries")
+
     queries: list[InMemoryAskQuery] = []
     for item in _questions:
         queries.append(InMemoryAskQuery(

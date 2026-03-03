@@ -56,6 +56,10 @@ from .experimental.create_benchmark import create_benchmark
 from .config import (
     print_supported_datasets,
     print_supported_ask_datasets,
+    print_named_vector_targets,
+    get_named_vector_target_entry,
+    resolve_named_vector_target,
+    resolve_embedding_providers,
     supported_search_datasets,
     supported_ask_datasets,
 )
@@ -76,6 +80,10 @@ __all__ = [
     "create_benchmark",
     "print_supported_datasets",
     "print_supported_ask_datasets",
+    "print_named_vector_targets",
+    "get_named_vector_target_entry",
+    "resolve_named_vector_target",
+    "resolve_embedding_providers",
     "supported_search_datasets",
     "supported_ask_datasets",
     # Models

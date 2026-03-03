@@ -20,11 +20,175 @@ from ..utils import (
 )
 
 
+# Public API: used by external callers to build temporary collections with an explicit text embedding model.
+def get_vector_config(embedding_model: Optional[str] = None) -> Any:
+    """
+    Factory function to create vectorizer config based on provider.
+    
+    Args:
+        embedding_model: Model string in format "provider/model" (e.g., "cohere/embed-4")
+                        or just "model" for weaviate. If None, uses default weaviate.
+    
+    Returns:
+        Vectorizer configuration object
+    """
+    if not embedding_model:
+        return wvcc.Configure.Vectors.text2vec_weaviate(
+            vectorize_collection_name=False,
+        )
+    
+    provider, model_name = parse_embedding_model(embedding_model)
+    
+    if provider == "weaviate":
+        return wvcc.Configure.Vectors.text2vec_weaviate(
+            model=model_name,
+            vectorize_collection_name=False,
+        )
+    elif provider == "cohere":
+        return wvcc.Configure.Vectors.text2vec_cohere(model=model_name)
+    elif provider == "voyageai":
+        return wvcc.Configure.Vectors.text2vec_voyageai(model=model_name)
+    else:
+        raise ValueError(
+            f"Unsupported embedding provider: '{provider}'. "
+            f"Supported providers: ['weaviate', 'cohere', 'voyageai']"
+        )
+
+
+# Public API: used by embedding-comparison flows and scripts to create/populate tagged collections.
+def create_collection_with_vector_config(
+    client: Optional[weaviate.WeaviateClient] = None,
+    dataset_name: Optional[str] = None,
+    tag: str = "Default",
+    embedding_model: Optional[str] = None,
+    weaviate_client: Optional[weaviate.WeaviateClient] = None,
+) -> None:
+    """
+    Create and populate a collection with a specified embedding model.
+    
+    Used for embedding model comparison where temporary collections
+    are created with different models.
+    
+    Args:
+        client: Connected Weaviate client
+        dataset_name: Name of the dataset to load
+        tag: Suffix to add to the collection name
+        embedding_model: Embedding model to use. If None, uses default.
+        weaviate_client: Backward-compatible alias for `client`.
+    """
+    if client is None:
+        client = weaviate_client
+    elif weaviate_client is not None and weaviate_client is not client:
+        raise ValueError("Pass either `client` or `weaviate_client`, not both")
+
+    if client is None:
+        raise ValueError("A Weaviate client is required")
+    if dataset_name is None:
+        raise ValueError("dataset_name is required")
+
+    print(f"Loading dataset '{dataset_name}'...")
+    objects = _load_documents(dataset_name)
+
+    spec = resolve_spec(dataset_name)
+    alias_collection_name = spec.name_fn(dataset_name)
+    collection_name = add_tag_to_name(alias_collection_name, tag)
+    vector_config = get_vector_config(embedding_model)
+
+    model_info = f" with model {embedding_model}" if embedding_model else " with default model"
+    print(f"Creating collection '{collection_name}'{model_info}...")
+
+    _drop_and_create_collection(
+        client,
+        collection_name,
+        properties=spec.properties,
+        vector_config=vector_config,
+        recreate=True,
+    )
+
+    print(f"Populating collection with {len(objects)} objects...")
+    _batch_insert(
+        client,
+        collection=collection_name,
+        items=objects,
+        item_to_props=spec.item_to_props,
+    )
+    print(f"Collection '{collection_name}' ready!\n")
+
+
+# Public API: primary entry point used by `scripts/populate-db.py` and package users.
+def database_loader(recreate: bool = True, tag: str = "Default") -> None:
+    """
+    Load dataset from config and populate Weaviate collection.
+    
+    Args:
+        recreate: Whether to drop existing collection before creating
+        tag: Suffix to add to collection name
+    """
+    config_path = Path(__file__).parent / "database_loader_config.yml"
+    config = load_config(config_path)
+
+    # Get provider headers for all configured embedding providers.
+    headers = _resolve_provider_headers(
+        embedding_providers=config.get("embedding_providers"),
+        embedding_models=[
+            config.get("text_embedding_model"),
+            config.get("image_embedding_model"),
+            *_coerce_model_list(config.get("text_embedding_models")),
+            *_coerce_model_list(config.get("image_embedding_models")),
+        ],
+    )
+
+    client = get_weaviate_client(headers=headers)
+
+    try:
+        dataset_name: str = config["dataset_name"]
+        objects = _load_documents(dataset_name)
+
+        print("\033[92mFirst Document:\033[0m")
+        pretty_print_in_memory_document(objects[0])
+
+        spec = resolve_spec(dataset_name)
+        alias_collection_name = spec.name_fn(dataset_name)
+        collection_name = add_tag_to_name(alias_collection_name, tag)
+
+        print(f"\n\033[96mCreating collection '{collection_name}'...\033[0m")
+        _drop_and_create_collection(
+            client,
+            collection_name,
+            properties=spec.properties,
+            vector_config=spec.vector_config,
+            recreate=recreate,
+        )
+
+        # Manage alias
+        alias_info = client.alias.get(alias_name=alias_collection_name)
+        if alias_info is None:
+            client.alias.create(
+                alias_name=alias_collection_name,
+                target_collection=collection_name,
+            )
+        else:
+            client.alias.update(
+                alias_name=alias_collection_name,
+                new_target_collection=collection_name,
+            )
+
+        _batch_insert(
+            client,
+            collection=collection_name,
+            items=objects,
+            item_to_props=spec.item_to_props,
+        )
+    finally:
+        client.close()
+
+
+# Private helper: low-level create/delete wrapper used internally to keep public loaders concise.
 def _drop_and_create_collection(
     client: weaviate.WeaviateClient,
     name: str,
     properties: Sequence[wvcc.Property],
-    vectorizer_config: Any,
+    vector_config: Any,
     recreate: bool = True,
 ) -> None:
     """Drop (if exists) and create a Weaviate collection."""
@@ -33,11 +197,12 @@ def _drop_and_create_collection(
     if not client.collections.exists(name):
         client.collections.create(
             name=name,
-            vector_config=vectorizer_config,
+            vector_config=vector_config,
             properties=list(properties),
         )
 
 
+# Private helper: internal batching utility shared by the public loaders above.
 def _batch_insert(
     client: weaviate.WeaviateClient,
     collection: str,
@@ -77,140 +242,87 @@ def _batch_insert(
     return total
 
 
-def get_vector_config(embedding_model: Optional[str] = None) -> Any:
-    """
-    Factory function to create vectorizer config based on provider.
-    
-    Args:
-        embedding_model: Model string in format "provider/model" (e.g., "cohere/embed-4")
-                        or just "model" for weaviate. If None, uses default weaviate.
-    
-    Returns:
-        Vectorizer configuration object
-    """
-    if not embedding_model:
-        return wvcc.Configure.Vectorizer.text2vec_weaviate()
-    
-    provider, model_name = parse_embedding_model(embedding_model)
-    
-    if provider == "weaviate":
-        return wvcc.Configure.Vectors.text2vec_weaviate(model=model_name)
-    elif provider == "cohere":
-        return wvcc.Configure.Vectors.text2vec_cohere(model=model_name)
-    elif provider == "voyageai":
-        return wvcc.Configure.Vectors.text2vec_voyageai(model=model_name)
-    else:
-        raise ValueError(
-            f"Unsupported embedding provider: '{provider}'. "
-            f"Supported providers: ['weaviate', 'cohere', 'voyageai']"
-        )
+# Private helper: internal header resolver so provider-key logic stays out of public APIs.
+def _resolve_provider_headers(
+    embedding_models: Sequence[Optional[str]] = (),
+    embedding_providers: Optional[str | Sequence[str]] = None,
+) -> dict[str, str]:
+    """Resolve API headers for all configured embedding providers."""
+    headers: dict[str, str] = {}
 
+    for provider in _parse_embedding_providers(embedding_providers):
+        headers.update(get_provider_headers(provider))
 
-def create_collection_with_vector_config(
-    client: weaviate.WeaviateClient,
-    dataset_name: str,
-    tag: str = "Default",
-    embedding_model: Optional[str] = None,
-) -> None:
-    """
-    Create and populate a collection with a specified embedding model.
-    
-    Used for embedding model comparison where temporary collections
-    are created with different models.
-    
-    Args:
-        client: Connected Weaviate client
-        dataset_name: Name of the dataset to load
-        tag: Suffix to add to the collection name
-        embedding_model: Embedding model to use. If None, uses default.
-    """
-    print(f"Loading dataset '{dataset_name}'...")
-    objects, _ = in_memory_dataset_loader(dataset_name)
-
-    spec = resolve_spec(dataset_name)
-    alias_collection_name = spec.name_fn(dataset_name)
-    collection_name = add_tag_to_name(alias_collection_name, tag)
-    vectorizer_config = get_vector_config(embedding_model)
-
-    model_info = f" with model {embedding_model}" if embedding_model else " with default model"
-    print(f"Creating collection '{collection_name}'{model_info}...")
-
-    _drop_and_create_collection(
-        client,
-        collection_name,
-        properties=spec.properties,
-        vectorizer_config=vectorizer_config,
-        recreate=True,
-    )
-
-    print(f"Populating collection with {len(objects)} objects...")
-    _batch_insert(
-        client,
-        collection=collection_name,
-        items=objects,
-        item_to_props=spec.item_to_props,
-    )
-    print(f"Collection '{collection_name}' ready!\n")
-
-
-def database_loader(recreate: bool = True, tag: str = "Default") -> None:
-    """
-    Load dataset from config and populate Weaviate collection.
-    
-    Args:
-        recreate: Whether to drop existing collection before creating
-        tag: Suffix to add to collection name
-    """
-    config_path = Path(__file__).parent / "database_loader_config.yml"
-    config = load_config(config_path)
-
-    # Get provider headers if using a third-party embedding provider
-    headers = {}
-    embedding_model = config.get("embedding_model")
-    if embedding_model:
+    for embedding_model in embedding_models:
+        if not embedding_model:
+            continue
         provider, _ = parse_embedding_model(embedding_model)
-        headers = get_provider_headers(provider)
+        headers.update(get_provider_headers(_normalize_provider_name(provider)))
+    return headers
 
-    client = get_weaviate_client(headers=headers)
 
-    try:
-        dataset_name: str = config["dataset_name"]
-        objects, _ = in_memory_dataset_loader(dataset_name)
+def _parse_embedding_providers(
+    embedding_providers: Optional[str | Sequence[str]],
+) -> list[str]:
+    """Parse embedding providers from config values."""
+    if embedding_providers is None:
+        return []
 
-        print("\033[92mFirst Document:\033[0m")
-        pretty_print_in_memory_document(objects[0])
+    if isinstance(embedding_providers, str):
+        raw = embedding_providers.strip()
+        if not raw or raw.lower() == "auto":
+            return []
+        return [
+            _normalize_provider_name(token)
+            for token in raw.split(",")
+            if token.strip()
+        ]
 
-        spec = resolve_spec(dataset_name)
-        alias_collection_name = spec.name_fn(dataset_name)
-        collection_name = add_tag_to_name(alias_collection_name, tag)
+    providers: list[str] = []
+    for value in embedding_providers:
+        if not isinstance(value, str):
+            raise ValueError("embedding_providers entries must be strings.")
+        normalized = _normalize_provider_name(value)
+        if normalized == "auto":
+            continue
+        if normalized not in providers:
+            providers.append(normalized)
+    return providers
 
-        print(f"\n\033[96mCreating collection '{collection_name}'...\033[0m")
-        _drop_and_create_collection(
-            client,
-            collection_name,
-            properties=spec.properties,
-            vectorizer_config=spec.vector_config,
-            recreate=recreate,
-        )
 
-        # Manage alias
-        alias_info = client.alias.get(alias_name=alias_collection_name)
-        if alias_info is None:
-            client.alias.create(
-                alias_name=alias_collection_name,
-                target_collection=collection_name,
-            )
-        else:
-            client.alias.update(
-                alias_name=alias_collection_name,
-                new_target_collection=collection_name,
-            )
+def _normalize_provider_name(provider: str) -> str:
+    """Normalize provider aliases to canonical provider names."""
+    normalized = provider.strip().lower()
+    if normalized in {"voyage", "voyage-ai"}:
+        return "voyageai"
+    return normalized
 
-        _batch_insert(
-            client,
-            collection=collection_name,
-            items=objects,
-            item_to_props=spec.item_to_props,
-        )
-    finally:
-        client.close()
+
+def _coerce_model_list(raw_models: Any) -> list[str]:
+    """Normalize optional model config values to a list of non-empty strings."""
+    if raw_models is None:
+        return []
+    if isinstance(raw_models, str):
+        return [raw_models] if raw_models.strip() else []
+    if not isinstance(raw_models, Sequence):
+        raise ValueError("Embedding model lists must be a sequence of strings.")
+
+    models: list[str] = []
+    for value in raw_models:
+        if not isinstance(value, str):
+            raise ValueError("Embedding model list entries must be strings.")
+        if value.strip():
+            models.append(value)
+    return models
+
+
+# Private helper: centralizes dataset validation for all public loader paths.
+def _load_documents(dataset_name: str) -> Sequence[Mapping[str, Any]]:
+    """Load in-memory docs for a dataset with explicit validation."""
+    loaded = in_memory_dataset_loader(dataset_name, corpus_only=True)
+    if loaded is None:
+        raise ValueError(f"Unsupported dataset_name: {dataset_name}")
+    objects, _ = loaded
+    if not objects:
+        raise ValueError(f"Dataset '{dataset_name}' returned zero documents")
+    return objects
