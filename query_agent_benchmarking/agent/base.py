@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, Sequence
 from abc import ABC, abstractmethod
 
 import weaviate
@@ -24,7 +24,10 @@ class BaseAgentBuilder(ABC):
         agents_host: Optional[str] = None,
         use_async: bool = False,
         embedding_model: Optional[str] = None,
+        text_embedding_model: Optional[str] = None,
+        image_embedding_model: Optional[str] = None,
         system_prompt: Optional[str] = None,
+        embedding_providers: Optional[Sequence[str]] = None,
     ):
         self.use_async = use_async
         self.agent = None
@@ -34,12 +37,15 @@ class BaseAgentBuilder(ABC):
         self.cluster_url = os.getenv("WEAVIATE_URL")
         self.api_key = os.getenv("WEAVIATE_API_KEY")
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        self.available_named_vectors: list[str] = []
         
-        # Get provider headers for third-party embedding providers
-        self.headers: dict[str, str] = {}
-        if embedding_model:
-            provider, _ = parse_embedding_model(embedding_model)
-            self.headers = get_provider_headers(provider)
+        # Resolve provider headers for one or more configured embedding models.
+        self.headers = self._resolve_headers(
+            embedding_model=embedding_model,
+            text_embedding_model=text_embedding_model,
+            image_embedding_model=image_embedding_model,
+            embedding_providers=embedding_providers,
+        )
         
         # Require either dataset_name or docs_collection, but not both
         if dataset_name and docs_collection:
@@ -53,12 +59,64 @@ class BaseAgentBuilder(ABC):
         if docs_collection:
             self.collection = docs_collection.collection_name
             self.id_property = docs_collection.id_key
+            self.uses_named_vectors = False
         else:
             spec = resolve_spec(dataset_name)
             self.collection = f"{spec.name_fn(dataset_name)}_Default"
             self.id_property = "dataset_id"
+            self.uses_named_vectors = isinstance(spec.vector_config, list)
+            if self.uses_named_vectors:
+                self.available_named_vectors = [
+                    cfg.name
+                    for cfg in spec.vector_config
+                    if getattr(cfg, "name", None)
+                ]
 
         self.agents_host = agents_host or "https://api.agents.weaviate.io"
+
+    @staticmethod
+    def _resolve_headers(
+        embedding_model: Optional[str],
+        text_embedding_model: Optional[str],
+        image_embedding_model: Optional[str],
+        embedding_providers: Optional[Sequence[str]],
+    ) -> dict[str, str]:
+        """Resolve API key headers for all configured embedding providers."""
+        headers: dict[str, str] = {}
+
+        normalized_providers: Sequence[str] = embedding_providers or []
+        if isinstance(normalized_providers, str):
+            normalized_providers = [normalized_providers]
+
+        if normalized_providers:
+            for provider in normalized_providers:
+                headers.update(
+                    get_provider_headers(BaseAgentBuilder._normalize_provider_name(provider))
+                )
+
+        models_to_resolve = [text_embedding_model, image_embedding_model]
+
+        # Backward compatibility for older configs that only pass embedding_model.
+        if embedding_model and text_embedding_model is None:
+            models_to_resolve.insert(0, embedding_model)
+        elif embedding_model and embedding_model != text_embedding_model:
+            models_to_resolve.append(embedding_model)
+
+        for model in models_to_resolve:
+            if not model:
+                continue
+            provider, _ = parse_embedding_model(model)
+            headers.update(get_provider_headers(BaseAgentBuilder._normalize_provider_name(provider)))
+
+        return headers
+
+    @staticmethod
+    def _normalize_provider_name(provider: str) -> str:
+        """Normalize provider aliases to canonical provider names."""
+        normalized = provider.strip().lower()
+        if normalized in {"voyage", "voyage-ai"}:
+            return "voyageai"
+        return normalized
 
     def _connect_sync(self) -> weaviate.WeaviateClient:
         """Create synchronous Weaviate connection."""
@@ -108,4 +166,3 @@ class BaseAgentBuilder(ABC):
                 print("Sync connection closed successfully")
             except Exception as e:
                 print(f"Warning: Error closing sync connection: {str(e)}")
-

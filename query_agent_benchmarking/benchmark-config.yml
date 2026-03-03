@@ -1,10 +1,11 @@
 # =============================================================================
 # Search Mode Settings
 # =============================================================================
-search_agent_name: "hybrid-search"
-search_dataset: bright/biology
+search_agent_name: "vector-search"
+search_dataset: vidore_v3_hr
 
-embedding_model: "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
+# See `named_vectors.md` for supported target vectors.
+search_target: "image_content_weaviate"
 
 # =============================================================================
 # Ask Mode Settings
@@ -24,8 +25,8 @@ use_async: True
 max_concurrent: 5
 sleep_between_requests: 0
 
-use_subset: False
-num_samples: 50
+use_subset: True
+num_samples: 100
 
 num_trials: 1
 batch_size: 5
@@ -37,5 +38,5 @@ external_service_host: http://localhost:8000/search
 # Embedding Model Comparison
 # =============================================================================
 ablate_embedding_models: 
-- "Snowflake/snowflake-arctic-embed-l-v2.0"
-- "Snowflake/snowflake-arctic-embed-m-v1.5"
+- "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
+- "weaviate/Snowflake/snowflake-arctic-embed-m-v1.5"

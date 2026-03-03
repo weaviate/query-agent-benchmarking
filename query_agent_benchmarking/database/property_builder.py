@@ -1,8 +1,8 @@
+import inspect
 from pathlib import Path
 from typing import Any, Callable, Mapping, Optional
 import yaml
 
-from pydantic import AnyHttpUrl
 import weaviate.collections.classes.config as wvcc
 
 from .spec import DatasetSpec
@@ -130,6 +130,23 @@ class DatasetSpecBuilder:
         """Parse embedding model string into provider and model name."""
         return parse_embedding_model(embedding_model)
 
+    def _provider_suffix(self, provider: str) -> str:
+        """Normalize provider labels for vector names."""
+        normalized = provider.strip().lower()
+        if normalized in {"voyage", "voyage-ai"}:
+            return "voyageai"
+        return normalized
+
+    def _qualify_vector_name_with_provider(
+        self,
+        name: Optional[str],
+        provider: str,
+    ) -> Optional[str]:
+        """Append provider suffix to a base vector name."""
+        if name is None:
+            return None
+        return f"{name}_{self._provider_suffix(provider)}"
+
     def _get_vectorizer_for_provider(self, provider: str, model: str) -> Any:
         """
         Get the appropriate vectorizer config based on provider.
@@ -141,10 +158,11 @@ class DatasetSpecBuilder:
         Returns:
             Vectorizer configuration object
         """
-        # Weaviate uses Configure.Vectorizer (returns correct type)
-        # Third-party providers use Configure.Vectors (returns _VectorConfigCreate)
         if provider == "weaviate":
-            return wvcc.Configure.Vectors.text2vec_weaviate(model=model)
+            return wvcc.Configure.Vectors.text2vec_weaviate(
+                model=model,
+                vectorize_collection_name=False,
+            )
         elif provider == "cohere":
             return wvcc.Configure.Vectors.text2vec_cohere(model=model)
         elif provider == "voyageai":
@@ -155,108 +173,400 @@ class DatasetSpecBuilder:
                 f"Supported providers: ['weaviate', 'cohere', 'voyageai']"
             )
 
-    def with_text2vec(self) -> "DatasetSpecBuilder":
+    def _append_vector_config(self, cfg: Any) -> None:
+        """Append a vector config to a named-vectors list."""
+        if self._vector_config is None:
+            self._vector_config = [cfg]
+            return
+        if isinstance(self._vector_config, list):
+            new_name = getattr(cfg, "name", None)
+            if new_name:
+                existing_names = {
+                    getattr(existing_cfg, "name", None)
+                    for existing_cfg in self._vector_config
+                }
+                if new_name in existing_names:
+                    raise ValueError(
+                        f"Named vector '{new_name}' is already configured. "
+                        "Vector names must be unique within a collection."
+                    )
+            self._vector_config.append(cfg)
+            return
+        raise ValueError(
+            "Cannot append a named vector config because vector_config is already set "
+            "to a single (unnamed) vectorizer. Use named vector configs consistently "
+            "(i.e., call with_text2vec/with_multi2vec with `name=`) or start a new builder."
+        )
+
+    def _set_or_append_vector_config(self, cfg: Any, name: Optional[str]) -> None:
+        """Set unnamed vector config or append a named vector config."""
+        if name is None:
+            if isinstance(self._vector_config, list):
+                raise ValueError(
+                    "Cannot set an unnamed vectorizer when named vectors are already configured. "
+                    "Pass `name=` instead."
+                )
+            self._vector_config = cfg
+            return
+        self._append_vector_config(cfg)
+
+    def with_text2vec(
+        self,
+        name: Optional[str] = None,
+        source_properties: Optional[list[str]] = None,
+        embedding_model: Optional[str] = None,
+        name_by_provider: bool = False,
+    ) -> "DatasetSpecBuilder":
         """
-        Use text2vec vectorizer based on embedding_model from config.
-        
-        Reads the 'embedding_model' config value (e.g., "cohere/embed-4")
+        Configure a text2vec vectorizer.
+
+        - If called with no args, configures a single unnamed vectorizer (backward compatible).
+        - If called with `name` and `source_properties`, appends a named vector config, enabling
+          multiple independent named vectors (e.g., `.with_text2vec(...).with_text2vec(...)`).
+
+        Reads the 'text_embedding_model' config value (e.g., "cohere/embed-4")
         and selects the appropriate vectorizer provider.
         """
-        embedding_model = self._config.get("embedding_model")
-        if not embedding_model:
-            # Fall back to default weaviate vectorizer
-            self._vector_config = wvcc.Configure.Vectors.text2vec_weaviate()
+        if (name is None) != (source_properties is None):
+            raise ValueError("with_text2vec: `name` and `source_properties` must be provided together")
+
+        cfg_model = embedding_model or self._config.get("text_embedding_model")
+
+        # Unnamed, single-vector mode (legacy)
+        if name is None and source_properties is None:
+            if isinstance(self._vector_config, list):
+                raise ValueError(
+                    "with_text2vec(): cannot set an unnamed vectorizer when named vectors are already configured. "
+                    "Pass `name=` and `source_properties=` instead."
+                )
+            if not cfg_model:
+                self._vector_config = wvcc.Configure.Vectors.text2vec_weaviate(
+                    vectorize_collection_name=False,
+                )
+                return self
+            provider, model_name = self._parse_embedding_model(cfg_model)
+            self._vector_config = self._get_vectorizer_for_provider(provider, model_name)
             return self
-        
-        provider, model_name = self._parse_embedding_model(embedding_model)
-        self._vector_config = self._get_vectorizer_for_provider(provider, model_name)
+
+        # Named-vectors mode
+        if not cfg_model:
+            vector_name = (
+                self._qualify_vector_name_with_provider(name, "weaviate")
+                if name_by_provider
+                else name
+            )
+            # Default to Weaviate vectorizer with explicit name/source_properties
+            self._append_vector_config(
+                wvcc.Configure.Vectors.text2vec_weaviate(
+                    name=vector_name,
+                    source_properties=source_properties,
+                    vectorize_collection_name=False,
+                )
+            )
+            return self
+
+        provider, model_name = self._parse_embedding_model(cfg_model)
+        vector_name = (
+            self._qualify_vector_name_with_provider(name, provider)
+            if name_by_provider
+            else name
+        )
+
+        if provider == "weaviate":
+            cfg = wvcc.Configure.Vectors.text2vec_weaviate(
+                name=vector_name,
+                model=model_name,
+                source_properties=source_properties,
+                vectorize_collection_name=False,
+            )
+        elif provider == "cohere":
+            cfg = wvcc.Configure.Vectors.text2vec_cohere(
+                name=vector_name,
+                model=model_name,
+                source_properties=source_properties,
+            )
+        elif provider == "voyageai":
+            cfg = wvcc.Configure.Vectors.text2vec_voyageai(
+                name=vector_name,
+                model=model_name,
+                source_properties=source_properties,
+            )
+        else:
+            raise ValueError(
+                f"Unsupported embedding provider: '{provider}'. "
+                f"Supported providers: ['weaviate', 'cohere', 'voyageai']"
+            )
+
+        self._append_vector_config(cfg)
+        return self
+
+    def with_text2vec_provider_named(
+        self,
+        source_properties: list[str],
+        base_name: str = "text_content",
+        embedding_models: Optional[list[str]] = None,
+    ) -> "DatasetSpecBuilder":
+        """
+        Configure one or more provider-qualified text named vectors.
+
+        Naming convention:
+        - Single provider: `<base_name>_<provider>`
+          Example: `text_content_weaviate`
+        - Repeated provider in a single collection: `<base_name>_<provider>_<n>`
+          Example: `text_content_cohere_2`
+        """
+        configured_models = embedding_models
+        if configured_models is None:
+            configured_models = self._config.get("text_embedding_models")
+
+        if configured_models is None:
+            return self.with_text2vec(
+                name=base_name,
+                source_properties=source_properties,
+                name_by_provider=True,
+            )
+        if not isinstance(configured_models, list) or not configured_models:
+            raise ValueError(
+                "text_embedding_models must be a non-empty list when provided."
+            )
+
+        provider_totals: dict[str, int] = {}
+        parsed_models: list[tuple[str, str]] = []
+        for model in configured_models:
+            if not isinstance(model, str) or not model.strip():
+                raise ValueError(
+                    "Every value in text_embedding_models must be a non-empty string."
+                )
+            provider, _ = self._parse_embedding_model(model.strip())
+            provider_label = self._provider_suffix(provider)
+            provider_totals[provider_label] = provider_totals.get(provider_label, 0) + 1
+            parsed_models.append((model.strip(), provider_label))
+
+        provider_seen: dict[str, int] = {}
+        for model, provider_label in parsed_models:
+            provider_seen[provider_label] = provider_seen.get(provider_label, 0) + 1
+            suffix = provider_label
+            if provider_totals[provider_label] > 1:
+                suffix = f"{provider_label}_{provider_seen[provider_label]}"
+            vector_name = f"{base_name}_{suffix}"
+            self.with_text2vec(
+                name=vector_name,
+                source_properties=source_properties,
+                embedding_model=model,
+            )
         return self
 
     def with_multi2vec(
         self,
         image_field: str,
+        name: Optional[str] = None,
         default_model: str = "ModernVBERT/colmodernvbert",
+        embedding_model: Optional[str] = None,
+        name_by_provider: bool = False,
     ) -> "DatasetSpecBuilder":
         """
-        Use multi2vec vectorizer based on embedding_model from config.
-        
-        Reads the 'embedding_model' config value (e.g., "cohere/embed-v4.0")
-        and selects the appropriate multi2vec provider.
+        Configure a multi2vec image vectorizer via provider dispatch.
+
+        Provider-specific config creation is intentionally isolated in
+        `_build_multi2vec_config(...)` so new `multi2vec_X` providers can be added
+        in one place.
+
+        - If called with `name`, appends a named vector config (named-vectors mode).
+        - If called without `name`, configures a single unnamed vectorizer (backward compatible).
+
+        Reads `image_embedding_model` (or falls back to `text_embedding_model`).
+        Example: `"weaviate/ModernVBERT/colmodernvbert"`.
         
         Args:
             image_field: The property name containing the image blob
-            default_model: Default model if none specified in config (for weaviate)
+            name: Optional named vector name (enables multiple vectors per collection)
+            default_model: Default model if none specified in config
+            embedding_model: Optional override for the model string ("provider/model")
         """
-        embedding_model = self._config.get("embedding_model")
-        if not embedding_model:
-            # Fall back to default weaviate multi2vec
-            return self.with_multi2vec_weaviate(image_field, default_model)
-        
-        provider, model_name = self._parse_embedding_model(embedding_model)
-        
-        if provider == "cohere":
-            return self._with_multi2vec_cohere(image_field, model_name)
-        elif provider == "voyageai":
-            return self._with_multi2vec_voyageai(image_field, model_name)
-        elif provider == "weaviate":
-            return self.with_multi2vec_weaviate(image_field, model_name)
-        else:
-            raise ValueError(
-                f"Unsupported multi2vec provider: '{provider}'. "
-                f"Supported providers: ['cohere', 'voyageai', 'weaviate']"
-            )
-
-    def _with_multi2vec_cohere(
-        self,
-        image_field: str,
-        model: str,
-    ) -> "DatasetSpecBuilder":
-        """Use multi2vec_cohere vectorizer for images."""
-        self._vector_config = wvcc.Configure.Vectors.multi2vec_cohere(
-            image_fields=[image_field],
-            model=model,
+        provider, model_name = self._resolve_multi2vec_provider_model(
+            embedding_model=embedding_model,
+            default_model=default_model,
         )
+        vector_name = (
+            self._qualify_vector_name_with_provider(name, provider)
+            if name_by_provider
+            else name
+        )
+        cfg = self._build_multi2vec_config(
+            provider=provider,
+            image_field=image_field,
+            model=model_name,
+            name=vector_name,
+        )
+        self._set_or_append_vector_config(cfg, name=vector_name)
         return self
 
-    def _with_multi2vec_voyageai(
+    def with_image2vec(
         self,
         image_field: str,
-        model: str,
+        name: Optional[str] = None,
+        name_by_provider: bool = False,
     ) -> "DatasetSpecBuilder":
-        """Use multi2vec_voyageai vectorizer for images."""
-        self._vector_config = wvcc.Configure.Vectors.multi2vec_voyageai(
-            image_fields=[image_field],
-            model=model,
+        """
+        Configure the `img2vec-neural` image vectorizer.
+
+        This wraps `Configure.Vectors.img2vec_neural(...)` and supports both
+        unnamed and named-vector modes.
+
+        Args:
+            image_field: Blob property containing base64-encoded image data.
+            name: Optional named vector name.
+        """
+        vector_name = (
+            self._qualify_vector_name_with_provider(name, "weaviate")
+            if name_by_provider
+            else name
         )
+        cfg = wvcc.Configure.Vectors.img2vec_neural(
+            name=vector_name,
+            image_fields=[image_field],
+        )
+        self._set_or_append_vector_config(cfg, name=vector_name)
         return self
 
     def with_multi2vec_weaviate(
         self,
         image_field: str,
         model: str = "ModernVBERT/colmodernvbert",
+        name: Optional[str] = None,
+        name_by_provider: bool = False,
     ) -> "DatasetSpecBuilder":
-        """Use multi2vec_weaviate vectorizer for images."""
-        if self._config.get("use_MUVERA_encoding"):
-            self._vector_config = wvcc.Configure.MultiVectors.multi2vec_weaviate(
-                base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
-                image_field=image_field,
-                model=model,
-                encoding=wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(
-                    ksim=self._config.get("ksim", 4),
-                    dprojections=self._config.get("dprojections", 16),
-                    repetitions=self._config.get("repetitions", 10),
-                ),
-                vector_index_config=wvcc.Configure.VectorIndex.hnsw(
-                    ef=self._config.get("ef", 500),
-                ),
-            )
-        else:
-            self._vector_config = wvcc.Configure.MultiVectors.multi2vec_weaviate(
-                base_url=AnyHttpUrl("https://dev-embedding.labs.weaviate.io"),
-                image_field=image_field,
-                model=model,
-            )
+        """Convenience wrapper for the Weaviate multi2vec provider."""
+        vector_name = (
+            self._qualify_vector_name_with_provider(name, "weaviate")
+            if name_by_provider
+            else name
+        )
+        cfg = self._build_multi2vec_config(
+            provider="weaviate",
+            image_field=image_field,
+            model=model,
+            name=vector_name,
+        )
+        self._set_or_append_vector_config(cfg, name=vector_name)
         return self
+
+    def _resolve_multi2vec_provider_model(
+        self,
+        embedding_model: Optional[str],
+        default_model: str,
+    ) -> tuple[str, str]:
+        """Resolve provider/model for multi2vec configuration."""
+        text_embedding_models = self._config.get("text_embedding_models")
+        first_text_embedding_model = (
+            text_embedding_models[0]
+            if isinstance(text_embedding_models, list) and text_embedding_models
+            else None
+        )
+        cfg_model = (
+            embedding_model
+            or self._config.get("image_embedding_model")
+            or self._config.get("text_embedding_model")
+            or first_text_embedding_model
+        )
+        if not cfg_model:
+            return "weaviate", default_model
+
+        provider, model_name = self._parse_embedding_model(cfg_model)
+        return provider, model_name or default_model
+
+    def _multi2vec_supports_muvera(self, provider: str) -> bool:
+        """Return whether a multi2vec provider supports MUVERA encoding."""
+        return provider == "weaviate"
+
+    def _build_muvera_kwargs(self, provider: str) -> dict[str, Any]:
+        """Build MUVERA kwargs if enabled in config for a compatible provider."""
+        if not self._config.get("use_MUVERA_encoding"):
+            return {}
+        if not self._multi2vec_supports_muvera(provider):
+            raise ValueError(
+                f"use_MUVERA_encoding=True is not supported for provider '{provider}'. "
+                "Disable MUVERA or use a provider that supports it."
+            )
+        return {
+            "encoding": wvcc.Configure.VectorIndex.MultiVector.Encoding.muvera(
+                ksim=self._config.get("ksim", 4),
+                dprojections=self._config.get("dprojections", 16),
+                repetitions=self._config.get("repetitions", 10),
+            ),
+            "vector_index_config": wvcc.Configure.VectorIndex.hnsw(
+                ef=self._config.get("ef", 500),
+            ),
+        }
+
+    def _build_multi2vec_weaviate_config(
+        self,
+        image_field: str,
+        model: str,
+        name: Optional[str],
+    ) -> Any:
+        """Build multi2vec config for the Weaviate provider."""
+        constructor = getattr(wvcc.Configure.MultiVectors, "multi2vec_weaviate", None)
+        if constructor is None:
+            constructor = getattr(wvcc.Configure.Vectors, "multi2vec_weaviate", None)
+        if constructor is None:
+            raise ValueError(
+                "This Weaviate client version does not expose multi2vec_weaviate."
+            )
+
+        kwargs: dict[str, Any] = {"name": name, "model": model}
+        try:
+            signature = inspect.signature(constructor)
+        except (TypeError, ValueError):
+            signature = None
+
+        if signature and "image_fields" in signature.parameters:
+            kwargs["image_fields"] = [image_field]
+        elif signature and "image_field" in signature.parameters:
+            kwargs["image_field"] = image_field
+        else:
+            # Default to modern parameter shape.
+            kwargs["image_fields"] = [image_field]
+
+        kwargs.update(self._build_muvera_kwargs(provider="weaviate"))
+        try:
+            return constructor(**kwargs)
+        except TypeError as exc:
+            # Compatibility fallback between client versions.
+            error = str(exc)
+            if "unexpected keyword argument 'image_fields'" in error:
+                kwargs.pop("image_fields", None)
+                kwargs["image_field"] = image_field
+                return constructor(**kwargs)
+            if "unexpected keyword argument 'image_field'" in error:
+                kwargs.pop("image_field", None)
+                kwargs["image_fields"] = [image_field]
+                return constructor(**kwargs)
+            raise
+
+    def _build_multi2vec_config(
+        self,
+        provider: str,
+        image_field: str,
+        model: str,
+        name: Optional[str],
+    ) -> Any:
+        """
+        Build provider-specific multi2vec config.
+
+        To add a new provider in the future, register it in `provider_builders`.
+        """
+        provider_builders: dict[str, Callable[[str, str, Optional[str]], Any]] = {
+            "weaviate": self._build_multi2vec_weaviate_config,
+        }
+        builder = provider_builders.get(provider)
+        if builder is None:
+            supported = sorted(provider_builders.keys())
+            raise ValueError(
+                f"Unsupported multi2vec provider: '{provider}'. "
+                f"Supported providers in this project: {supported}"
+            )
+        return builder(image_field, model, name)
 
     def with_custom_vector_config(self, config: Any) -> "DatasetSpecBuilder":
         """Use a custom vector configuration."""
