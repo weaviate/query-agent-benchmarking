@@ -1,98 +1,118 @@
 # Add LongMemEval
 
-Add the LongMemEval to `query-agent-benchmarking`.
+Add the LongMemEval-S benchmark to `query-agent-benchmarking` as a **search evaluation**.
 
-- Extend the `database` layer to create a Multi-Tenant Weaviate Collection.
+## Dataset
 
-Here's how to create a multi-tenant collection using the Weaviate Python v4 client:
+Available on HuggingFace as two subsets:
 
+```python
+from datasets import load_dataset
+
+queries = load_dataset("weaviate/longmemeval-s-cleaned", "queries")  # 500 questions
+docs = load_dataset("weaviate/longmemeval-s-cleaned", "docs")        # 23,867 sessions
+```
+
+### Queries schema
+
+| Field | Type | Description |
+|---|---|---|
+| `question_id` | `str` | Unique question identifier |
+| `question` | `str` | The question text |
+| `question_date` | `str` | When the question was asked |
+| `answer` | `str` | Ground truth answer (string, some are numeric like "3") |
+| `answer_session_ids` | `list[str]` | Ground truth — session IDs that contain the answer |
+| `tenant_id` | `str` | Same as `question_id`, maps query to its tenant |
+
+### Docs schema
+
+| Field | Type | Description |
+|---|---|---|
+| `tenant_id` | `str` | Maps doc to its tenant (= `question_id`) |
+| `session_id` | `str` | Unique session identifier (used as doc ID for retrieval) |
+| `session_date` | `str` | Timestamp of the session |
+| `session_text` | `str` | Full multi-turn conversation concatenated as `role: content` lines |
+
+### Data model
+
+- Each of the 500 questions has its own haystack of ~48 sessions (avg).
+- One doc = one concatenated chat session.
+- Ground truth labels are at the session level — `answer_session_ids` points to the session(s) that contain the answer.
+- `tenant_id` links each query to its haystack of docs.
+
+## Multi-Tenant Weaviate Collection
+
+Each question gets its own **tenant** so the agent searches only that question's haystack.
+
+### Collection creation
+
+```python
 from weaviate.classes.config import Configure
 
-multi_collection = client.collections.create(
-    name="MultiTenancyCollection",
-    # Enable multi-tenancy on the new collection
-    multi_tenancy_config=Configure.multi_tenancy(enabled=True)
-)
-[Enable multi-tenancy]
-
-Once the collection is created, you can add tenants to it:
-
-from weaviate.classes.tenants import Tenant
-
-# Add two tenants to the collection
-multi_collection.tenants.create(
-    tenants=[
-        Tenant(name="tenantA"),
-        Tenant(name="tenantB"),
-    ]
-)
-[Add tenants manually]
-
-You can also enable additional options like auto_tenant_creation (available from v1.25.0), which automatically creates a new tenant if you try to insert an object into a non-existent one:
-
-from weaviate.classes.config import Configure
-
-multi_collection = client.collections.create(
-    name="CollectionWithAutoMTEnabled",
+client.collections.create(
+    name="LongmemevalS",
     multi_tenancy_config=Configure.multi_tenancy(
         enabled=True,
-        auto_tenant_creation=True
-    )
+        auto_tenant_creation=True,
+    ),
+    # properties: session_id, session_date, session_text
+    # vectorizer on session_text
 )
-[Auto tenant creation]
+```
 
-Note: Tenant names can only contain alphanumeric characters (a-z, A-Z, 0-9), underscores (_), and hyphens (-), with a length of 4 to 64 characters.
+Note: Tenant names must be alphanumeric, underscores, or hyphens, 4–64 characters. The `question_id` values (e.g., `e47becba`) satisfy this.
 
-The LongMemEval multi-tenant collection should have this schema:
-- haystack_session
-- haystack_session_id
-- haystack_session_date
+### Data ingestion
 
-I created this script to help you understand the data further:
+For each question (tenant), insert that question's docs into the tenant:
 
-Connors-MacBook-Pro-2:eda cshorten$ uv run python3 longmemeval-s-eda.py
-question_id: str
-question_type: str
-question: str
-question_date: str
-answer: str
-answer_session_ids: list
-haystack_dates: list
-haystack_session_ids: list
-haystack_sessions: list
+```
+for each unique tenant_id:
+    1. filter docs to that tenant
+    2. batch-insert into the tenant's partition
+```
 
-...
+With `auto_tenant_creation=True`, tenants are created automatically on first insert.
 
-For each of the 500 questions, create a tenant, ingest that question's haystack, run the question as a retrieval query against that tenant, compare results to answer_session_ids, then move to the next question. It's a straightforward loop but worth spelling out.
+## Evaluation
 
-The evaluation labels are at the session level — answer_session_ids points to whole sessions, so retrieval metrics (Recall@k, NDCG@k) are computed by checking whether you retrieved the correct session(s). That makes "one doc per session" the natural starting point for evaluation purposes.
+### Mode: Search
 
-I need to split this into 2 json files: `longmemeval-s-queries` and `longmemeval-s-docs`.
+This is a **search evaluation**. For each question:
 
-I need the queries and the docs to use the question_id to map to the tenant, so something like this:
-  4. Query JSON structure not defined
+1. Set the active tenant to the question's `tenant_id`
+2. Run the question as a retrieval query against that tenant's sessions
+3. Compare retrieved `session_id`s to `answer_session_ids`
 
-  The spec says to split into longmemeval-s-queries and longmemeval-s-docs but doesn't define the fields. I'd suggest:
+### Metrics
 
-  # longmemeval-s-docs (one entry per session per question)
-  {
-    "tenant_id": "<question_id>",
-    "session_id": "<haystack_session_id>",
-    "session_date": "<haystack_date>",
-    "session_text": "<concatenated conversation>"
-  }
+- Recall@1, Recall@5, Recall@10
+- nDCG@10
 
-  # longmemeval-s-queries
-  {
-    "question_id": "<question_id>",
-    "question": "<question>",
-    "question_date": "<question_date>",
-    "answer": "<answer>",
-    "answer_session_ids": ["<session_id>", ...],
-    "tenant_id": "<question_id>"
-  }
+### Ground truth mapping
 
+- Retrieved doc ID = `session_id`
+- Ground truth IDs = `answer_session_ids`
 
+## Implementation Checklist
 
---
-Let's start by integrating this as a search test, and then later on consider an answer test.
+### Database layer
+- [ ] Extend `database_loader.py` to support multi-tenant collection creation
+- [ ] Add LongMemEval entry to the dataset registry with properties: `session_id`, `session_date`, `session_text`
+- [ ] Implement per-tenant batch insert
+
+### Dataset loader
+- [ ] Add `longmemeval-s` loader to `dataset.py` that fetches from `weaviate/longmemeval-s-cleaned`
+- [ ] Map docs to the existing ingestion format (keyed by `tenant_id`)
+- [ ] Map queries to `InMemoryQuery` with `dataset_ids = answer_session_ids`
+
+### Agent layer
+- [ ] Add tenant-awareness to the agent so it queries within the correct tenant per question
+
+### Benchmark runner
+- [ ] Add `longmemeval-s` to `DATASET_METRICS` in `query_agent_benchmark.py` (Recall@1/5/20, nDCG@10)
+- [ ] Add to `supported_search_datasets` in config
+
+### Future work (out of scope for now)
+- Ask evaluation using `answer` field with LLM-as-judge
+- Temporal filtering experiments using `question_date` / `session_date`
