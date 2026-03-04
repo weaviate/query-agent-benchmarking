@@ -134,6 +134,42 @@ Expected response format:
 {"answer": "..."}
 ```
 
+## Multi-Tenancy
+
+Some datasets (e.g. `longmemeval-s`, `longmemeval-m`) use Weaviate multi-tenancy, where each question has its own isolated haystack of documents stored in a separate tenant. Multi-tenancy is handled transparently by the agent layer — no special config is needed.
+
+### How it works
+
+1. **Data loading**: Each `InMemoryQuery` carries an optional `tenant_id` field. For multi-tenant datasets this is set during loading (e.g. from the `tenant_id` column in the HuggingFace dataset).
+
+2. **Query execution**: `run_search_queries` / `run_search_queries_async` in `query_agent_benchmark.py` passes `query.tenant_id` through to the agent:
+   ```python
+   response = query_agent.run(query.question, tenant=query.tenant_id)
+   ```
+
+3. **Agent layer**: `SearchAgentBuilder.run()` and `run_async()` accept an optional `tenant` parameter. When provided, `_get_collection(tenant)` calls `collection.with_tenant(tenant)` to get a tenant-scoped handle before running the query:
+   ```python
+   def _get_collection(self, tenant=None):
+       col = self.weaviate_collection
+       if tenant is not None:
+           col = col.with_tenant(tenant)
+       return col
+   ```
+
+4. **Non-multi-tenant datasets**: `tenant_id` defaults to `None`, so the collection is used as-is with no tenant scoping.
+
+### DB population
+
+Multi-tenancy is configured in the `DatasetSpec` via the builder:
+```python
+(DatasetSpecBuilder("longmemeval-s")
+    .with_multi_tenancy(tenant_id_field="tenant_id")
+    ...
+    .build())
+```
+
+This sets `auto_tenant_creation=True` on the collection, so tenants are created automatically during batch insert. Each document's `tenant_id` field determines which tenant it is inserted into.
+
 ## Target Vector Syntax
 
 There are two equivalent ways to set target vectors for `hybrid-search` and `vector-search`:

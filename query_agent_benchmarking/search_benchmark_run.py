@@ -42,6 +42,7 @@ from query_agent_benchmarking.config import (
     supported_search_datasets,
     resolve_named_vector_target,
     resolve_embedding_providers,
+    get_named_vector_target_entry,
 )
 
 
@@ -84,6 +85,9 @@ def _resolve_search_agent_name(
         return f"{base_name}[{resolved_inline_target}]"
 
     if target_vector:
+        # Silently ignore target vector for single-vector (non-named-vector) datasets.
+        if dataset_identifier and get_named_vector_target_entry(dataset_identifier) is None:
+            return raw_agent_name
         resolved_target_vector = resolve_named_vector_target(
             dataset_name=dataset_identifier,
             target_vector=target_vector,

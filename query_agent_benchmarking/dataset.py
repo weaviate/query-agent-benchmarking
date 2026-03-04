@@ -50,6 +50,10 @@ def in_memory_dataset_loader(
         loaded = _in_memory_dataset_loader_multihoprag()
     elif dataset_name == "vidore_v3_hr":
         loaded = _in_memory_dataset_loader_vidore()
+    elif dataset_name == "longmemeval-s":
+        loaded = _in_memory_dataset_loader_longmemeval("weaviate/longmemeval-s-cleaned")
+    elif dataset_name == "longmemeval-m":
+        loaded = _in_memory_dataset_loader_longmemeval("weaviate/longmemeval-m-cleaned")
     else:
         return None
 
@@ -296,6 +300,37 @@ def _in_memory_dataset_loader_multihoprag():
     
     print(f"Loaded {len(docs)} documents and {len(questions)} questions")
     return docs, questions
+
+def _in_memory_dataset_loader_longmemeval(hf_path: str):
+    print(f"Loading LongMemEval dataset from {hf_path}...")
+
+    raw_docs = load_dataset(hf_path, "docs")["train"]
+    docs = []
+    for item in raw_docs:
+        sid = str(item["session_id"])
+        docs.append({
+            "tenant_id": str(item["tenant_id"]),
+            "session_id": sid,
+            "dataset_id": sid,
+            "session_date": item["session_date"],
+            "session_text": item["session_text"],
+        })
+
+    raw_queries = load_dataset(hf_path, "queries")["train"]
+    questions = []
+    for item in raw_queries:
+        questions.append(
+            InMemoryQuery(
+                question=item["question"],
+                dataset_ids=[str(sid) for sid in item["answer_session_ids"]],
+                query_id=str(item["question_id"]),
+                tenant_id=str(item["tenant_id"]),
+            )
+        )
+
+    print(f"Loaded {len(docs)} documents and {len(questions)} questions")
+    return docs, questions
+
 
 def _load_dataset_from_hf_hub(filepath, subset=None, train=True):
     ds = load_dataset(filepath, subset)

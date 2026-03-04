@@ -71,6 +71,24 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_text2vec_provider_named(source_properties=["content"], base_name="text_content")
         .with_multi2vec(image_field="image", name="image_content", name_by_provider=True)
         .build()),
+
+    (DatasetSpecBuilder("longmemeval-s")
+        .with_static_name("LongmemevalS")
+        .with_text_property("session_text")
+        .with_text_property("session_date", searchable=False, filterable=True)
+        .with_dataset_id(source_field="session_id")
+        .with_text2vec()
+        .with_multi_tenancy(tenant_id_field="tenant_id")
+        .build()),
+
+    (DatasetSpecBuilder("longmemeval-m")
+        .with_static_name("LongmemevalM")
+        .with_text_property("session_text")
+        .with_text_property("session_date", searchable=False, filterable=True)
+        .with_dataset_id(source_field="session_id")
+        .with_text2vec()
+        .with_multi_tenancy(tenant_id_field="tenant_id")
+        .build()),
 ]
 
 

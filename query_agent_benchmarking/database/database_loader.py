@@ -103,6 +103,7 @@ def create_collection_with_vector_config(
         properties=spec.properties,
         vector_config=vector_config,
         recreate=True,
+        multi_tenancy_config=spec.multi_tenancy_config,
     )
 
     print(f"Populating collection with {len(objects)} objects...")
@@ -111,6 +112,7 @@ def create_collection_with_vector_config(
         collection=collection_name,
         items=objects,
         item_to_props=spec.item_to_props,
+        tenant_id_field=spec.tenant_id_field,
     )
     print(f"Collection '{collection_name}' ready!\n")
 
@@ -158,6 +160,7 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
             properties=spec.properties,
             vector_config=spec.vector_config,
             recreate=recreate,
+            multi_tenancy_config=spec.multi_tenancy_config,
         )
 
         # Manage alias
@@ -178,6 +181,7 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
             collection=collection_name,
             items=objects,
             item_to_props=spec.item_to_props,
+            tenant_id_field=spec.tenant_id_field,
         )
     finally:
         client.close()
@@ -190,16 +194,20 @@ def _drop_and_create_collection(
     properties: Sequence[wvcc.Property],
     vector_config: Any,
     recreate: bool = True,
+    multi_tenancy_config: Any = None,
 ) -> None:
     """Drop (if exists) and create a Weaviate collection."""
     if recreate and client.collections.exists(name):
         client.collections.delete(name)
     if not client.collections.exists(name):
-        client.collections.create(
-            name=name,
-            vector_config=vector_config,
-            properties=list(properties),
-        )
+        create_kwargs: dict[str, Any] = {
+            "name": name,
+            "vector_config": vector_config,
+            "properties": list(properties),
+        }
+        if multi_tenancy_config is not None:
+            create_kwargs["multi_tenancy_config"] = multi_tenancy_config
+        client.collections.create(**create_kwargs)
 
 
 # Private helper: internal batching utility shared by the public loaders above.
@@ -210,10 +218,14 @@ def _batch_insert(
     item_to_props: Callable[[Mapping[str, Any]], dict[str, Any]],
     batch_size: int = 20,
     verbose: bool = True,
+    tenant_id_field: Optional[str] = None,
 ) -> int:
     """
     Insert items into a Weaviate collection in batches.
-    
+
+    If tenant_id_field is set, each item's tenant is read from that field
+    and passed to add_object so the object is inserted into the correct tenant.
+
     Returns the total number of items inserted.
     """
     start = time.perf_counter()
@@ -225,7 +237,13 @@ def _batch_insert(
     with client.batch.fixed_size(batch_size=batch_size) as batch:
         for i, item in enumerate(items, start=1):
             props = item_to_props(item)
-            batch.add_object(collection=collection, properties=props)
+            add_kwargs: dict[str, Any] = {
+                "collection": collection,
+                "properties": props,
+            }
+            if tenant_id_field is not None:
+                add_kwargs["tenant"] = str(item[tenant_id_field])
+            batch.add_object(**add_kwargs)
 
             if verbose and i % batch_size == 0:
                 elapsed = time.perf_counter() - start

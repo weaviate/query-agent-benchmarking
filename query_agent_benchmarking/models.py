@@ -22,6 +22,7 @@ class InMemoryQuery(BaseModel):
     question: str
     dataset_ids: list[str]
     query_id: Optional[str] = None
+    tenant_id: Optional[str] = None
     # FreshStack nugget fields (optional)
     nugget_data: Optional[list[NuggetInfo]] = None
     ids_per_nugget: Optional[dict[str, list[str]]] = None

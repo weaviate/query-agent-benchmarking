@@ -277,7 +277,14 @@ class SearchAgentBuilder(BaseAgentBuilder):
             traceback.print_exc()
             raise
 
-    def run(self, query: str) -> list[ObjectID]:
+    def _get_collection(self, tenant: Optional[str] = None):
+        """Return the collection handle, optionally scoped to a tenant."""
+        col = self.weaviate_collection
+        if tenant is not None:
+            col = col.with_tenant(tenant)
+        return col
+
+    def run(self, query: str, tenant: Optional[str] = None) -> list[ObjectID]:
         """Run synchronous search query."""
         if self.agent_name == "query-agent-search-only":
             response = self.agent.search(query, limit=20)
@@ -285,24 +292,26 @@ class SearchAgentBuilder(BaseAgentBuilder):
             for obj in response.search_results.objects:
                 results.append(ObjectID(object_id=obj.properties[self.id_property]))
             return results
-        
+
         elif self.agent_name == "hybrid-search":
+            col = self._get_collection(tenant)
             target_vector = self._resolve_target_vector()
             hybrid_kwargs = {"query": query, "limit": 20}
             if target_vector is not None:
                 hybrid_kwargs["target_vector"] = target_vector
-            response = self.weaviate_collection.query.hybrid(**hybrid_kwargs)
+            response = col.query.hybrid(**hybrid_kwargs)
             results = []
             for obj in response.objects:
                 results.append(ObjectID(object_id=str(obj.properties[self.id_property])))
             return results
 
         elif self.agent_name == "vector-search":
+            col = self._get_collection(tenant)
             target_vector = self._resolve_target_vector()
             near_text_kwargs = {"query": query, "limit": 20}
             if target_vector is not None:
                 near_text_kwargs["target_vector"] = target_vector
-            response = self.weaviate_collection.query.near_text(**near_text_kwargs)
+            response = col.query.near_text(**near_text_kwargs)
             results = []
             for obj in response.objects:
                 results.append(ObjectID(object_id=str(obj.properties[self.id_property])))
@@ -324,7 +333,7 @@ class SearchAgentBuilder(BaseAgentBuilder):
                 results.append(ObjectID(object_id=str(doc_id)))
             return results
 
-    async def run_async(self, query: str) -> list[ObjectID]:
+    async def run_async(self, query: str, tenant: Optional[str] = None) -> list[ObjectID]:
         """Run asynchronous search query."""
         try:
             if self.agent_name == "query-agent-search-only":
@@ -334,21 +343,23 @@ class SearchAgentBuilder(BaseAgentBuilder):
                     results.append(ObjectID(object_id=obj.properties[self.id_property]))
                 return results
             elif self.agent_name == "hybrid-search":
+                col = self._get_collection(tenant)
                 target_vector = self._resolve_target_vector()
                 hybrid_kwargs = {"query": query, "limit": 20}
                 if target_vector is not None:
                     hybrid_kwargs["target_vector"] = target_vector
-                response = await self.weaviate_collection.query.hybrid(**hybrid_kwargs)
+                response = await col.query.hybrid(**hybrid_kwargs)
                 results = []
                 for obj in response.objects:
                     results.append(ObjectID(object_id=str(obj.properties[self.id_property])))
                 return results
             elif self.agent_name == "vector-search":
+                col = self._get_collection(tenant)
                 target_vector = self._resolve_target_vector()
                 near_text_kwargs = {"query": query, "limit": 20}
                 if target_vector is not None:
                     near_text_kwargs["target_vector"] = target_vector
-                response = await self.weaviate_collection.query.near_text(**near_text_kwargs)
+                response = await col.query.near_text(**near_text_kwargs)
                 results = []
                 for obj in response.objects:
                     results.append(ObjectID(object_id=str(obj.properties[self.id_property])))
@@ -356,13 +367,13 @@ class SearchAgentBuilder(BaseAgentBuilder):
             elif self.agent_name == "external_service":
                 # Build request payload
                 payload = {"query": query}
-                
+
                 # Send async request to external host
                 async with httpx.AsyncClient(timeout=300.0) as client:
                     response = await client.post(self.external_service_host, json=payload)
                     response.raise_for_status()
                     data = response.json()
-                
+
                 # Parse results - expect {"results": ["id1", "id2", ...]}
                 results = []
                 for doc_id in data.get("results", []):
