@@ -86,6 +86,18 @@ DATASET_METRICS: dict[str, list[dict]] = {
         {"func": calculate_recall_at_k, "params": {"k": 20}},
         {"func": calculate_nDCG_at_k, "params": {"k": 10}},
     ],
+    "longmemeval-s": [
+        {"func": calculate_recall_at_k, "params": {"k": 1}},
+        {"func": calculate_recall_at_k, "params": {"k": 5}},
+        {"func": calculate_recall_at_k, "params": {"k": 10}},
+        {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+    ],
+    "longmemeval-m": [
+        {"func": calculate_recall_at_k, "params": {"k": 1}},
+        {"func": calculate_recall_at_k, "params": {"k": 5}},
+        {"func": calculate_recall_at_k, "params": {"k": 10}},
+        {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+    ],
 }
 
 
@@ -113,7 +125,7 @@ def run_search_queries(
     for i, query in enumerate(tqdm(queries, desc="Running search queries")):
         query_start_time = time.time()
         stringified_ids = [str(dataset_id) for dataset_id in query.dataset_ids]
-        response = query_agent.run(query.question)  # -> list[ObjectID]
+        response = query_agent.run(query.question, tenant=query.tenant_id)  # -> list[ObjectID]
         query_time_taken = time.time() - query_start_time
 
         results.append(QueryResult(
@@ -170,7 +182,7 @@ async def run_search_queries_async(
                 
                 question_sample = query.question
                 print(f"Running search query {index}: {question_sample}")
-                response = await query_agent.run_async(query.question)
+                response = await query_agent.run_async(query.question, tenant=query.tenant_id)
                 query_time_taken = time.time() - query_start_time
 
                 result = QueryResult(

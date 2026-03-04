@@ -36,6 +36,8 @@ class DatasetSpecBuilder:
         self._field_mappings: dict[str, str] = {}
         self._id_field: str = "dataset_id"
         self._custom_mapper: Optional[Callable[[Mapping[str, Any]], dict[str, Any]]] = None
+        self._multi_tenancy_config: Any = None
+        self._tenant_id_field: Optional[str] = None
         self._config: dict[str, Any] = self._load_config(config_path)
 
     def _load_config(self, path: Optional[str | Path] = None) -> dict[str, Any]:
@@ -568,6 +570,20 @@ class DatasetSpecBuilder:
             )
         return builder(image_field, model, name)
 
+    def with_multi_tenancy(
+        self,
+        tenant_id_field: str = "tenant_id",
+    ) -> "DatasetSpecBuilder":
+        """Enable multi-tenancy for this dataset.
+
+        Args:
+            tenant_id_field: Source field name used to group items by tenant.
+        """
+        from weaviate.collections.classes.config import Configure
+        self._multi_tenancy_config = Configure.multi_tenancy(enabled=True, auto_tenant_creation=True)
+        self._tenant_id_field = tenant_id_field
+        return self
+
     def with_custom_vector_config(self, config: Any) -> "DatasetSpecBuilder":
         """Use a custom vector configuration."""
         self._vector_config = config
@@ -602,6 +618,8 @@ class DatasetSpecBuilder:
             properties=tuple(self._properties),
             vector_config=self._vector_config,
             item_to_props=item_to_props,
+            multi_tenancy_config=self._multi_tenancy_config,
+            tenant_id_field=self._tenant_id_field,
         )
 
     def _build_mapper(self) -> Callable[[Mapping[str, Any]], dict[str, Any]]:

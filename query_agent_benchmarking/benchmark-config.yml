@@ -1,11 +1,11 @@
 # =============================================================================
 # Search Mode Settings
 # =============================================================================
-search_agent_name: "vector-search"
-search_dataset: vidore_v3_hr
+search_agent_name: "hybrid-search"
+search_dataset: longmemeval-m
 
 # See `named_vectors.md` for supported target vectors.
-search_target: "image_content_weaviate"
+search_target: "text_content_weaviate"
 
 # =============================================================================
 # Ask Mode Settings
@@ -25,7 +25,7 @@ use_async: True
 max_concurrent: 5
 sleep_between_requests: 0
 
-use_subset: True
+use_subset: False
 num_samples: 100
 
 num_trials: 1

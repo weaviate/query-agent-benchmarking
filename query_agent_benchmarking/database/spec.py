@@ -1,6 +1,6 @@
 """Dataset specification definition."""
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, Optional
 
 import weaviate.collections.classes.config as wvcc
 
@@ -13,6 +13,8 @@ class DatasetSpec:
     properties: tuple[wvcc.Property, ...]
     vector_config: Any
     item_to_props: Callable[[Mapping[str, Any]], dict[str, Any]]
+    multi_tenancy_config: Any = None
+    tenant_id_field: Optional[str] = None
 
     def matches(self, dataset_name: str) -> bool:
         """Check if this spec matches a dataset name."""

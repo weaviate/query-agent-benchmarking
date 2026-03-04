@@ -21,6 +21,8 @@ supported_search_datasets = (
     "freshstack-laravel",
     "freshstack-yolo",
     "irpapers",
+    "longmemeval-m",
+    "longmemeval-s",
     "lotte/lifestyle/test/forum",
     "lotte/lifestyle/test/search",
     "lotte/recreation/test/forum",

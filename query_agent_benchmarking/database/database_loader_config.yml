@@ -1,4 +1,4 @@
-dataset_name: vidore_v3_hr
+dataset_name: longmemeval-m
 
 # NOTE: This is a work in progess, need a better abstraction for multiple models from the same provider.
 # The problem is X_weaviate_snowflake_... ends up being really verbose when you need to
