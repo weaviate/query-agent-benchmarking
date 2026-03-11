@@ -20,6 +20,7 @@ from query_agent_benchmarking.metrics.ir_metrics import (
 )
 from query_agent_benchmarking.metrics.lmjudge_alignment import LMJudge
 from query_agent_benchmarking.metrics.exact_match import calculate_exact_match
+from query_agent_benchmarking.metrics.officeqa_metric import score_answer as officeqa_score_answer, extract_final_answer
 from query_agent_benchmarking.models import (
     QueryResult,
     InMemoryQuery,
@@ -537,6 +538,8 @@ async def analyze_ask_results(
     judge_model: str = "openai/gpt-4.1",
     ensemble_k: int = 3,
     use_exact_match: bool = False,
+    use_officeqa_metric: bool = False,
+    officeqa_tolerance: float = 0.00,
 ) -> dict:
     """
     Analyze ask results using LLM-as-judge for semantic alignment or exact match.
@@ -550,14 +553,16 @@ async def analyze_ask_results(
     Returns:
         Dictionary with alignment scores and timing metrics.
     """
-    if use_exact_match:
+    if use_officeqa_metric:
+        print(f"\n\033[94mAnalyzing {len(results)} ask results with OfficeQA fuzzy match (tolerance={officeqa_tolerance})...\033[0m")
+    elif use_exact_match:
         print(f"\n\033[94mAnalyzing {len(results)} ask results with exact match...\033[0m")
     else:
         print(f"\n\033[94mAnalyzing {len(results)} ask results with LLM judge...\033[0m")
         print(f"Judge model: {judge_model}, Ensemble K: {ensemble_k}")
-    
-    # Initialize the LLM judge only if not using exact match
-    judge = None if use_exact_match else LMJudge(model=judge_model, ensemble_k=ensemble_k)
+
+    # Initialize the LLM judge only if not using exact match or officeqa metric
+    judge = None if (use_exact_match or use_officeqa_metric) else LMJudge(model=judge_model, ensemble_k=ensemble_k)
     
     alignment_scores = []
     query_times = []
@@ -565,14 +570,29 @@ async def analyze_ask_results(
     total_input_tokens = 0
     total_output_tokens = 0
     
-    desc = "Running exact match" if use_exact_match else "Running LLM judge"
+    if use_officeqa_metric:
+        desc = "Running OfficeQA fuzzy match"
+    elif use_exact_match:
+        desc = "Running exact match"
+    else:
+        desc = "Running LLM judge"
     for i, result in enumerate(tqdm(results, desc=desc)):
         # Skip error results
         if result.system_answer.startswith("[ERROR]"):
             print(f"\n\033[91mSkipping evaluation for query {i} due to error.\033[0m")
             continue
-        
-        if use_exact_match:
+
+        if use_officeqa_metric:
+            # Extract final answer from tags if present
+            predicted = extract_final_answer(result.system_answer)
+            score = officeqa_score_answer(
+                ground_truth=result.query.ground_truth_answer,
+                predicted=predicted,
+                tolerance=officeqa_tolerance,
+            )
+            aligned = score == 1.0
+            alignment_scores.append(1 if aligned else 0)
+        elif use_exact_match:
             # Use exact match
             aligned = calculate_exact_match(
                 system_answer=result.system_answer,
@@ -606,7 +626,15 @@ async def analyze_ask_results(
             print(f"Running avg query time: {np.mean(query_times):.2f}s")
     
     # Build results dictionary (same structure as search benchmark)
-    metric_name = "exact_match_accuracy" if use_exact_match else "alignment_score"
+    if use_officeqa_metric:
+        metric_name = "officeqa_accuracy"
+        metric_label = "officeqa_fuzzy_match"
+    elif use_exact_match:
+        metric_name = "exact_match_accuracy"
+        metric_label = "exact_match"
+    else:
+        metric_name = "alignment_score"
+        metric_label = "llm_judge"
     metric_results = {metric_name: alignment_scores}
 
     results_dict = {
@@ -615,7 +643,7 @@ async def analyze_ask_results(
         "misaligned_indices": misaligned_indices,
         "total_input_tokens": total_input_tokens,
         "total_output_tokens": total_output_tokens,
-        "metric": "exact_match" if use_exact_match else "llm_judge",
+        "metric": metric_label,
     }
 
     for name, scores in metric_results.items():

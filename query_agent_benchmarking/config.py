@@ -34,6 +34,7 @@ supported_search_datasets = (
 supported_ask_datasets = (
     "irpapers",  # Uses IRPapers_Default collection
     "multihoprag",  # Uses MultiHopRAG_Default collection
+    "officeqa",  # Uses OfficeQA_Default collection (local PDFs)
 )
 
 supported_embedding_models = (
