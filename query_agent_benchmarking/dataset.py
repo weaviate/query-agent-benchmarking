@@ -11,7 +11,7 @@ from datasets import load_dataset
 from query_agent_benchmarking.utils import get_weaviate_client
 
 from query_agent_benchmarking.models import InMemoryQuery, InMemoryAskQuery, NuggetInfo
-from query_agent_benchmarking.pdf_utils import get_pdf_page_counts, process_single_pdf
+from query_agent_benchmarking.database.pdf_utils import get_pdf_page_counts, process_single_pdf
 
 
 def in_memory_dataset_loader(
