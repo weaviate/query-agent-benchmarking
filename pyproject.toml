@@ -20,6 +20,7 @@ dependencies = [
   "setuptools>=80.9.0",
   "wheel>=0.45.1",
   "twine>=6.2.0",
+  "PyMuPDF>=1.24.0",
 ]
 
 [tool.setuptools.packages.find]

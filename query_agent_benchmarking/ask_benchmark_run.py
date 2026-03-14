@@ -116,10 +116,14 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
         print(f"Using a subset of {config['num_samples']} queries.")
 
     # Determine which metric to use
-    # MultiHop-RAG uses exact match, others use LLM judge
+    # MultiHop-RAG uses exact match, OfficeQA uses fuzzy match, others use LLM judge
     use_exact_match = config.get("use_exact_match", False)
+    use_officeqa_metric = config.get("use_officeqa_metric", False)
+    officeqa_tolerance = config.get("officeqa_tolerance", 0.00)
     if isinstance(queries_input, str) and queries_input == "multihoprag":
         use_exact_match = True
+    if isinstance(queries_input, str) and queries_input == "officeqa":
+        use_officeqa_metric = True
 
     # Set system prompt from config override, or fall back to registry
     system_prompt = config.get("system_prompt")
@@ -195,15 +199,27 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
             judge_model=judge_model,
             ensemble_k=ensemble_k,
             use_exact_match=use_exact_match,
+            use_officeqa_metric=use_officeqa_metric,
+            officeqa_tolerance=officeqa_tolerance,
         )
         
         print(f"\n\033[92mTrial {trial+1} Results:\033[0m")
-        score_key = "avg_exact_match_accuracy" if use_exact_match else "avg_alignment_score"
+        if use_officeqa_metric:
+            score_key = "avg_officeqa_accuracy"
+        elif use_exact_match:
+            score_key = "avg_exact_match_accuracy"
+        else:
+            score_key = "avg_alignment_score"
         print(f"  {score_key}: {metrics[score_key]:.2%}")
         print(f"  Avg Query Time: {metrics['avg_query_time']:.2f}s")
 
         # Extract per-query scores for trial results
-        scores_key = "exact_match_accuracy_scores" if use_exact_match else "alignment_score_scores"
+        if use_officeqa_metric:
+            scores_key = "officeqa_accuracy_scores"
+        elif use_exact_match:
+            scores_key = "exact_match_accuracy_scores"
+        else:
+            scores_key = "alignment_score_scores"
         alignment_scores = metrics.get(scores_key, [])
 
         save_ask_trial_results(

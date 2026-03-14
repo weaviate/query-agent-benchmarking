@@ -546,6 +546,25 @@ class DatasetSpecBuilder:
                 return constructor(**kwargs)
             raise
 
+    def _build_multi2vec_cohere_config(
+        self,
+        image_field: str,
+        model: str,
+        name: Optional[str],
+    ) -> Any:
+        """Build multi2vec config for the Cohere provider."""
+        constructor = getattr(wvcc.Configure.Vectors, "multi2vec_cohere", None)
+        if constructor is None:
+            raise ValueError(
+                "This Weaviate client version does not expose multi2vec_cohere. "
+                "Please upgrade your weaviate-client package."
+            )
+        return constructor(
+            name=name,
+            model=model,
+            image_fields=[image_field],
+        )
+
     def _build_multi2vec_config(
         self,
         provider: str,
@@ -560,6 +579,7 @@ class DatasetSpecBuilder:
         """
         provider_builders: dict[str, Callable[[str, str, Optional[str]], Any]] = {
             "weaviate": self._build_multi2vec_weaviate_config,
+            "cohere": self._build_multi2vec_cohere_config,
         }
         builder = provider_builders.get(provider)
         if builder is None:

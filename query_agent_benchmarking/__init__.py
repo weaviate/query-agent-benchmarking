@@ -50,6 +50,8 @@ from .metrics import (
     calculate_alignment_score,
     # Exact Match
     calculate_exact_match,
+    # OfficeQA
+    officeqa_score_answer,
 )
 
 from .experimental.create_benchmark import create_benchmark
@@ -112,6 +114,8 @@ __all__ = [
     "calculate_alignment_score",
     # Metrics - Exact Match
     "calculate_exact_match",
+    # Metrics - OfficeQA
+    "officeqa_score_answer",
     # Result serialization
     "save_trial_results",
     "save_ask_trial_results",

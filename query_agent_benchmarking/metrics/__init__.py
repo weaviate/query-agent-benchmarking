@@ -11,6 +11,7 @@ from .lmjudge_alignment import (
     calculate_alignment_score,
 )
 from .exact_match import calculate_exact_match
+from .officeqa_metric import score_answer as officeqa_score_answer
 
 __all__ = [
     # IR Metrics
@@ -25,5 +26,7 @@ __all__ = [
     "calculate_alignment_score",
     # Exact Match Metric
     "calculate_exact_match",
+    # OfficeQA Metric
+    "officeqa_score_answer",
 ]
 

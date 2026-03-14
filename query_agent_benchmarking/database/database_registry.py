@@ -89,6 +89,14 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_text2vec()
         .with_multi_tenancy(tenant_id_field="tenant_id")
         .build()),
+
+    (DatasetSpecBuilder("officeqa")
+        .with_static_name("OfficeQA")
+        .with_blob_property("image", source_field="image")
+        .with_text_property("source_pdf", searchable=False, filterable=True)
+        .with_int_property("page_number", filterable=True)
+        .with_multi2vec(image_field="image", embedding_model="cohere/embed-v4.0")
+        .build()),
 ]
 
 
