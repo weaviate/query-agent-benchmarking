@@ -137,6 +137,8 @@ class DatasetSpecBuilder:
         normalized = provider.strip().lower()
         if normalized in {"voyage", "voyage-ai"}:
             return "voyageai"
+        if normalized in {"gemini", "google-gemini", "google_gemini"}:
+            return "google"
         return normalized
 
     def _qualify_vector_name_with_provider(
@@ -169,10 +171,12 @@ class DatasetSpecBuilder:
             return wvcc.Configure.Vectors.text2vec_cohere(model=model)
         elif provider == "voyageai":
             return wvcc.Configure.Vectors.text2vec_voyageai(model=model)
+        elif provider == "google":
+            return wvcc.Configure.Vectors.multi2vec_google_gemini(model=model)
         else:
             raise ValueError(
                 f"Unsupported embedding provider: '{provider}'. "
-                f"Supported providers: ['weaviate', 'cohere', 'voyageai']"
+                f"Supported providers: ['weaviate', 'cohere', 'voyageai', 'google']"
             )
 
     def _append_vector_config(self, cfg: Any) -> None:
@@ -293,10 +297,16 @@ class DatasetSpecBuilder:
                 model=model_name,
                 source_properties=source_properties,
             )
+        elif provider == "google":
+            cfg = wvcc.Configure.Vectors.multi2vec_google_gemini(
+                name=vector_name,
+                model=model_name,
+                text_fields=source_properties,
+            )
         else:
             raise ValueError(
                 f"Unsupported embedding provider: '{provider}'. "
-                f"Supported providers: ['weaviate', 'cohere', 'voyageai']"
+                f"Supported providers: ['weaviate', 'cohere', 'voyageai', 'google']"
             )
 
         self._append_vector_config(cfg)
@@ -565,6 +575,25 @@ class DatasetSpecBuilder:
             image_fields=[image_field],
         )
 
+    def _build_multi2vec_google_gemini_config(
+        self,
+        image_field: str,
+        model: str,
+        name: Optional[str],
+    ) -> Any:
+        """Build multi2vec config for the Google Gemini provider."""
+        constructor = getattr(wvcc.Configure.Vectors, "multi2vec_google_gemini", None)
+        if constructor is None:
+            raise ValueError(
+                "This Weaviate client version does not expose multi2vec_google_gemini. "
+                "Please upgrade your weaviate-client package."
+            )
+        return constructor(
+            name=name,
+            model=model,
+            image_fields=[image_field],
+        )
+
     def _build_multi2vec_config(
         self,
         provider: str,
@@ -580,6 +609,7 @@ class DatasetSpecBuilder:
         provider_builders: dict[str, Callable[[str, str, Optional[str]], Any]] = {
             "weaviate": self._build_multi2vec_weaviate_config,
             "cohere": self._build_multi2vec_cohere_config,
+            "google": self._build_multi2vec_google_gemini_config,
         }
         builder = provider_builders.get(provider)
         if builder is None:

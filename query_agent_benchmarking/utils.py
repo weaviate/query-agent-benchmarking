@@ -100,7 +100,7 @@ def get_provider_headers(provider: str) -> dict[str, str]:
     Get API key headers for third-party embedding providers.
     
     Args:
-        provider: The provider name ("cohere", "voyageai", or "weaviate")
+        provider: The provider name ("cohere", "voyageai", "google", or "weaviate")
     
     Returns:
         Dictionary of headers with API keys from environment variables
@@ -108,6 +108,7 @@ def get_provider_headers(provider: str) -> dict[str, str]:
     header_map = {
         "cohere": ("X-Cohere-Api-Key", "COHERE_API_KEY"),
         "voyageai": ("X-VoyageAI-Api-Key", "VOYAGEAI_API_KEY"),
+        "google": ("X-Goog-Api-Key", "GOOGLE_API_KEY"),
     }
     
     if provider not in header_map:

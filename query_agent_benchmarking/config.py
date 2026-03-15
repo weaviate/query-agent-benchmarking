@@ -55,11 +55,15 @@ _VECTORIZER_PROVIDER_MAP = {
     "img2vec-neural": "weaviate",
     "text2vec-cohere": "cohere",
     "text2vec-voyageai": "voyageai",
+    "multi2vec-palm": "google",
 }
 
 _PROVIDER_ALIASES = {
     "voyage": "voyageai",
     "voyage-ai": "voyageai",
+    "gemini": "google",
+    "google-gemini": "google",
+    "google_gemini": "google",
 }
 
 
