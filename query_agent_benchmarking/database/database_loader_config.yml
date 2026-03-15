@@ -1,4 +1,4 @@
-dataset_name: officeqa
+dataset_name: irpapers
 
 # NOTE: This is a work in progess, need a better abstraction for multiple models from the same provider.
 # The problem is X_weaviate_snowflake_... ends up being really verbose when you need to
@@ -7,9 +7,9 @@ dataset_name: officeqa
 # Use a list to create multiple provider-qualified text vectors, e.g.
 # `text_content_weaviate`, `text_content_cohere`.
 text_embedding_models:
-  - "cohere/embed-v4.0"
+  - "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
 
-image_embedding_model: "cohere/embed-v4.0"
+image_embedding_model: "weaviate/ModernVBERT/colmodernvbert"
 
 # MUVERA+HNSW parameters
 use_MUVERA_encoding: False

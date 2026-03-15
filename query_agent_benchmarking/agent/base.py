@@ -116,6 +116,8 @@ class BaseAgentBuilder(ABC):
         normalized = provider.strip().lower()
         if normalized in {"voyage", "voyage-ai"}:
             return "voyageai"
+        if normalized in {"gemini", "google-gemini", "google_gemini"}:
+            return "google"
         return normalized
 
     def _connect_sync(self) -> weaviate.WeaviateClient:

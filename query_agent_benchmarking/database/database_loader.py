@@ -48,10 +48,12 @@ def get_vector_config(embedding_model: Optional[str] = None) -> Any:
         return wvcc.Configure.Vectors.text2vec_cohere(model=model_name)
     elif provider == "voyageai":
         return wvcc.Configure.Vectors.text2vec_voyageai(model=model_name)
+    elif provider == "google":
+        return wvcc.Configure.Vectors.multi2vec_google_gemini(model=model_name)
     else:
         raise ValueError(
             f"Unsupported embedding provider: '{provider}'. "
-            f"Supported providers: ['weaviate', 'cohere', 'voyageai']"
+            f"Supported providers: ['weaviate', 'cohere', 'voyageai', 'google']"
         )
 
 
@@ -313,6 +315,8 @@ def _normalize_provider_name(provider: str) -> str:
     normalized = provider.strip().lower()
     if normalized in {"voyage", "voyage-ai"}:
         return "voyageai"
+    if normalized in {"gemini", "google-gemini", "google_gemini"}:
+        return "google"
     return normalized
 
 
