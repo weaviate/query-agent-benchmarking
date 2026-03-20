@@ -276,11 +276,14 @@ def run_ask_queries(
         query_start_time = time.time()
         
         try:
-            # Pass oracle_context_id if available (for external mode)
-            response = ask_agent.run(
+            # Build kwargs — pass tenant_id if the agent supports it (e.g., EngramAskAgent)
+            run_kwargs = dict(
                 query=query.question,
-                oracle_context_id=query.oracle_context_id
+                oracle_context_id=query.oracle_context_id,
             )
+            if hasattr(query, "tenant_id") and query.tenant_id is not None:
+                run_kwargs["tenant_id"] = query.tenant_id
+            response = ask_agent.run(**run_kwargs)
             query_time_taken = time.time() - query_start_time
             
             results.append(AskResult(
@@ -340,10 +343,13 @@ async def run_ask_queries_async(
                     await asyncio.sleep(0.1)
                 
                 print(f"Running ask query {index}: {query.question[:50]}...")
-                response = await ask_agent.run_async(
+                run_kwargs = dict(
                     query=query.question,
-                    oracle_context_id=query.oracle_context_id
+                    oracle_context_id=query.oracle_context_id,
                 )
+                if hasattr(query, "tenant_id") and query.tenant_id is not None:
+                    run_kwargs["tenant_id"] = query.tenant_id
+                response = await ask_agent.run_async(**run_kwargs)
                 query_time_taken = time.time() - query_start_time
 
                 return AskResult(

@@ -7,7 +7,7 @@ name = "query-agent-benchmarking"
 version = "0.6"
 description="A Python library for benchmarking Weaviate's Query Agent!"
 readme="README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
   "dspy>=3.0.4",
   "sentence-transformers>=5.0.0",
@@ -20,7 +20,8 @@ dependencies = [
   "setuptools>=80.9.0",
   "wheel>=0.45.1",
   "twine>=6.2.0",
-  "PyMuPDF>=1.24.0",
+  "PyMuPDF>=1.24.0,!=1.27.2.2",
+  "weaviate-engram>=0.4.0",
 ]
 
 [tool.setuptools.packages.find]

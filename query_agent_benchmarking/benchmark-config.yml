@@ -11,12 +11,13 @@ search_target: "image_content_weaviate"
 # Ask Mode Settings
 # =============================================================================
 ask_agent_name: "query-agent-ask"
-ask_dataset: multihoprag
-queries: "multihoprag"
+ask_dataset: longmemeval-s
 
 # LLM Judge configuration
 judge_model: "openai/gpt-4.1"
 ensemble_k: 3
+
+engram_base_url: https://dev-engram.labs.weaviate.io
 
 # =============================================================================
 # Shared Settings

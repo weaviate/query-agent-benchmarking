@@ -33,6 +33,7 @@ supported_search_datasets = (
 
 supported_ask_datasets = (
     "irpapers",  # Uses IRPapers_Default collection
+    "longmemeval-s",  # Uses Engram memory layer or LongmemevalS_Default collection
     "multihoprag",  # Uses MultiHopRAG_Default collection
     "officeqa",  # Uses OfficeQA_Default collection (local PDFs)
 )

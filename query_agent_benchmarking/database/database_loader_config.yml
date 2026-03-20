@@ -1,4 +1,4 @@
-dataset_name: irpapers
+dataset_name: longmemeval-s
 
 # NOTE: This is a work in progess, need a better abstraction for multiple models from the same provider.
 # The problem is X_weaviate_snowflake_... ends up being really verbose when you need to
@@ -17,3 +17,7 @@ ksim: 4
 dprojections: 16
 repetitions: 10
 ef: 500
+
+# Engram parameters
+use_engram: True
+engram_base_url: https://dev-engram.labs.weaviate.io

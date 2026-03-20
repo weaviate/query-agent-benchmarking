@@ -122,14 +122,22 @@ def create_collection_with_vector_config(
 # Public API: primary entry point used by `scripts/populate-db.py` and package users.
 def database_loader(recreate: bool = True, tag: str = "Default") -> None:
     """
-    Load dataset from config and populate Weaviate collection.
-    
+    Load dataset from config and populate Weaviate collection (or Engram if use_engram is set).
+
     Args:
         recreate: Whether to drop existing collection before creating
         tag: Suffix to add to collection name
     """
     config_path = Path(__file__).parent / "database_loader_config.yml"
     config = load_config(config_path)
+
+    if config.get("use_engram", False):
+        from .engram_loader import engram_loader
+        engram_loader(
+            dataset_name=config.get("dataset_name"),
+            engram_base_url=config.get("engram_base_url"),
+        )
+        return
 
     # Get provider headers for all configured embedding providers.
     headers = _resolve_provider_headers(

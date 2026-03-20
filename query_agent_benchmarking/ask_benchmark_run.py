@@ -10,7 +10,7 @@ import asyncio
 from pathlib import Path
 from typing import Optional, Any, Union
 
-from query_agent_benchmarking.agent import AskAgentBuilder
+from query_agent_benchmarking.agent import AskAgentBuilder, EngramAskAgent
 from query_agent_benchmarking.models import (
     DocsCollection,
     AskQueriesCollection,
@@ -51,8 +51,11 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     dataset_name = config.get("ask_dataset")
     docs_collection = config.get("docs_collection")
     queries_input = config.get("queries")
-    
-    # Load queries
+
+    # Load queries — fall back to ask_dataset if queries is not explicitly provided
+    if not queries_input and dataset_name:
+        queries_input = dataset_name
+
     if queries_input:
         if isinstance(queries_input, AskQueriesCollection):
             # Custom Weaviate collection
@@ -88,7 +91,7 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
                 f"Got: {type(queries_input)}"
             )
     else:
-        raise ValueError("Must provide 'queries' for ask evaluation")
+        raise ValueError("Must provide 'queries' or 'ask_dataset' for ask evaluation")
     
     # Determine dataset identifier
     if docs_collection:
@@ -138,7 +141,16 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     # Add agent_name to config for result serialization
     config["agent_name"] = agent_name
 
-    if docs_collection:
+    if agent_name == "engram":
+        import os
+        ask_agent = EngramAskAgent(
+            engram_api_key=config.get("engram_api_key") or os.getenv("ENGRAM_API_KEY", ""),
+            engram_base_url=config.get("engram_base_url") or os.getenv("ENGRAM_BASE_URL", ""),
+            engram_user_id_prefix=config.get("engram_user_id_prefix", ""),
+            llm_model=config.get("engram_llm_model", "gpt-4.1"),
+            system_prompt=system_prompt,
+        )
+    elif docs_collection:
         ask_agent = AskAgentBuilder(
             agent_name=agent_name,
             docs_collection=docs_collection,

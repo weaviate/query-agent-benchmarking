@@ -470,10 +470,14 @@ def in_memory_ask_dataset_loader(dataset_name: str) -> list[InMemoryAskQuery]:
         return _in_memory_ask_loader_multihoprag()
     elif dataset_name == "officeqa":
         return _in_memory_ask_loader_officeqa()
+    elif dataset_name == "longmemeval-s":
+        return _in_memory_ask_loader_longmemeval("weaviate/longmemeval-s-cleaned")
+    elif dataset_name == "longmemeval-m":
+        return _in_memory_ask_loader_longmemeval("weaviate/longmemeval-m-cleaned")
     else:
         raise ValueError(
             f"Unknown ask dataset: {dataset_name}. "
-            f"Supported ask datasets: irpapers, multihoprag, officeqa"
+            f"Supported ask datasets: irpapers, multihoprag, officeqa, longmemeval-s, longmemeval-m"
         )
 
 
@@ -529,6 +533,23 @@ def _in_memory_ask_loader_officeqa() -> list[InMemoryAskQuery]:
                 ground_truth_answer=row["answer"],
                 oracle_context_id=None,
             ))
+
+    print(f"Loaded {len(queries)} ask queries")
+    return queries
+
+
+def _in_memory_ask_loader_longmemeval(hf_path: str) -> list[InMemoryAskQuery]:
+    """Load LongMemEval ask queries with ground truth answers."""
+    print(f"Loading LongMemEval ask queries from {hf_path}...")
+
+    raw_queries = load_dataset(hf_path, "queries")["train"]
+    queries: list[InMemoryAskQuery] = []
+    for item in raw_queries:
+        queries.append(InMemoryAskQuery(
+            question=item["question"],
+            ground_truth_answer=item["answer"],
+            tenant_id=str(item["tenant_id"]),
+        ))
 
     print(f"Loaded {len(queries)} ask queries")
     return queries
