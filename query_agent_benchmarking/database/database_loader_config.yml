@@ -1,4 +1,4 @@
-dataset_name: irpapers
+dataset_name: irpapers-text-only
 
 # NOTE: This is a work in progess, need a better abstraction for multiple models from the same provider.
 # The problem is X_weaviate_snowflake_... ends up being really verbose when you need to
@@ -6,8 +6,7 @@ dataset_name: irpapers
 
 # Use a list to create multiple provider-qualified text vectors, e.g.
 # `text_content_weaviate`, `text_content_cohere`.
-text_embedding_models:
-  - "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
+text_embedding_model: "voyageai/voyage-4-large"
 
 image_embedding_model: "weaviate/ModernVBERT/colmodernvbert"
 

@@ -192,7 +192,7 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
     embedding_providers = resolve_embedding_providers(
         dataset_name=dataset_identifier,
         target_vector=resolved_target_vector,
-        embedding_providers=config.get("embedding_providers"),
+        embedding_providers=config.get("embedding_providers") or config.get("external_providers"),
         embedding_models=[
             text_embedding_model,
             image_embedding_model,

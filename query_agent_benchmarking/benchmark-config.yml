@@ -1,11 +1,11 @@
 # =============================================================================
 # Search Mode Settings
 # =============================================================================
-search_agent_name: "vector-search"
-search_dataset: irpapers
+search_agent_name: "query-agent-search-only"
+search_dataset: irpapers-text-only
 
 # See `named_vectors.md` for supported target vectors.
-search_target: "image_content_weaviate"
+search_target: "text_content_voyageai"
 
 # =============================================================================
 # Ask Mode Settings
@@ -21,6 +21,9 @@ ensemble_k: 3
 # =============================================================================
 # Shared Settings
 # =============================================================================
+external_providers:
+  - voyageai
+
 use_async: True
 max_concurrent: 5
 sleep_between_requests: 0

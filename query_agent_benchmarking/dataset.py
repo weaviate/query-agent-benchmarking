@@ -47,7 +47,7 @@ def in_memory_dataset_loader(
         loaded = _in_memory_dataset_loader_freshstack(subset="laravel")
     elif dataset_name == "freshstack-yolo":
         loaded = _in_memory_dataset_loader_freshstack(subset="yolo")
-    elif dataset_name == "irpapers":
+    elif dataset_name in ("irpapers", "irpapers-text-only"):
         loaded = _in_memory_dataset_loader_irpapers()
     elif dataset_name == "multihoprag":
         loaded = _in_memory_dataset_loader_multihoprag()

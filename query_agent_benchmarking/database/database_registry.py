@@ -56,6 +56,13 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_multi2vec(image_field="image", name="image_content", name_by_provider=True)
         .build()),
 
+    (DatasetSpecBuilder("irpapers-text-only")
+        .with_static_name("IRPapersTextOnly")
+        .with_text_property("content", source_field="transcription")
+        .with_dataset_id()
+        .with_text2vec()
+        .build()),
+
     (DatasetSpecBuilder("multihoprag")
         .with_static_name("MultiHopRAG")
         .with_text_property("content", source_field="body")
