@@ -21,6 +21,7 @@ class SearchAgentBuilder(BaseAgentBuilder):
       `"hybrid-search[text_content_weaviate+image_content_weaviate]"`.
     * `agent_name == "vector-search"` → Pure vector search via near_text (no BM25). Supports the
       same `[target_vector]` suffix as hybrid-search, e.g. `"vector-search[image_content_weaviate]"`.
+    * `agent_name == "bm25-search"` → Pure keyword search via BM25 (no vector component).
     * `agent_name == "external_service"` → Sends requests to an external host for search evaluation.
 
     The "external_service" mode allows you to bring your own retrieval system
@@ -34,6 +35,7 @@ class SearchAgentBuilder(BaseAgentBuilder):
         "query-agent-search-only",
         "hybrid-search",
         "vector-search",
+        "bm25-search",
         "external_service",
     }
     TARGETABLE_AGENT_NAMES = {"hybrid-search", "vector-search"}
@@ -72,7 +74,7 @@ class SearchAgentBuilder(BaseAgentBuilder):
         if self.agent_name not in self.SUPPORTED_AGENT_NAMES:
             raise ValueError(
                 f"Unknown agent_name: {self.agent_name}. "
-                "Must be 'query-agent-search-only', 'hybrid-search', 'vector-search', or 'external_service'"
+                "Must be 'query-agent-search-only', 'hybrid-search', 'vector-search', 'bm25-search', or 'external_service'"
             )
         if (
             self.target_vector_config is not None
@@ -235,10 +237,12 @@ class SearchAgentBuilder(BaseAgentBuilder):
         elif self.agent_name in ("hybrid-search", "vector-search"):
             self.weaviate_collection = self.weaviate_client.collections.use(self.collection)
             self._load_named_vector_metadata_sync()
+        elif self.agent_name == "bm25-search":
+            self.weaviate_collection = self.weaviate_client.collections.use(self.collection)
         else:
             raise ValueError(
                 f"Unknown agent_name: {self.agent_name}. "
-                "Must be 'query-agent-search-only', 'hybrid-search', 'vector-search', or 'external_service'"
+                "Must be 'query-agent-search-only', 'hybrid-search', 'vector-search', 'bm25-search', or 'external_service'"
             )
 
     async def initialize_async(self):
@@ -265,10 +269,12 @@ class SearchAgentBuilder(BaseAgentBuilder):
             elif self.agent_name in ("hybrid-search", "vector-search"):
                 self.weaviate_collection = self.weaviate_client.collections.use(self.collection)
                 await self._load_named_vector_metadata_async()
+            elif self.agent_name == "bm25-search":
+                self.weaviate_collection = self.weaviate_client.collections.use(self.collection)
             else:
                 raise ValueError(
                     f"Unknown agent_name: {self.agent_name}. "
-                    "Must be 'query-agent-search-only', 'hybrid-search', 'vector-search', or 'external_service'"
+                    "Must be 'query-agent-search-only', 'hybrid-search', 'vector-search', 'bm25-search', or 'external_service'"
                 )
                 
         except Exception as e:
@@ -317,6 +323,14 @@ class SearchAgentBuilder(BaseAgentBuilder):
                 results.append(ObjectID(object_id=str(obj.properties[self.id_property])))
             return results
 
+        elif self.agent_name == "bm25-search":
+            col = self._get_collection(tenant)
+            response = col.query.bm25(query=query, limit=20)
+            results = []
+            for obj in response.objects:
+                results.append(ObjectID(object_id=str(obj.properties[self.id_property])))
+            return results
+
         elif self.agent_name == "external_service":
             # Build request payload
             payload = {"query": query}
@@ -360,6 +374,13 @@ class SearchAgentBuilder(BaseAgentBuilder):
                 if target_vector is not None:
                     near_text_kwargs["target_vector"] = target_vector
                 response = await col.query.near_text(**near_text_kwargs)
+                results = []
+                for obj in response.objects:
+                    results.append(ObjectID(object_id=str(obj.properties[self.id_property])))
+                return results
+            elif self.agent_name == "bm25-search":
+                col = self._get_collection(tenant)
+                response = await col.query.bm25(query=query, limit=20)
                 results = []
                 for obj in response.objects:
                     results.append(ObjectID(object_id=str(obj.properties[self.id_property])))
