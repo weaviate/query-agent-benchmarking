@@ -2,7 +2,7 @@
 # Search Mode Settings
 # =============================================================================
 search_agent_name: "bm25-search"
-search_dataset: bright/biology
+search_dataset: reasonir-biology-subset
 
 # See `named_vectors.md` for supported target vectors.
 search_target: "text_content_weaviate"

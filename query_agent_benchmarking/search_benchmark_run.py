@@ -120,6 +120,11 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
     docs_collection = config.get("docs_collection")
     queries_input = config.get("queries")
 
+    # Datasets that load queries from HF but reuse another dataset's document collection.
+    _COLLECTION_OVERRIDES = {
+        "reasonir-biology-subset": "BrightBiology_Default",
+    }
+
     if dataset_name:
         # Built-in dataset paths
         if dataset_name not in supported_search_datasets:
@@ -130,6 +135,15 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
 
         _, queries = in_memory_dataset_loader(dataset_name, queries_only=True)
         dataset_identifier = dataset_name
+
+        # If this dataset reuses another collection, switch to custom collection path.
+        if dataset_name in _COLLECTION_OVERRIDES:
+            docs_collection = DocsCollection(
+                collection_name=_COLLECTION_OVERRIDES[dataset_name],
+                content_key="content",
+                id_key="dataset_id",
+            )
+            dataset_name = None
 
     elif docs_collection and queries_input:
         # Custom collection path
@@ -275,7 +289,7 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
         metrics = await analyze_search_results(
             results=results,
             ground_truths=queries,
-            dataset_name=dataset_name,
+            dataset_name=dataset_identifier,
         )
         print(metrics)
         save_trial_metrics(

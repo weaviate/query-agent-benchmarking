@@ -104,6 +104,7 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_int_property("page_number", filterable=True)
         .with_multi2vec(image_field="image", embedding_model="cohere/embed-v4.0")
         .build()),
+
 ]
 
 
