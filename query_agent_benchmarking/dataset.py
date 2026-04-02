@@ -59,6 +59,8 @@ def in_memory_dataset_loader(
         loaded = _in_memory_dataset_loader_longmemeval("weaviate/longmemeval-m-cleaned")
     elif dataset_name == "officeqa":
         loaded = _in_memory_dataset_loader_officeqa()
+    elif dataset_name == "reasonir-biology-subset":
+        loaded = _in_memory_dataset_loader_reasonir_biology_subset()
     else:
         return None
 
@@ -305,6 +307,22 @@ def _in_memory_dataset_loader_multihoprag():
     
     print(f"Loaded {len(docs)} documents and {len(questions)} questions")
     return docs, questions
+
+def _in_memory_dataset_loader_reasonir_biology_subset():
+    print("Loading ReasonIR Biology Subset queries...")
+    raw = _load_dataset_from_hf_hub(filepath="weaviate/reasonir-biology-subset")
+    questions = []
+    for item in raw:
+        questions.append(
+            InMemoryQuery(
+                question=item["question"],
+                query_id=str(item["gold_id"]),
+                dataset_ids=[str(item["gold_id"])],
+            )
+        )
+    print(f"Loaded {len(questions)} queries")
+    return [], questions
+
 
 def _in_memory_dataset_loader_longmemeval(hf_path: str):
     print(f"Loading LongMemEval dataset from {hf_path}...")

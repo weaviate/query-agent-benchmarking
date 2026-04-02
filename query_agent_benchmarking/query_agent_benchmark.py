@@ -99,6 +99,12 @@ DATASET_METRICS: dict[str, list[dict]] = {
         {"func": calculate_recall_at_k, "params": {"k": 10}},
         {"func": calculate_nDCG_at_k, "params": {"k": 10}},
     ],
+    "reasonir-biology-subset": [
+        {"func": calculate_recall_at_k, "params": {"k": 1}},
+        {"func": calculate_recall_at_k, "params": {"k": 5}},
+        {"func": calculate_recall_at_k, "params": {"k": 20}},
+        {"func": calculate_nDCG_at_k, "params": {"k": 10}},
+    ],
 }
 
 
