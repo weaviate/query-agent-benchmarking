@@ -4,12 +4,12 @@ load_dotenv()
 from .experimental.add_hard_negatives import add_hard_negatives
 
 # Search benchmark exports
-from .cmd.run_search import run_search_eval, run_search_evals
+from .internal.core.services import run_search_eval, run_search_evals
 
 # Ask benchmark exports
-from .cmd.run_ask import run_ask_eval
+from .internal.core.services import run_ask_eval
 
-from .cmd.run_compare_embeddings import compare_embeddings
+from .internal.core.services import compare_embeddings
 from .internal.adapters.database import database_loader
 from .internal.adapters.dataset import (
     in_memory_dataset_loader,
