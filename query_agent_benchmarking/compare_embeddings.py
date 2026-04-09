@@ -10,7 +10,9 @@ from query_agent_benchmarking.utils import (
     load_config,
     merge_configs,
     print_results_comparison,
-    get_weaviate_client,
+)
+from query_agent_benchmarking.adapters.clients.weaviate_client import get_weaviate_client
+from query_agent_benchmarking.adapters.clients.provider_headers import (
     parse_embedding_model,
     get_provider_headers,
 )

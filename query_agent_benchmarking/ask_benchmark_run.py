@@ -20,17 +20,17 @@ from query_agent_benchmarking.dataset import (
     in_memory_ask_dataset_loader,
     load_ask_queries_from_weaviate,
 )
-from query_agent_benchmarking.query_agent_benchmark import (
+from query_agent_benchmarking.domain.query_execution import (
     run_ask_queries,
     run_ask_queries_async,
-    analyze_ask_results,
-    aggregate_metrics
 )
-from query_agent_benchmarking.result_serialization import (
-    save_trial_metrics,
-    save_ask_trial_results,
-    save_aggregated_results,
+from query_agent_benchmarking.domain.analysis import aggregate_metrics
+from query_agent_benchmarking.adapters.metrics.ask_metrics_calculator import (
+    LMJudgeAskCalculator,
+    ExactMatchAskCalculator,
+    OfficeQAAskCalculator,
 )
+from query_agent_benchmarking.adapters.results.json_file_repository import JsonFileResultRepository
 from query_agent_benchmarking.utils import (
     load_config, 
     merge_configs,
@@ -191,18 +191,39 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     # LLM Judge configuration (only used if not using exact match)
     judge_model = config.get("judge_model", "openai/gpt-4.1")
     ensemble_k = config.get("ensemble_k", 3)
-    
+
     num_trials = config.get("num_trials", 1)
     metrics_across_trials = []
+
+    # Wire up adapter implementations
+    if use_officeqa_metric:
+        metrics_calculator = OfficeQAAskCalculator(tolerance=officeqa_tolerance)
+    elif use_exact_match:
+        metrics_calculator = ExactMatchAskCalculator()
+    else:
+        metrics_calculator = LMJudgeAskCalculator(model=judge_model, ensemble_k=ensemble_k)
+
+    result_repo = JsonFileResultRepository()
+
+    # Determine score keys for display
+    if use_officeqa_metric:
+        score_key = "avg_officeqa_accuracy"
+        scores_key = "officeqa_accuracy_scores"
+    elif use_exact_match:
+        score_key = "avg_exact_match_accuracy"
+        scores_key = "exact_match_accuracy_scores"
+    else:
+        score_key = "avg_alignment_score"
+        scores_key = "alignment_score_scores"
 
     # Run trials
     for trial in range(num_trials):
         print(f"\033[92mRunning ask trial {trial+1}/{num_trials}\033[0m")
 
-        if use_async:        
+        if use_async:
             print("\033[92mRunning ask queries async!\033[0m")
             await ask_agent.initialize_async()
-            
+
             try:
                 results = await run_ask_queries_async(
                     queries=queries,
@@ -220,43 +241,23 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
                 sleep_between_requests=config.get("sleep_between_requests", 0.0),
             )
 
-        # Analyze results with appropriate metric
-        metrics = await analyze_ask_results(
-            results=results,
-            judge_model=judge_model,
-            ensemble_k=ensemble_k,
-            use_exact_match=use_exact_match,
-            use_officeqa_metric=use_officeqa_metric,
-            officeqa_tolerance=officeqa_tolerance,
-        )
-        
+        # Analyze results with the appropriate metrics calculator
+        metrics = metrics_calculator.compute(results)
+
         print(f"\n\033[92mTrial {trial+1} Results:\033[0m")
-        if use_officeqa_metric:
-            score_key = "avg_officeqa_accuracy"
-        elif use_exact_match:
-            score_key = "avg_exact_match_accuracy"
-        else:
-            score_key = "avg_alignment_score"
         print(f"  {score_key}: {metrics[score_key]:.2%}")
         print(f"  Avg Query Time: {metrics['avg_query_time']:.2f}s")
 
-        # Extract per-query scores for trial results
-        if use_officeqa_metric:
-            scores_key = "officeqa_accuracy_scores"
-        elif use_exact_match:
-            scores_key = "exact_match_accuracy_scores"
-        else:
-            scores_key = "alignment_score_scores"
         alignment_scores = metrics.get(scores_key, [])
 
-        save_ask_trial_results(
+        result_repo.save_ask_trial_results(
             results=results,
             config=config,
             trial_number=trial+1,
             alignment_scores=alignment_scores,
         )
 
-        save_trial_metrics(
+        result_repo.save_trial_metrics(
             metrics=metrics,
             config=config,
             trial_number=trial+1,
@@ -266,7 +267,7 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
 
     # Aggregate and save results
     aggregated_metrics = aggregate_metrics(metrics_across_trials)
-    save_aggregated_results(
+    result_repo.save_aggregated_results(
         aggregated_metrics=aggregated_metrics,
         config=config,
     )

@@ -21,17 +21,13 @@ from query_agent_benchmarking.models import (
     InMemoryQuery,
     InMemorySearchQuery,
 )
-from query_agent_benchmarking.query_agent_benchmark import (
+from query_agent_benchmarking.domain.query_execution import (
     run_search_queries,
     run_search_queries_async,
-    analyze_search_results,
-    aggregate_metrics
 )
-from query_agent_benchmarking.result_serialization import (
-    save_trial_results,
-    save_trial_metrics,
-    save_aggregated_results,
-)
+from query_agent_benchmarking.domain.analysis import aggregate_metrics
+from query_agent_benchmarking.adapters.metrics.ir_metrics_calculator import IRMetricsCalculator
+from query_agent_benchmarking.adapters.results.json_file_repository import JsonFileResultRepository
 from query_agent_benchmarking.utils import (
     pretty_print_in_memory_query, 
     load_config, 
@@ -265,6 +261,10 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
     num_trials = config.get("num_trials", 1)
     metrics_across_trials = []
 
+    # Wire up adapter implementations
+    metrics_calculator = IRMetricsCalculator(dataset_name=dataset_identifier)
+    result_repo = JsonFileResultRepository()
+
     # Run trials
     for trial in range(num_trials):
         print(f"\033[92mRunning trial {trial+1}/{num_trials}\033[0m")
@@ -289,20 +289,16 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
                 query_agent=query_agent,
             )
 
-        save_trial_results(
+        result_repo.save_trial_results(
             results=results,
             config=config,
             trial_number=trial+1,
         )
 
         # Analyze results
-        metrics = await analyze_search_results(
-            results=results,
-            ground_truths=queries,
-            dataset_name=dataset_identifier,
-        )
+        metrics = metrics_calculator.compute(results, queries)
         print(metrics)
-        save_trial_metrics(
+        result_repo.save_trial_metrics(
             metrics=metrics,
             config=config,
             trial_number=trial+1,
@@ -311,7 +307,7 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
 
     # Aggregate and save results
     aggregated_metrics = aggregate_metrics(metrics_across_trials)
-    save_aggregated_results(
+    result_repo.save_aggregated_results(
         aggregated_metrics=aggregated_metrics,
         config=config,
     )
