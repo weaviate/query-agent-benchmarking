@@ -10,9 +10,9 @@ import numpy as np
 from tqdm import tqdm
 
 from query_agent_benchmarking.internal.core.models import AskResult
-from query_agent_benchmarking.metrics.lmjudge_alignment import LMJudge
-from query_agent_benchmarking.metrics.exact_match import calculate_exact_match
-from query_agent_benchmarking.metrics.officeqa_metric import (
+from query_agent_benchmarking.internal.adapters.metrics.lmjudge_alignment import LMJudge
+from query_agent_benchmarking.internal.adapters.metrics.exact_match import calculate_exact_match
+from query_agent_benchmarking.internal.adapters.metrics.officeqa_metric import (
     score_answer as officeqa_score_answer,
     extract_final_answer,
 )

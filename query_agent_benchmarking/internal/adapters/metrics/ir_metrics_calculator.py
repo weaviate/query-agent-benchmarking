@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from query_agent_benchmarking.internal.core.models import QueryResult, InMemoryQuery
 from query_agent_benchmarking.internal.core.metrics_config import MetricSpec, resolve_metrics_profile
-from query_agent_benchmarking.metrics.ir_metrics import (
+from query_agent_benchmarking.internal.adapters.metrics.ir_metrics import (
     calculate_recall_at_k,
     calculate_success_at_k,
     calculate_nDCG_at_k,

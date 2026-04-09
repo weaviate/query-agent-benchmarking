@@ -4,9 +4,9 @@ from pathlib import Path
 
 import hashlib
 
-from query_agent_benchmarking.database import create_collection_with_vector_config, resolve_spec
+from query_agent_benchmarking.internal.adapters.database import create_collection_with_vector_config, resolve_spec
 from query_agent_benchmarking.cmd.run_search import _run_search_eval
-from query_agent_benchmarking.utils import (
+from query_agent_benchmarking.internal.utils import (
     load_config,
     merge_configs,
     print_results_comparison,

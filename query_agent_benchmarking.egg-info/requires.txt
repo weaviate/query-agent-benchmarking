@@ -1,0 +1,13 @@
+dspy>=3.0.4
+sentence-transformers>=5.0.0
+weaviate-client>=4.19.2
+weaviate-agents>=1.1.0
+pandas>=2.3.1
+datasets>=4.0.0
+ir-datasets>=0.5.11
+pip>=25.2
+setuptools>=80.9.0
+wheel>=0.45.1
+twine>=6.2.0
+PyMuPDF>=1.24.0
+weaviate-engram>=0.5.0

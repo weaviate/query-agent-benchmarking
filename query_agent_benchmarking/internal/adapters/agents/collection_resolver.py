@@ -7,7 +7,7 @@ agent connection management.
 from typing import Optional
 
 from query_agent_benchmarking.internal.core.models import DocsCollection
-from query_agent_benchmarking.database.database_registry import resolve_spec
+from query_agent_benchmarking.internal.adapters.database.database_registry import resolve_spec
 
 
 def resolve_collection_info(

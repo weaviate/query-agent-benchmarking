@@ -7,8 +7,8 @@ from .cmd.run_search import run_search_eval, run_search_evals
 from .cmd.run_ask import run_ask_eval
 
 from .cmd.run_compare_embeddings import compare_embeddings
-from .database import database_loader
-from .dataset import (
+from .internal.adapters.database import database_loader
+from .internal.dataset import (
     in_memory_dataset_loader,
     in_memory_ask_dataset_loader,
     load_ask_queries_from_weaviate,
@@ -16,7 +16,7 @@ from .dataset import (
 )
 
 # Models
-from .models import (
+from .internal.core.models import (
     DocsCollection,
     QueriesCollection,
     InMemoryQuery,
@@ -32,7 +32,7 @@ from .models import (
 )
 
 # Agent exports
-from .agent import (
+from .internal.agents import (
     SearchAgentBuilder,
     AskAgentBuilder,
     BaseAgentBuilder,
@@ -40,20 +40,17 @@ from .agent import (
 )
 
 # Metrics
-from .metrics import (
-    # IR Metrics
+from .internal.adapters.metrics.ir_metrics import (
     calculate_recall_at_k,
     calculate_success_at_k,
     calculate_nDCG_at_k,
     calculate_coverage,
     calculate_alpha_ndcg,
-    # LLM Judge
-    LMJudge,
-    calculate_alignment_score,
-    # Exact Match
-    calculate_exact_match,
-    # OfficeQA
-    officeqa_score_answer,
+)
+from .internal.adapters.metrics.lmjudge_alignment import LMJudge
+from .internal.adapters.metrics.exact_match import calculate_exact_match
+from .internal.adapters.metrics.officeqa_metric import (
+    score_answer as officeqa_score_answer,
 )
 
 from .experimental.create_benchmark import create_benchmark
@@ -67,7 +64,12 @@ from .internal.config.config import (
     supported_search_datasets,
     supported_ask_datasets,
 )
-from .result_serialization import save_trial_results, save_ask_trial_results, save_trial_metrics, save_aggregated_results
+from .internal.adapters.results.serialization import (
+    save_trial_results,
+    save_ask_trial_results,
+    save_trial_metrics,
+    save_aggregated_results,
+)
 
 __all__ = [
     # Main entry points
@@ -115,7 +117,6 @@ __all__ = [
     "calculate_alpha_ndcg",
     # Metrics - LLM Judge
     "LMJudge",
-    "calculate_alignment_score",
     # Metrics - Exact Match
     "calculate_exact_match",
     # Metrics - OfficeQA

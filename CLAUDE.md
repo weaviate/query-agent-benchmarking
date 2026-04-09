@@ -36,76 +36,89 @@ Requires `WEAVIATE_URL`, `WEAVIATE_API_KEY`, and `OPENAI_API_KEY`. Third-party e
 
 ## Architecture
 
-The codebase follows **hexagonal architecture** (ports & adapters) with a `cmd/` + `internal/` layout separating entry points from library code.
+The codebase follows **hexagonal architecture** (ports & adapters) with a `cmd/` + `internal/` layout.
 
 ### Directory Structure
 
 ```
 query_agent_benchmarking/
-├── cmd/                           # Entry point orchestration
-│   ├── run_search.py              # Search benchmark runner
-│   ├── run_ask.py                 # Ask benchmark runner
-│   └── run_compare_embeddings.py  # Embedding model comparison
+├── __init__.py                        # Public API exports
+├── benchmark-config.yml               # Default benchmark configuration
 │
-├── internal/                      # Library internals
-│   ├── core/                      # CORE - no external dependencies
-│   │   ├── models.py              # Pydantic models (canonical location)
-│   │   ├── metrics_config.py      # MetricSpec, MetricsProfile, dataset-metrics registry
-│   │   ├── query_execution.py     # run_search_queries[_async], run_ask_queries[_async]
-│   │   ├── analysis.py            # aggregate_metrics (pure math)
+├── cmd/                               # Entry point orchestration
+│   ├── run_search.py                  # Search benchmark runner
+│   ├── run_ask.py                     # Ask benchmark runner
+│   └── run_compare_embeddings.py      # Embedding model comparison
+│
+├── internal/                          # Library internals
+│   ├── core/                          # Domain logic (no external deps)
+│   │   ├── models.py                  # Pydantic models
+│   │   ├── metrics_config.py          # MetricSpec, dataset-metrics registry
+│   │   ├── query_execution.py         # run_search/ask_queries[_async]
+│   │   ├── analysis.py               # aggregate_metrics
 │   │   ├── benchmark_orchestrator.py  # DI-based orchestrators
-│   │   └── ports/                 # Python Protocol interfaces
-│   │       ├── search_agent.py    # SearchAgent protocol
-│   │       ├── ask_agent.py       # AskAgent protocol + AskResponse
+│   │   └── ports/                     # Python Protocol interfaces
+│   │       ├── search_agent.py
+│   │       ├── ask_agent.py
 │   │       ├── dataset_repository.py
 │   │       ├── metrics_calculator.py
 │   │       ├── result_repository.py
 │   │       ├── database_manager.py
 │   │       └── llm_judge.py
 │   │
-│   ├── adapters/                  # Port implementations
-│   │   ├── agents/                # SearchAgent/AskAgent adapters
+│   ├── adapters/                      # Port implementations
+│   │   ├── agents/                    # Protocol-based agent adapters
 │   │   │   ├── weaviate_query_agent.py
 │   │   │   ├── weaviate_search.py
 │   │   │   ├── external_service.py
 │   │   │   └── collection_resolver.py
-│   │   ├── clients/               # Cross-cutting infrastructure
+│   │   ├── clients/                   # Infrastructure clients
 │   │   │   ├── weaviate_client.py
 │   │   │   └── provider_headers.py
-│   │   ├── dataset/               # DatasetRepository adapters
+│   │   ├── database/                  # DB population & schema
+│   │   │   ├── database_registry.py
+│   │   │   ├── database_loader.py
+│   │   │   ├── property_builder.py
+│   │   │   ├── spec.py
+│   │   │   └── ...
+│   │   ├── dataset/                   # Dataset loaders
 │   │   │   ├── huggingface_loader.py
 │   │   │   ├── ir_datasets_loader.py
 │   │   │   ├── weaviate_loader.py
 │   │   │   ├── local_file_loader.py
 │   │   │   └── registry.py
-│   │   ├── metrics/               # MetricsCalculator adapters
+│   │   ├── metrics/                   # Metric implementations
+│   │   │   ├── ir_metrics.py
 │   │   │   ├── ir_metrics_calculator.py
-│   │   │   └── ask_metrics_calculator.py
+│   │   │   ├── ask_metrics_calculator.py
+│   │   │   ├── lmjudge_alignment.py
+│   │   │   ├── exact_match.py
+│   │   │   └── officeqa_metric.py
 │   │   └── results/
-│   │       └── json_file_repository.py
+│   │       ├── json_file_repository.py
+│   │       └── serialization.py
 │   │
-│   ├── config/                    # Configuration
-│   │   ├── config.py              # Dataset lists, named vector targets
+│   ├── agents/                        # Legacy agent builders
+│   │   ├── base.py                    # BaseAgentBuilder ABC
+│   │   ├── search_agent.py            # SearchAgentBuilder
+│   │   ├── ask_agent.py               # AskAgentBuilder
+│   │   └── engram_dspy_agent.py       # EngramDSPyAgent
+│   │
+│   ├── config/                        # Configuration
+│   │   ├── config.py                  # Dataset lists, named vector targets
 │   │   └── qa_system_prompt_registry.py
 │   │
-│   ├── mocks/                     # Mock implementations for testing
-│   │   ├── agents.py              # MockSearchAgent, MockAskAgent
-│   │   └── repositories.py        # MockResultRepository
+│   ├── mocks/                         # Mock implementations for testing
+│   │   ├── agents.py
+│   │   └── repositories.py
 │   │
-│   └── testutil/                  # Test utilities and factories
-│       └── factories.py           # make_search_queries(), make_ask_results(), etc.
+│   ├── testutil/                      # Test factories
+│   │   └── factories.py
+│   │
+│   ├── dataset.py                     # Dataset loading facade
+│   └── utils.py                       # Shared utilities
 │
-├── agent/                         # Legacy agent builders (backward-compatible)
-├── metrics/                       # Raw metric functions
-├── database/                      # DB population (registry, loader, specs)
-├── __init__.py                    # Public API (all exports preserved)
-├── models.py                      # Re-exports -> internal/core/models
-├── config.py                      # Re-exports -> internal/config/config
-├── dataset.py                     # Facade -> internal/adapters/dataset/
-├── query_agent_benchmark.py       # Backward-compatible facade
-├── domain/                        # Re-exports -> internal/core/
-├── ports/                         # Re-exports -> internal/core/ports/
-└── adapters/                      # Re-exports -> internal/adapters/
+└── experimental/                      # Experimental tools
 ```
 
 ### Entry Points
@@ -115,44 +128,29 @@ The package exposes three main functions via `__init__.py`:
 - `run_ask_eval()` - in `cmd/run_ask.py`
 - `compare_embeddings()` - in `cmd/run_compare_embeddings.py`
 
-All accept either programmatic kwargs or load from YAML config files (`benchmark-config.yml` for benchmarks, `database/database_loader_config.yml` for DB population). Kwargs override file config via `merge_configs()`.
+All accept either programmatic kwargs or load from YAML config files. Kwargs override file config via `merge_configs()`.
 
 ### Core Layer (`internal/core/`)
 
-The core layer has **no external dependencies** (no Weaviate, HuggingFace, DSPy imports):
+No external dependencies (no Weaviate, HuggingFace, DSPy imports):
 - `models.py`: All Pydantic models (ObjectID, InMemoryQuery, QueryResult, AskResult, etc.)
-- `metrics_config.py`: `MetricSpec` (data-only metric spec) + `DATASET_METRICS_REGISTRY` mapping datasets to metrics
+- `metrics_config.py`: `MetricSpec` + `DATASET_METRICS_REGISTRY` mapping datasets to metrics
 - `query_execution.py`: Sync/async query runners accepting port-typed agents
 - `analysis.py`: `aggregate_metrics()` for cross-trial statistical aggregation
 - `benchmark_orchestrator.py`: `SearchBenchmarkOrchestrator` / `AskBenchmarkOrchestrator` with DI
 - `ports/`: Python Protocol interfaces for all boundaries
 
-### Agent Layer (`agent/`)
-
-`BaseAgentBuilder` (ABC) handles Weaviate connection and dataset-to-collection name mapping. Two concrete builders:
-- `SearchAgentBuilder`: Wraps `QueryAgent` (search-only mode), Weaviate hybrid search, or external HTTP service
-- `AskAgentBuilder`: Wraps `QueryAgent` (ask mode) or external HTTP service
-
-Clean protocol-implementing alternatives are in `internal/adapters/agents/`:
-- `WeaviateQueryAgentSearch` / `WeaviateQueryAgentAsk`: Clean wrappers for QueryAgent
-- `WeaviateHybridSearch`, `WeaviateVectorSearch`, `WeaviateBM25Search`: Direct search
-- `ExternalSearchService` / `ExternalAskService`: HTTP-based BYOS adapters
-
 ### Data Flow
 
-1. **Dataset loading** (`internal/adapters/dataset/`): Loads queries/docs from HuggingFace Hub, ir_datasets, or Weaviate collections into `InMemoryQuery`/`InMemoryAskQuery` Pydantic models
-2. **DB population** (`database/`): Registry-based system — `database_registry.py` defines `DatasetSpec` per dataset
-3. **Query execution** (`internal/core/query_execution.py`): Runs queries (sync or async with batching/semaphore concurrency)
-4. **Metrics** (`internal/adapters/metrics/`): `IRMetricsCalculator` dispatches `MetricSpec` names to metric functions. Ask metrics via `LMJudgeAskCalculator`, `ExactMatchAskCalculator`, or `OfficeQAAskCalculator`
-5. **Serialization** (`internal/adapters/results/json_file_repository.py`): `JsonFileResultRepository` for per-trial and aggregated JSON output
-
-### Backward Compatibility
-
-Old import paths are preserved via re-export facades at `domain/`, `ports/`, `adapters/`, `config.py`, `search_benchmark_run.py`, `ask_benchmark_run.py`, and `compare_embeddings.py`. All existing `from query_agent_benchmarking.domain.models import ...` style imports continue to work.
+1. **Dataset loading** (`internal/adapters/dataset/`): Loads from HuggingFace Hub, ir_datasets, or Weaviate
+2. **DB population** (`internal/adapters/database/`): Registry-based collection creation
+3. **Query execution** (`internal/core/query_execution.py`): Sync/async with batching/semaphore
+4. **Metrics** (`internal/adapters/metrics/`): IR metrics, LLM judge, exact match, OfficeQA
+5. **Serialization** (`internal/adapters/results/`): JSON file I/O
 
 ### Dataset-Metric Mapping
 
-Different datasets use different metrics (configured in `internal/core/metrics_config.py`):
+Configured in `internal/core/metrics_config.py`:
 - BEIR/BRIGHT: Recall@1/5/20, nDCG@10
 - FreshStack: Recall@50, Coverage@5/10/20, alpha-nDCG@10
 - LoTTe: Recall@1/5/20, Success@5
@@ -160,13 +158,7 @@ Different datasets use different metrics (configured in `internal/core/metrics_c
 
 ### Collection Naming Convention
 
-Built-in datasets map to Weaviate collections as `{DatasetPrefix}{PascalizedSubset}_{Tag}` (e.g., `FreshstackLangchain_Default`, `BeirScifact_Default`). The tag defaults to "Default" and supports aliasing.
-
-## Key Pydantic Models (`internal/core/models.py`)
-
-- `InMemoryQuery` / `InMemorySearchQuery`: Search queries with `dataset_ids` ground truth and optional FreshStack nugget data
-- `InMemoryAskQuery`: Ask queries with `ground_truth_answer` and optional `oracle_context_id`
-- `DocsCollection` / `QueriesCollection` / `AskQueriesCollection`: Custom collection configs for non-builtin datasets
+Built-in datasets map to Weaviate collections as `{DatasetPrefix}{PascalizedSubset}_{Tag}` (e.g., `FreshstackLangchain_Default`, `BeirScifact_Default`).
 
 ## Tests
 
@@ -177,8 +169,7 @@ uv run pytest tests/adapters/ -v           # Adapter tests
 uv run pytest tests/integration/ -v        # End-to-end integration tests
 ```
 
-Test structure:
 - `tests/domain/`: MetricSpec, aggregate_metrics, query execution, orchestrators
-- `tests/adapters/`: IR metrics, exact match, JSON repository, agent adapters, parsing utilities
+- `tests/adapters/`: IR metrics, exact match, JSON repository, agent adapters
 - `tests/integration/`: Full search/ask pipeline E2E tests with mock agents
 - Shared fixtures in `tests/conftest.py` use `internal/mocks/` and `internal/testutil/`

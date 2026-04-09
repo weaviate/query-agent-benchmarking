@@ -8,7 +8,7 @@ query_agent_benchmarking.create_benchmark(
 
 # Then optionally test with:
 '''
-from query_agent_benchmarking.models import (
+from query_agent_benchmarking.internal.core.models import (
     DocsCollection,
     QueriesCollection,
 )

@@ -6,7 +6,7 @@ Wraps the existing result_serialization module behind the ResultRepository port.
 from typing import Any
 
 from query_agent_benchmarking.internal.core.models import QueryResult, AskResult
-from query_agent_benchmarking.result_serialization import (
+from query_agent_benchmarking.internal.adapters.results.serialization import (
     save_trial_results as _save_trial_results,
     save_ask_trial_results as _save_ask_trial_results,
     save_trial_metrics as _save_trial_metrics,

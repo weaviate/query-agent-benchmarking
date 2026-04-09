@@ -10,12 +10,12 @@ import asyncio
 from pathlib import Path
 from typing import Optional, Any, Union
 
-from query_agent_benchmarking.agent import SearchAgentBuilder
-from query_agent_benchmarking.dataset import (
+from query_agent_benchmarking.internal.agents import SearchAgentBuilder
+from query_agent_benchmarking.internal.dataset import (
     in_memory_dataset_loader,
     load_queries_from_weaviate_collection,
 )
-from query_agent_benchmarking.models import (
+from query_agent_benchmarking.internal.core.models import (
     DocsCollection,
     QueriesCollection,
     InMemoryQuery,
@@ -28,7 +28,7 @@ from query_agent_benchmarking.internal.core.query_execution import (
 from query_agent_benchmarking.internal.core.analysis import aggregate_metrics
 from query_agent_benchmarking.internal.adapters.metrics.ir_metrics_calculator import IRMetricsCalculator
 from query_agent_benchmarking.internal.adapters.results.json_file_repository import JsonFileResultRepository
-from query_agent_benchmarking.utils import (
+from query_agent_benchmarking.internal.utils import (
     pretty_print_in_memory_query, 
     load_config, 
     merge_configs,

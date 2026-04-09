@@ -21,7 +21,7 @@ from query_agent_benchmarking.internal.core.models import (
 def repo_with_tmp_dir(tmp_path):
     """Create a repository that saves to a temp directory."""
     repo = JsonFileResultRepository()
-    with patch("query_agent_benchmarking.result_serialization.RESULTS_DIR", tmp_path):
+    with patch("query_agent_benchmarking.internal.adapters.results.serialization.RESULTS_DIR", tmp_path):
         yield repo, tmp_path
 
 

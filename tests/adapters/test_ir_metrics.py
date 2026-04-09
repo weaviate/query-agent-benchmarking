@@ -2,7 +2,7 @@
 
 import pytest
 
-from query_agent_benchmarking.metrics.ir_metrics import (
+from query_agent_benchmarking.internal.adapters.metrics.ir_metrics import (
     calculate_recall_at_k,
     calculate_success_at_k,
     calculate_nDCG_at_k,

@@ -1,6 +1,6 @@
 """Tests for exact match metric."""
 
-from query_agent_benchmarking.metrics.exact_match import calculate_exact_match
+from query_agent_benchmarking.internal.adapters.metrics.exact_match import calculate_exact_match
 
 
 class TestExactMatch:

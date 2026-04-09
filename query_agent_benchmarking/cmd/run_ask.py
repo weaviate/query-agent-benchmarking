@@ -10,13 +10,13 @@ import asyncio
 from pathlib import Path
 from typing import Optional, Any, Union
 
-from query_agent_benchmarking.agent import AskAgentBuilder, EngramDSPyAgent
-from query_agent_benchmarking.models import (
+from query_agent_benchmarking.internal.agents import AskAgentBuilder, EngramDSPyAgent
+from query_agent_benchmarking.internal.core.models import (
     DocsCollection,
     AskQueriesCollection,
     InMemoryAskQuery,
 )
-from query_agent_benchmarking.dataset import (
+from query_agent_benchmarking.internal.dataset import (
     in_memory_ask_dataset_loader,
     load_ask_queries_from_weaviate,
 )
@@ -31,7 +31,7 @@ from query_agent_benchmarking.internal.adapters.metrics.ask_metrics_calculator i
     OfficeQAAskCalculator,
 )
 from query_agent_benchmarking.internal.adapters.results.json_file_repository import JsonFileResultRepository
-from query_agent_benchmarking.utils import (
+from query_agent_benchmarking.internal.utils import (
     load_config, 
     merge_configs,
 )
