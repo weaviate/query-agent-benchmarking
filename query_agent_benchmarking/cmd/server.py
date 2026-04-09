@@ -91,7 +91,7 @@ def run_search(req: RunSearchBenchmarkRequest) -> dict[str, Any]:
         kwargs = req.model_dump(exclude_none=True)
         result = query_agent_benchmarking.run_search_eval(**kwargs)
         return {"status": "ok", "result": result}
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         return {"status": "error", "error": "An internal error occurred."}
 
@@ -103,7 +103,7 @@ def run_ask(req: RunAskBenchmarkRequest) -> dict[str, Any]:
         kwargs = req.model_dump(exclude_none=True)
         result = query_agent_benchmarking.run_ask_eval(**kwargs)
         return {"status": "ok", "result": result}
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         return {"status": "error", "error": "An internal error occurred."}
 
@@ -115,7 +115,7 @@ def run_compare(req: CompareEmbeddingsRequest) -> dict[str, Any]:
         kwargs = req.model_dump(exclude_none=True)
         result = query_agent_benchmarking.compare_embeddings(**kwargs)
         return {"status": "ok", "result": result}
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         return {"status": "error", "error": "An internal error occurred."}
 
@@ -129,6 +129,6 @@ def populate_db_endpoint(req: PopulateDatabaseRequest) -> dict[str, Any]:
             tag=req.tag,
         )
         return {"status": "ok"}
-    except Exception as e:
+    except Exception:
         traceback.print_exc()
         return {"status": "error", "error": "An internal error occurred."}
