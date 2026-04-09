@@ -111,16 +111,18 @@ class AskAgentBuilder(BaseAgentBuilder):
             raise
 
     def run(
-        self, 
-        query: str, 
-        oracle_context_id: Optional[str] = None
+        self,
+        query: str,
+        oracle_context_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
     ) -> AskResponse:
         """
         Run synchronous ask query.
-        
+
         Args:
             query: The question to ask.
             oracle_context_id: Optional context ID to send to external host.
+            tenant_id: Optional tenant ID for multi-tenant datasets (unused by this agent).
         """
         if self.agent_name == "query-agent-ask":
             response = self.agent.ask(query)
@@ -147,9 +149,10 @@ class AskAgentBuilder(BaseAgentBuilder):
             )
 
     async def run_async(
-        self, 
+        self,
         query: str,
-        oracle_context_id: Optional[str] = None
+        oracle_context_id: Optional[str] = None,
+        tenant_id: Optional[str] = None,
     ) -> AskResponse:
         """
         Run asynchronous ask query.

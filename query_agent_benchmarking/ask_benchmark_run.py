@@ -75,7 +75,10 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
         elif isinstance(queries_input, str):
             # Built-in dataset name - loader handles all key mappings internally
             if queries_input in supported_ask_datasets:
-                queries = in_memory_ask_dataset_loader(queries_input)
+                queries = in_memory_ask_dataset_loader(
+                    queries_input,
+                    longmemeval_subset=config.get("longmemeval_subset"),
+                )
             else:
                 raise ValueError(
                     f"Unknown ask dataset: '{queries_input}'. "
@@ -266,6 +269,7 @@ def run_ask_eval(
     output_path: Optional[str] = None,
     random_seed: Optional[int] = None,
     embedding_model: Optional[str] = None,
+    longmemeval_subset: Optional[dict] = None,
     **kwargs
 ) -> dict[str, Any]:
     """
@@ -345,6 +349,7 @@ def run_ask_eval(
         "output_path": output_path,
         "random_seed": random_seed,
         "embedding_model": embedding_model,
+        "longmemeval_subset": longmemeval_subset,
         **kwargs
     }
     

@@ -16,3 +16,10 @@ ksim: 4
 dprojections: 16
 repetitions: 10
 ef: 500
+
+# LongMemEval subset selection
+# Filter tenants (users) by sorted index range. Only sessions for tenants
+# within [lower_bound, upper_bound) are loaded/ingested.
+# Example: users_to_test: [20, 50] loads tenants at sorted indices 20..49.
+# longmemeval_subset:
+#   users_to_test: [0, 10]

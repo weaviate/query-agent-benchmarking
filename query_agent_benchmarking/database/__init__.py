@@ -7,6 +7,11 @@ from .database_loader import (
     create_collection_with_vector_config,
     get_vector_config,
 )
+from .engram_loader import (
+    engram_ingest_tenant,
+    engram_ingest_all_tenants,
+    TenantIngestionStats,
+)
 
 __all__ = [
     "DatasetSpec",
@@ -16,4 +21,7 @@ __all__ = [
     "database_loader",
     "create_collection_with_vector_config",
     "get_vector_config",
+    "engram_ingest_tenant",
+    "engram_ingest_all_tenants",
+    "TenantIngestionStats",
 ]
