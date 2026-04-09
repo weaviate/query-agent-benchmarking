@@ -1,0 +1,44 @@
+Metadata-Version: 2.4
+Name: query-agent-benchmarking
+Version: 0.6
+Summary: A Python library for benchmarking Weaviate's Query Agent!
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: dspy>=3.0.4
+Requires-Dist: sentence-transformers>=5.0.0
+Requires-Dist: weaviate-client>=4.19.2
+Requires-Dist: weaviate-agents>=1.1.0
+Requires-Dist: pandas>=2.3.1
+Requires-Dist: datasets>=4.0.0
+Requires-Dist: ir-datasets>=0.5.11
+Requires-Dist: pip>=25.2
+Requires-Dist: setuptools>=80.9.0
+Requires-Dist: wheel>=0.45.1
+Requires-Dist: twine>=6.2.0
+Requires-Dist: PyMuPDF>=1.24.0
+Requires-Dist: weaviate-engram>=0.5.0
+Requires-Dist: python-dotenv>=1.1.1
+Dynamic: license-file
+
+# Query Agent Benchmarking
+
+This repo contains a package for benchmarking the performance of Weaviate's Query Agent.
+
+## News 📯
+
+[9/25] 📊 Search Mode Benchmarking is live on the [Weaviate Blog](https://weaviate.io/blog/search-mode-benchmarking).
+
+## How to Run 🧰
+
+Populate Weaviate with benchmark data:
+```
+uv run python3 scripts/populate-db.py
+```
+
+Run eval:
+```
+uv run python3 scripts/run-search-benchmark.py
+```
+
+See `query_agent_benchmarking/benchmark-config.yml` to change the dataset populated in your Weaviate instance, as well as ablate `hybrid-search` or `query-agent-search-only`, as well as the number of samples and concurrency parameters.

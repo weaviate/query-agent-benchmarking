@@ -39,7 +39,7 @@ from query_agent_benchmarking.internal.config.config import supported_ask_datase
 from query_agent_benchmarking.internal.config.qa_system_prompt_registry import get_system_prompt
 
 
-DEFAULT_CONFIG_PATH = Path(__file__).parent.parent / "benchmark-config.yml"
+DEFAULT_CONFIG_PATH = Path(__file__).parent.parent / "internal" / "config" / "benchmark-config.yml"
 DEFAULT_AGENT_CONFIG_PATH = Path(__file__).parent.parent / "agent" / "agent-config.yml"
 
 

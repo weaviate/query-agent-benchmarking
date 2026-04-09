@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from .experimental.add_hard_negatives import add_hard_negatives
 
 # Search benchmark exports

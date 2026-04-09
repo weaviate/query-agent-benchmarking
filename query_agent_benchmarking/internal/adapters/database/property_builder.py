@@ -44,7 +44,7 @@ class DatasetSpecBuilder:
         """Load configuration from a YAML file."""
         if path is None:
             # Resolve relative to this file's directory, not the current working directory
-            path = Path(__file__).parent / "database_loader_config.yml"
+            path = Path(__file__).parent.parent.parent / "config" / "database_loader_config.yml"
         else:
             path = Path(path)
 

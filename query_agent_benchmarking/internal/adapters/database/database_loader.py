@@ -134,7 +134,7 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
         recreate: Whether to drop existing collection before creating
         tag: Suffix to add to collection name
     """
-    config_path = Path(__file__).parent / "database_loader_config.yml"
+    config_path = Path(__file__).parent.parent.parent / "config" / "database_loader_config.yml"
     config = load_config(config_path)
 
     dataset_name: str = config["dataset_name"]

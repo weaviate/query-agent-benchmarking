@@ -46,7 +46,7 @@ def compare_embeddings(
     """
     
     if config_path is None:
-        config_path = Path(__file__).parent.parent / "benchmark-config.yml"
+        config_path = Path(__file__).parent.parent / "internal" / "config" / "benchmark-config.yml"
     
     file_config = load_config(config_path)
     
