@@ -7,6 +7,7 @@ from .database_loader import (
     create_collection_with_vector_config,
     get_vector_config,
 )
+from .database_config import supported_database_datasets, validate_database_dataset
 from .engram_loader import (
     engram_ingest_tenant,
     engram_ingest_all_tenants,
@@ -21,6 +22,8 @@ __all__ = [
     "database_loader",
     "create_collection_with_vector_config",
     "get_vector_config",
+    "supported_database_datasets",
+    "validate_database_dataset",
     "engram_ingest_tenant",
     "engram_ingest_all_tenants",
     "TenantIngestionStats",

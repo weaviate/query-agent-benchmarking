@@ -8,6 +8,7 @@ from typing import Any, Callable, Mapping, Optional, Sequence
 import weaviate
 import weaviate.collections.classes.config as wvcc
 
+from .database_config import validate_database_dataset
 from .database_registry import resolve_spec
 from ..dataset import in_memory_dataset_loader
 from ..utils import (
@@ -146,6 +147,7 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
 
     try:
         dataset_name: str = config["dataset_name"]
+        validate_database_dataset(dataset_name)
         objects = _load_documents(dataset_name)
 
         print("\033[92mFirst Document:\033[0m")
