@@ -11,15 +11,18 @@ import weaviate.collections.classes.config as wvcc
 from .database_config import validate_database_dataset
 from .database_registry import resolve_spec
 from .engram_loader import engram_ingest_all_tenants
-from query_agent_benchmarking.internal.dataset import in_memory_dataset_loader, load_longmemeval_docs_by_tenant
-from query_agent_benchmarking.internal.utils import (
-    get_weaviate_client,
-    get_provider_headers,
-    load_config,
-    parse_embedding_model,
-    pretty_print_in_memory_document,
-    add_tag_to_name,
+from query_agent_benchmarking.internal.adapters.dataset import (
+    in_memory_dataset_loader,
+    load_longmemeval_docs_by_tenant,
 )
+from query_agent_benchmarking.internal.adapters.clients.weaviate_client import get_weaviate_client
+from query_agent_benchmarking.internal.adapters.clients.provider_headers import (
+    get_provider_headers,
+    parse_embedding_model,
+)
+from query_agent_benchmarking.internal.config.loader import load_config
+from query_agent_benchmarking.internal.display import pretty_print_in_memory_document
+from query_agent_benchmarking.internal.adapters.database.naming import add_tag_to_name
 
 
 # Public API: used by external callers to build temporary collections with an explicit text embedding model.

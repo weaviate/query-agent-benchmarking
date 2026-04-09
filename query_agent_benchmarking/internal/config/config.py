@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Optional, Sequence
 
 from query_agent_benchmarking.internal.adapters.database import resolve_spec
-from query_agent_benchmarking.internal.utils import parse_embedding_model
+from query_agent_benchmarking.internal.adapters.clients.provider_headers import parse_embedding_model
 
 supported_search_datasets = (
     "beir/fiqa/test",

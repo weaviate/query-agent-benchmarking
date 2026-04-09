@@ -6,7 +6,8 @@ import yaml
 import weaviate.collections.classes.config as wvcc
 
 from .spec import DatasetSpec
-from query_agent_benchmarking.internal.utils import pascalize_name, parse_embedding_model
+from query_agent_benchmarking.internal.adapters.database.naming import pascalize_name
+from query_agent_benchmarking.internal.adapters.clients.provider_headers import parse_embedding_model
 
 TEXT = wvcc.DataType.TEXT
 BLOB = wvcc.DataType.BLOB

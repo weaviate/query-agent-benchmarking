@@ -3,7 +3,7 @@ import os
 import weaviate
 from weaviate.classes.config import Configure, Property, DataType
 
-from query_agent_benchmarking.internal.dataset import in_memory_dataset_loader
+from query_agent_benchmarking.internal.adapters.dataset import in_memory_dataset_loader
 
 collection_name="BrightBiologyQueries"
 

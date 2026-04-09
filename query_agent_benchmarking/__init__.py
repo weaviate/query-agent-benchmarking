@@ -11,7 +11,7 @@ from .cmd.run_ask import run_ask_eval
 
 from .cmd.run_compare_embeddings import compare_embeddings
 from .internal.adapters.database import database_loader
-from .internal.dataset import (
+from .internal.adapters.dataset import (
     in_memory_dataset_loader,
     in_memory_ask_dataset_loader,
     load_ask_queries_from_weaviate,
