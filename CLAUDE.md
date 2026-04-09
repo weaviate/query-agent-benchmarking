@@ -40,21 +40,32 @@ This package is organized using the **hexagonal architecture** pattern, also kno
 
 ### How It Works in This Package
 
-The package is split into three layers inside `query_agent_benchmarking/internal/`:
+The package is split into layers inside `query_agent_benchmarking/internal/`. The heart of the architecture lives in `core/`, which is itself divided into three packages that correspond to the three rings of the hexagonal model:
 
 ```
 internal/
-├── core/           # The domain — pure logic, no infrastructure imports
-│   ├── models.py           # Pydantic data contracts (InMemoryQuery, QueryResult, etc.)
-│   ├── ports/              # Abstract interfaces the domain needs
-│   ├── metrics_config.py   # Dataset-to-metrics mapping (data only, no function refs)
-│   ├── query_execution.py  # Query runner logic (iteration, batching, concurrency)
-│   ├── analysis.py         # Cross-trial metric aggregation (pure math)
-│   ├── benchmark_orchestrator.py  # DI-wired orchestrators
-│   └── services/           # Application-level entry points
-│       ├── search_benchmark.py
-│       ├── ask_benchmark.py
-│       └── compare_embeddings.py
+├── core/                  # The hexagonal core
+│   ├── domain/            # Innermost ring — pure logic, zero adapter imports
+│   │   ├── models.py              # Pydantic data contracts (InMemoryQuery, QueryResult, etc.)
+│   │   ├── metrics_config.py      # Dataset-to-metrics mapping (data only, no function refs)
+│   │   ├── query_execution.py     # Query runner logic (iteration, batching, concurrency)
+│   │   ├── analysis.py            # Cross-trial metric aggregation (pure math)
+│   │   └── benchmark_orchestrator.py  # DI-wired orchestrators
+│   │
+│   ├── ports/             # Abstract interfaces the domain needs
+│   │   ├── search_agent.py        # SearchAgent protocol
+│   │   ├── ask_agent.py           # AskAgent protocol + AskResponse
+│   │   ├── dataset_repository.py  # SearchDatasetRepository, AskDatasetRepository
+│   │   ├── metrics_calculator.py  # SearchMetricsCalculator, AskMetricsCalculator
+│   │   ├── result_repository.py   # ResultRepository
+│   │   ├── database_manager.py    # DatabaseManager
+│   │   └── llm_judge.py           # LLMJudge
+│   │
+│   └── services/          # Application layer — wires adapters to domain
+│       ├── search_benchmark.py    # run_search_eval, run_search_evals
+│       ├── ask_benchmark.py       # run_ask_eval
+│       ├── populate_db.py         # populate_db
+│       └── compare_embeddings.py  # compare_embeddings
 │
 ├── adapters/       # Concrete implementations that plug into ports
 │   ├── agents/         # SearchAgent & AskAgent implementations
@@ -69,6 +80,8 @@ internal/
 ├── mocks/          # No-op implementations for testing
 └── testutil/       # Query/result factory helpers for tests
 ```
+
+The dependency rule is strict: **domain** imports nothing outside itself. **Ports** import only from domain (to reference model types in protocol signatures). **Services** import from both domain and adapters to wire everything together. **Adapters** import from domain and ports but never from each other or from services.
 
 ### Ports
 
@@ -91,8 +104,8 @@ The domain declares seven port protocols in `core/ports/`, each a Python `Protoc
 1. **Configuration** (`config/`): YAML files are loaded and merged with programmatic kwargs.
 2. **Dataset loading** (`adapters/dataset/`): Queries and corpus are loaded into Pydantic models (`InMemoryQuery`, `InMemoryAskQuery`) via the dataset registry.
 3. **Agent construction** (`agents/`): Builder factories read config and instantiate the right `SearchAgent` or `AskAgent` adapter.
-4. **Query execution** (`core/query_execution.py`): Queries are run through the agent (sync or async with semaphore concurrency), producing `QueryResult` or `AskResult` objects.
-5. **Metrics** (`adapters/metrics/`): A `MetricsCalculator` adapter computes scores. Which metrics to use is determined by `core/metrics_config.py` based on dataset name patterns.
+4. **Query execution** (`core/domain/query_execution.py`): Queries are run through the agent (sync or async with semaphore concurrency), producing `QueryResult` or `AskResult` objects.
+5. **Metrics** (`adapters/metrics/`): A `MetricsCalculator` adapter computes scores. Which metrics to use is determined by `core/domain/metrics_config.py` based on dataset name patterns.
 6. **Persistence** (`adapters/results/`): A `ResultRepository` adapter saves per-trial results, per-trial metrics, and cross-trial aggregations.
 
 ### Testing Without Infrastructure
@@ -110,7 +123,7 @@ metrics = orchestrator.run_and_aggregate(queries, num_trials=3)
 
 ### Dataset-Metric Mapping
 
-Different datasets use different metrics, configured as pure data in `core/metrics_config.py`:
+Different datasets use different metrics, configured as pure data in `core/domain/metrics_config.py`:
 
 | Dataset family | Metrics |
 |---|---|
@@ -126,7 +139,7 @@ Built-in datasets map to Weaviate collections as `{DatasetPrefix}{PascalizedSubs
 
 ```
 query_agent_benchmarking/
-├── __init__.py          # Public API surface
+├── __init__.py          # Public API: populate_db, run_search_eval, run_ask_eval, compare_embeddings
 ├── cmd/                 # Server (uvicorn entry point)
 │   └── server.py
 ├── internal/            # All package internals (core + adapters + config)

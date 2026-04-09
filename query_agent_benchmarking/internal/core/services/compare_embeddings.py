@@ -13,7 +13,7 @@ from pathlib import Path
 from query_agent_benchmarking.internal.adapters.database import create_collection_with_vector_config, resolve_spec
 from query_agent_benchmarking.internal.core.services.search_benchmark import _run_search_eval
 from query_agent_benchmarking.internal.config.loader import load_config, merge_configs
-from query_agent_benchmarking.internal.display import print_results_comparison
+from query_agent_benchmarking.internal.core.domain.display import print_results_comparison
 from query_agent_benchmarking.internal.adapters.clients.weaviate_client import get_weaviate_client
 from query_agent_benchmarking.internal.adapters.clients.provider_headers import (
     parse_embedding_model,

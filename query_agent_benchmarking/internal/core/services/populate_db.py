@@ -22,7 +22,7 @@ from query_agent_benchmarking.internal.adapters.database.naming import add_tag_t
 from query_agent_benchmarking.internal.adapters.dataset import load_longmemeval_docs_by_tenant
 from query_agent_benchmarking.internal.adapters.clients.weaviate_client import get_weaviate_client
 from query_agent_benchmarking.internal.config.loader import load_config
-from query_agent_benchmarking.internal.display import pretty_print_in_memory_document
+from query_agent_benchmarking.internal.core.domain.display import pretty_print_in_memory_document
 
 
 DEFAULT_CONFIG_PATH = (

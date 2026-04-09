@@ -26,7 +26,7 @@ from query_agent_benchmarking.internal.core.domain.query_execution import (
 from query_agent_benchmarking.internal.core.domain.analysis import aggregate_metrics
 from query_agent_benchmarking.internal.adapters.metrics.ir_metrics_calculator import IRMetricsCalculator
 from query_agent_benchmarking.internal.adapters.results.json_file_repository import JsonFileResultRepository
-from query_agent_benchmarking.internal.display import pretty_print_in_memory_query, print_results_comparison
+from query_agent_benchmarking.internal.core.domain.display import pretty_print_in_memory_query, print_results_comparison
 from query_agent_benchmarking.internal.config.loader import load_config, merge_configs
 from query_agent_benchmarking.internal.config.config import (
     supported_search_datasets,
