@@ -5,10 +5,10 @@ import pytest
 from unittest.mock import patch
 from pathlib import Path
 
-from query_agent_benchmarking.adapters.results.json_file_repository import (
+from query_agent_benchmarking.internal.adapters.results.json_file_repository import (
     JsonFileResultRepository,
 )
-from query_agent_benchmarking.domain.models import (
+from query_agent_benchmarking.internal.core.models import (
     InMemoryQuery,
     QueryResult,
     ObjectID,

@@ -1,1 +1,1 @@
-"""Domain core - pure business logic with no external dependencies."""
+"""Backward-compatible re-exports from internal.core."""

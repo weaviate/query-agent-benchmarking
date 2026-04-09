@@ -1,12 +1,12 @@
 from .experimental.add_hard_negatives import add_hard_negatives
 
 # Search benchmark exports
-from .search_benchmark_run import run_search_eval, run_search_evals
+from .cmd.run_search import run_search_eval, run_search_evals
 
 # Ask benchmark exports
-from .ask_benchmark_run import run_ask_eval
+from .cmd.run_ask import run_ask_eval
 
-from .compare_embeddings import compare_embeddings
+from .cmd.run_compare_embeddings import compare_embeddings
 from .database import database_loader
 from .dataset import (
     in_memory_dataset_loader,
@@ -57,7 +57,7 @@ from .metrics import (
 )
 
 from .experimental.create_benchmark import create_benchmark
-from .config import (
+from .internal.config.config import (
     print_supported_datasets,
     print_supported_ask_datasets,
     print_named_vector_targets,

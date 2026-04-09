@@ -1,1 +1,1 @@
-"""Adapter implementations for port interfaces."""
+"""Backward-compatible re-exports from internal.adapters."""

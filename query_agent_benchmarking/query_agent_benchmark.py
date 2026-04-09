@@ -5,7 +5,7 @@ This module re-exports public functions for backward compatibility.
 """
 
 # Re-export query execution functions from domain layer
-from query_agent_benchmarking.domain.query_execution import (  # noqa: F401
+from query_agent_benchmarking.internal.core.query_execution import (  # noqa: F401
     run_search_queries,
     run_search_queries_async,
     run_ask_queries,
@@ -13,7 +13,7 @@ from query_agent_benchmarking.domain.query_execution import (  # noqa: F401
 )
 
 # Re-export aggregate_metrics from domain layer
-from query_agent_benchmarking.domain.analysis import aggregate_metrics  # noqa: F401
+from query_agent_benchmarking.internal.core.analysis import aggregate_metrics  # noqa: F401
 
 # Re-export the original analyze functions for backward compatibility.
 # These are async functions that used to live here and are still referenced

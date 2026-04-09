@@ -2,16 +2,16 @@
 
 import pytest
 
-from query_agent_benchmarking.domain.query_execution import (
+from query_agent_benchmarking.internal.core.query_execution import (
     run_search_queries,
     run_ask_queries,
 )
-from query_agent_benchmarking.domain.models import (
+from query_agent_benchmarking.internal.core.models import (
     InMemoryQuery,
     InMemoryAskQuery,
     ObjectID,
 )
-from query_agent_benchmarking.ports.ask_agent import AskResponse
+from query_agent_benchmarking.internal.core.ports.ask_agent import AskResponse
 
 
 class MockSearchAgent:

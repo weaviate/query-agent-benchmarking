@@ -4,15 +4,15 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from dataclasses import dataclass
 
-from query_agent_benchmarking.domain.models import ObjectID
-from query_agent_benchmarking.ports.ask_agent import AskResponse
-from query_agent_benchmarking.ports.search_agent import SearchAgent
-from query_agent_benchmarking.ports.ask_agent import AskAgent
-from query_agent_benchmarking.adapters.agents.external_service import (
+from query_agent_benchmarking.internal.core.models import ObjectID
+from query_agent_benchmarking.internal.core.ports.ask_agent import AskResponse
+from query_agent_benchmarking.internal.core.ports.search_agent import SearchAgent
+from query_agent_benchmarking.internal.core.ports.ask_agent import AskAgent
+from query_agent_benchmarking.internal.adapters.agents.external_service import (
     ExternalSearchService,
     ExternalAskService,
 )
-from query_agent_benchmarking.adapters.agents.weaviate_search import (
+from query_agent_benchmarking.internal.adapters.agents.weaviate_search import (
     parse_agent_name,
     parse_target_vector_names,
 )
@@ -254,10 +254,10 @@ class TestExternalAskService:
 
 class TestCollectionResolver:
     def test_both_raises(self):
-        from query_agent_benchmarking.adapters.agents.collection_resolver import (
+        from query_agent_benchmarking.internal.adapters.agents.collection_resolver import (
             resolve_collection_info,
         )
-        from query_agent_benchmarking.domain.models import DocsCollection
+        from query_agent_benchmarking.internal.core.models import DocsCollection
 
         with pytest.raises(ValueError, match="Cannot specify both"):
             resolve_collection_info(
@@ -268,7 +268,7 @@ class TestCollectionResolver:
             )
 
     def test_neither_raises(self):
-        from query_agent_benchmarking.adapters.agents.collection_resolver import (
+        from query_agent_benchmarking.internal.adapters.agents.collection_resolver import (
             resolve_collection_info,
         )
 
@@ -276,10 +276,10 @@ class TestCollectionResolver:
             resolve_collection_info()
 
     def test_custom_collection(self):
-        from query_agent_benchmarking.adapters.agents.collection_resolver import (
+        from query_agent_benchmarking.internal.adapters.agents.collection_resolver import (
             resolve_collection_info,
         )
-        from query_agent_benchmarking.domain.models import DocsCollection
+        from query_agent_benchmarking.internal.core.models import DocsCollection
 
         info = resolve_collection_info(
             docs_collection=DocsCollection(

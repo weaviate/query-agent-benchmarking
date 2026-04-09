@@ -9,14 +9,14 @@ import pytest
 from unittest.mock import MagicMock
 from dataclasses import dataclass
 
-from query_agent_benchmarking.domain.models import InMemoryAskQuery, AskResult
-from query_agent_benchmarking.domain.query_execution import run_ask_queries
-from query_agent_benchmarking.domain.analysis import aggregate_metrics
-from query_agent_benchmarking.domain.benchmark_orchestrator import AskBenchmarkOrchestrator
-from query_agent_benchmarking.adapters.metrics.ask_metrics_calculator import (
+from query_agent_benchmarking.internal.core.models import InMemoryAskQuery, AskResult
+from query_agent_benchmarking.internal.core.query_execution import run_ask_queries
+from query_agent_benchmarking.internal.core.analysis import aggregate_metrics
+from query_agent_benchmarking.internal.core.benchmark_orchestrator import AskBenchmarkOrchestrator
+from query_agent_benchmarking.internal.adapters.metrics.ask_metrics_calculator import (
     ExactMatchAskCalculator,
 )
-from query_agent_benchmarking.ports.ask_agent import AskResponse
+from query_agent_benchmarking.internal.core.ports.ask_agent import AskResponse
 
 
 # ============================================================================

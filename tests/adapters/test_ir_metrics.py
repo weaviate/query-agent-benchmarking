@@ -9,7 +9,7 @@ from query_agent_benchmarking.metrics.ir_metrics import (
     calculate_coverage,
     calculate_alpha_ndcg,
 )
-from query_agent_benchmarking.domain.models import NuggetInfo
+from query_agent_benchmarking.internal.core.models import NuggetInfo
 
 
 # ============================================================================

@@ -9,22 +9,22 @@ import json
 import random
 from typing import Optional
 
-from query_agent_benchmarking.domain.models import InMemoryQuery, InMemoryAskQuery
+from query_agent_benchmarking.internal.core.models import InMemoryQuery, InMemoryAskQuery
 
 # Delegate to the adapter registry
-from query_agent_benchmarking.adapters.dataset.registry import (
+from query_agent_benchmarking.internal.adapters.dataset.registry import (
     load_search_dataset,
     load_ask_dataset,
 )
 
 # Re-export Weaviate loaders
-from query_agent_benchmarking.adapters.dataset.weaviate_loader import (
+from query_agent_benchmarking.internal.adapters.dataset.weaviate_loader import (
     load_queries_from_weaviate_collection,
     load_ask_queries_from_weaviate,
 )
 
 # Re-export LongMemEval doc loader
-from query_agent_benchmarking.adapters.dataset.huggingface_loader import (
+from query_agent_benchmarking.internal.adapters.dataset.huggingface_loader import (
     load_longmemeval_docs_by_tenant,
 )
 
