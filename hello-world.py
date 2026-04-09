@@ -1,3 +1,0 @@
-import query_agent_benchmarking
-
-query_agent_benchmarking.print_supported_datasets()
