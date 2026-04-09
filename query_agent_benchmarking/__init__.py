@@ -10,6 +10,7 @@ from .internal.core.services import run_search_eval, run_search_evals
 from .internal.core.services import run_ask_eval
 
 from .internal.core.services import compare_embeddings
+from .internal.core.services import populate_db
 from .internal.adapters.database import database_loader
 from .internal.adapters.dataset import (
     in_memory_dataset_loader,
@@ -81,6 +82,7 @@ __all__ = [
     "run_ask_eval",
     # Utilities
     "add_hard_negatives",
+    "populate_db",
     "database_loader",
     "in_memory_dataset_loader",
     "in_memory_ask_dataset_loader",

@@ -37,13 +37,13 @@ def load_enron():
     emails = _load_from_hf("weaviate/enron-qa-emails-dasovich-j")
     questions = _load_from_hf("weaviate/enron-qa-questions-dasovich-j")
     parsed_questions = []
-    for question in questions:
+    for i, question in enumerate(questions):
         dataset_ids = question.pop("dataset_id")
         parsed_questions.append(
             InMemoryQuery(
                 question=question["question"],
-                query_id=question["query_id"],
-                dataset_ids=[dataset_ids] if not isinstance(dataset_ids, list) else dataset_ids,
+                query_id=question.get("query_id", str(i)),
+                dataset_ids=[str(dataset_ids)] if not isinstance(dataset_ids, list) else [str(d) for d in dataset_ids],
             )
         )
     return emails, parsed_questions
@@ -53,12 +53,12 @@ def load_wixqa():
     documents = _load_from_hf(filepath="Wix/WixQA", subset="wix_kb_corpus")
     questions = _load_from_hf(filepath="Wix/WixQA", subset="wixqa_expertwritten")
     parsed_questions = []
-    for question in questions:
+    for i, question in enumerate(questions):
         article_ids = question.pop("article_ids")
         parsed_questions.append(
             InMemoryQuery(
                 question=question["question"],
-                query_id=question["query_id"],
+                query_id=question.get("query_id", str(i)),
                 dataset_ids=[article_ids] if not isinstance(article_ids, list) else article_ids,
             )
         )

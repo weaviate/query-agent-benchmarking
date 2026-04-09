@@ -1,3 +1,3 @@
 import query_agent_benchmarking
 
-query_agent_benchmarking.database_loader()
+query_agent_benchmarking.populate_db()

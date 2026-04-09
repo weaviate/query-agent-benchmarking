@@ -121,10 +121,10 @@ def run_compare(req: CompareEmbeddingsRequest) -> dict[str, Any]:
 
 
 @app.post("/populate-db")
-def populate_db(req: PopulateDatabaseRequest) -> dict[str, Any]:
+def populate_db_endpoint(req: PopulateDatabaseRequest) -> dict[str, Any]:
     """Populate the database from config."""
     try:
-        query_agent_benchmarking.database_loader(
+        query_agent_benchmarking.populate_db(
             recreate=req.recreate,
             tag=req.tag,
         )

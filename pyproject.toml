@@ -32,6 +32,13 @@ where = ["."]
 include = ["query_agent_benchmarking*"]
 exclude = ["notebooks*", "results*", "locust*", "ci*"]
 
+[tool.pytest.ini_options]
+# By default only run unit/integration tests (fast, no network).
+# Functional tests download real data — opt in explicitly:
+#   uv run pytest tests/functional/ -v
+testpaths = ["tests"]
+addopts = "--ignore=tests/functional"
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
