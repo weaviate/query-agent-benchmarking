@@ -106,6 +106,8 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
         dataset_identifier = docs_collection.collection_name
     elif dataset_name:
         dataset_identifier = dataset_name
+    elif isinstance(queries_input, str):
+        dataset_identifier = queries_input
     else:
         dataset_identifier = "custom"
     
