@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from dataclasses import dataclass
 
-from query_agent_benchmarking.internal.core.models import ObjectID
+from query_agent_benchmarking.internal.core.domain.models import ObjectID
 from query_agent_benchmarking.internal.core.ports.ask_agent import AskResponse
 from query_agent_benchmarking.internal.core.ports.search_agent import SearchAgent
 from query_agent_benchmarking.internal.core.ports.ask_agent import AskAgent
@@ -257,7 +257,7 @@ class TestCollectionResolver:
         from query_agent_benchmarking.internal.adapters.agents.collection_resolver import (
             resolve_collection_info,
         )
-        from query_agent_benchmarking.internal.core.models import DocsCollection
+        from query_agent_benchmarking.internal.core.domain.models import DocsCollection
 
         with pytest.raises(ValueError, match="Cannot specify both"):
             resolve_collection_info(
@@ -279,7 +279,7 @@ class TestCollectionResolver:
         from query_agent_benchmarking.internal.adapters.agents.collection_resolver import (
             resolve_collection_info,
         )
-        from query_agent_benchmarking.internal.core.models import DocsCollection
+        from query_agent_benchmarking.internal.core.domain.models import DocsCollection
 
         info = resolve_collection_info(
             docs_collection=DocsCollection(

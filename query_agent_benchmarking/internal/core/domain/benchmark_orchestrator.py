@@ -7,13 +7,13 @@ These orchestrators coordinate the benchmark flow using port interfaces
 
 from typing import Any, Optional
 
-from query_agent_benchmarking.internal.core.models import (
+from query_agent_benchmarking.internal.core.domain.models import (
     InMemoryQuery,
     InMemoryAskQuery,
     QueryResult,
     AskResult,
 )
-from query_agent_benchmarking.internal.core.analysis import aggregate_metrics
+from query_agent_benchmarking.internal.core.domain.analysis import aggregate_metrics
 
 
 class SearchBenchmarkOrchestrator:

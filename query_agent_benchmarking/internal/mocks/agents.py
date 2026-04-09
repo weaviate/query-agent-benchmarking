@@ -1,6 +1,6 @@
 """Mock agent implementations for testing."""
 
-from query_agent_benchmarking.internal.core.models import ObjectID
+from query_agent_benchmarking.internal.core.domain.models import ObjectID
 from query_agent_benchmarking.internal.core.ports.ask_agent import AskResponse
 
 

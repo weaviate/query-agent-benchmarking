@@ -1,6 +1,6 @@
 """Dataset loaders using the ir_datasets library (BEIR, LOTTE)."""
 
-from query_agent_benchmarking.internal.core.models import InMemoryQuery
+from query_agent_benchmarking.internal.core.domain.models import InMemoryQuery
 
 
 def load_beir(dataset_name: str):

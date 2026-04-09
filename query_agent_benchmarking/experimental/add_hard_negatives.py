@@ -7,7 +7,7 @@ from weaviate.classes.query import Filter
 from weaviate.agents.classes import Operations
 from weaviate.agents.transformation import TransformationAgent
 
-from query_agent_benchmarking.internal.core.models import (
+from query_agent_benchmarking.internal.core.domain.models import (
     DocsCollection,
     QueriesCollection,
     HardNegativesCollection,

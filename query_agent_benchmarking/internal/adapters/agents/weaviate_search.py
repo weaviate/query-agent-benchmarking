@@ -13,7 +13,7 @@ from weaviate.auth import Auth
 from weaviate.config import AdditionalConfig, Timeout
 from weaviate.classes.query import TargetVectors
 
-from query_agent_benchmarking.internal.core.models import ObjectID
+from query_agent_benchmarking.internal.core.domain.models import ObjectID
 from query_agent_benchmarking.internal.adapters.agents.collection_resolver import resolve_collection_info
 from query_agent_benchmarking.internal.adapters.clients.provider_headers import (
     resolve_headers_for_models,

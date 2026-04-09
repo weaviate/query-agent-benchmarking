@@ -6,7 +6,7 @@ import weaviate
 from weaviate.auth import Auth
 from weaviate.config import AdditionalConfig, Timeout
 
-from query_agent_benchmarking.internal.core.models import DocsCollection
+from query_agent_benchmarking.internal.core.domain.models import DocsCollection
 from query_agent_benchmarking.internal.adapters.database.database_registry import resolve_spec
 from query_agent_benchmarking.internal.adapters.clients.provider_headers import (
     get_provider_headers,

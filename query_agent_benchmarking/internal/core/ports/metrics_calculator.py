@@ -2,7 +2,7 @@
 
 from typing import Protocol, runtime_checkable
 
-from query_agent_benchmarking.internal.core.models import (
+from query_agent_benchmarking.internal.core.domain.models import (
     QueryResult,
     InMemoryQuery,
     AskResult,

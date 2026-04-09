@@ -2,7 +2,7 @@
 
 import pytest
 
-from query_agent_benchmarking.internal.core.metrics_config import (
+from query_agent_benchmarking.internal.core.domain.metrics_config import (
     MetricSpec,
     MetricsProfile,
     resolve_metrics_profile,

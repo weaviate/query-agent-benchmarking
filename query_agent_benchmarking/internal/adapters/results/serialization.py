@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Any
 import json
-from query_agent_benchmarking.internal.core.models import QueryResult, AskResult
+from query_agent_benchmarking.internal.core.domain.models import QueryResult, AskResult
 
 
 # All results are saved to the result-visualizer/results/ directory

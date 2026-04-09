@@ -8,14 +8,14 @@ work together correctly without requiring a live Weaviate instance.
 import pytest
 from unittest.mock import MagicMock
 
-from query_agent_benchmarking.internal.core.models import (
+from query_agent_benchmarking.internal.core.domain.models import (
     InMemoryQuery,
     ObjectID,
     QueryResult,
 )
-from query_agent_benchmarking.internal.core.query_execution import run_search_queries
-from query_agent_benchmarking.internal.core.analysis import aggregate_metrics
-from query_agent_benchmarking.internal.core.benchmark_orchestrator import SearchBenchmarkOrchestrator
+from query_agent_benchmarking.internal.core.domain.query_execution import run_search_queries
+from query_agent_benchmarking.internal.core.domain.analysis import aggregate_metrics
+from query_agent_benchmarking.internal.core.domain.benchmark_orchestrator import SearchBenchmarkOrchestrator
 from query_agent_benchmarking.internal.adapters.metrics.ir_metrics_calculator import IRMetricsCalculator
 from query_agent_benchmarking.internal.adapters.results.json_file_repository import JsonFileResultRepository
 

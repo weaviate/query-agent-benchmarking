@@ -2,11 +2,11 @@
 
 import pytest
 
-from query_agent_benchmarking.internal.core.benchmark_orchestrator import (
+from query_agent_benchmarking.internal.core.domain.benchmark_orchestrator import (
     SearchBenchmarkOrchestrator,
     AskBenchmarkOrchestrator,
 )
-from query_agent_benchmarking.internal.core.models import (
+from query_agent_benchmarking.internal.core.domain.models import (
     InMemoryQuery,
     InMemoryAskQuery,
     ObjectID,

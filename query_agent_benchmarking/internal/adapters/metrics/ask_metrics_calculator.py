@@ -9,7 +9,7 @@ Provides calculators for different ask evaluation strategies:
 import numpy as np
 from tqdm import tqdm
 
-from query_agent_benchmarking.internal.core.models import AskResult
+from query_agent_benchmarking.internal.core.domain.models import AskResult
 from query_agent_benchmarking.internal.adapters.metrics.lmjudge_alignment import LMJudge
 from query_agent_benchmarking.internal.adapters.metrics.exact_match import calculate_exact_match
 from query_agent_benchmarking.internal.adapters.metrics.officeqa_metric import (

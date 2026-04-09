@@ -15,7 +15,7 @@ from query_agent_benchmarking.internal.adapters.dataset import (
     in_memory_dataset_loader,
     in_memory_ask_dataset_loader,
 )
-from query_agent_benchmarking.internal.core.models import InMemoryQuery, InMemoryAskQuery
+from query_agent_benchmarking.internal.core.domain.models import InMemoryQuery, InMemoryAskQuery
 
 
 # ---------------------------------------------------------------------------

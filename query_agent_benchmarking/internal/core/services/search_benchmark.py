@@ -13,17 +13,17 @@ from query_agent_benchmarking.internal.adapters.dataset import (
     in_memory_dataset_loader,
     load_queries_from_weaviate_collection,
 )
-from query_agent_benchmarking.internal.core.models import (
+from query_agent_benchmarking.internal.core.domain.models import (
     DocsCollection,
     QueriesCollection,
     InMemoryQuery,
     InMemorySearchQuery,
 )
-from query_agent_benchmarking.internal.core.query_execution import (
+from query_agent_benchmarking.internal.core.domain.query_execution import (
     run_search_queries,
     run_search_queries_async,
 )
-from query_agent_benchmarking.internal.core.analysis import aggregate_metrics
+from query_agent_benchmarking.internal.core.domain.analysis import aggregate_metrics
 from query_agent_benchmarking.internal.adapters.metrics.ir_metrics_calculator import IRMetricsCalculator
 from query_agent_benchmarking.internal.adapters.results.json_file_repository import JsonFileResultRepository
 from query_agent_benchmarking.internal.display import pretty_print_in_memory_query, print_results_comparison

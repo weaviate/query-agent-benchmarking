@@ -8,7 +8,7 @@ from pathlib import Path
 from query_agent_benchmarking.internal.adapters.results.json_file_repository import (
     JsonFileResultRepository,
 )
-from query_agent_benchmarking.internal.core.models import (
+from query_agent_benchmarking.internal.core.domain.models import (
     InMemoryQuery,
     QueryResult,
     ObjectID,

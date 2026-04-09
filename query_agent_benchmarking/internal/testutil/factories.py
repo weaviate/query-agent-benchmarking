@@ -1,6 +1,6 @@
 """Factory functions for creating test data."""
 
-from query_agent_benchmarking.internal.core.models import (
+from query_agent_benchmarking.internal.core.domain.models import (
     ObjectID,
     InMemoryQuery,
     InMemoryAskQuery,

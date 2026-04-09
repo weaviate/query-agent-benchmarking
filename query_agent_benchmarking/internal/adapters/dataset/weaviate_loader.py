@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from query_agent_benchmarking.internal.core.models import InMemoryQuery, InMemoryAskQuery
+from query_agent_benchmarking.internal.core.domain.models import InMemoryQuery, InMemoryAskQuery
 from query_agent_benchmarking.internal.adapters.clients.weaviate_client import get_weaviate_client
 
 

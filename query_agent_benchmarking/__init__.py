@@ -20,7 +20,7 @@ from .internal.adapters.dataset import (
 )
 
 # Models
-from .internal.core.models import (
+from .internal.core.domain.models import (
     DocsCollection,
     QueriesCollection,
     InMemoryQuery,

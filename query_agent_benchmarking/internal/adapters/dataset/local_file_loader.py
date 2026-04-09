@@ -3,7 +3,7 @@
 import csv
 from pathlib import Path
 
-from query_agent_benchmarking.internal.core.models import InMemoryQuery, InMemoryAskQuery
+from query_agent_benchmarking.internal.core.domain.models import InMemoryQuery, InMemoryAskQuery
 from query_agent_benchmarking.internal.adapters.database.pdf_utils import get_pdf_page_counts, process_single_pdf
 
 

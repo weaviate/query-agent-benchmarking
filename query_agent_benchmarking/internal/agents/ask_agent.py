@@ -5,7 +5,7 @@ import httpx
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 
 from query_agent_benchmarking.internal.agents.base import BaseAgentBuilder
-from query_agent_benchmarking.internal.core.models import DocsCollection
+from query_agent_benchmarking.internal.core.domain.models import DocsCollection
 
 
 @dataclass

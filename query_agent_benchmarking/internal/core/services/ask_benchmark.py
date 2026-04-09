@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional, Any, Union
 
 from query_agent_benchmarking.internal.agents import AskAgentBuilder, EngramDSPyAgent
-from query_agent_benchmarking.internal.core.models import (
+from query_agent_benchmarking.internal.core.domain.models import (
     DocsCollection,
     AskQueriesCollection,
     InMemoryAskQuery,
@@ -19,11 +19,11 @@ from query_agent_benchmarking.internal.adapters.dataset import (
     in_memory_ask_dataset_loader,
     load_ask_queries_from_weaviate,
 )
-from query_agent_benchmarking.internal.core.query_execution import (
+from query_agent_benchmarking.internal.core.domain.query_execution import (
     run_ask_queries,
     run_ask_queries_async,
 )
-from query_agent_benchmarking.internal.core.analysis import aggregate_metrics
+from query_agent_benchmarking.internal.core.domain.analysis import aggregate_metrics
 from query_agent_benchmarking.internal.adapters.metrics.ask_metrics_calculator import (
     LMJudgeAskCalculator,
     ExactMatchAskCalculator,

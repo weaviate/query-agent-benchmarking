@@ -11,7 +11,7 @@ from typing import Any
 
 from tqdm import tqdm
 
-from query_agent_benchmarking.internal.core.models import (
+from query_agent_benchmarking.internal.core.domain.models import (
     InMemoryQuery,
     InMemoryAskQuery,
     QueryResult,

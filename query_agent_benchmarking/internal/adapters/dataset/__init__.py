@@ -8,7 +8,7 @@ import json
 import random
 from typing import Optional
 
-from query_agent_benchmarking.internal.core.models import InMemoryQuery, InMemoryAskQuery
+from query_agent_benchmarking.internal.core.domain.models import InMemoryQuery, InMemoryAskQuery
 
 from .registry import load_search_dataset, load_ask_dataset
 from .weaviate_loader import (

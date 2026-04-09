@@ -3,7 +3,7 @@
 import inspect
 from typing import Any
 
-from query_agent_benchmarking.internal.core.models import InMemoryQuery
+from query_agent_benchmarking.internal.core.domain.models import InMemoryQuery
 
 
 def get_object_by_dataset_id(dataset_id, objects_list):

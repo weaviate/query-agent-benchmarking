@@ -2,7 +2,7 @@
 
 from typing import Protocol, runtime_checkable
 
-from query_agent_benchmarking.internal.core.models import InMemoryQuery, InMemoryAskQuery
+from query_agent_benchmarking.internal.core.domain.models import InMemoryQuery, InMemoryAskQuery
 
 
 @runtime_checkable

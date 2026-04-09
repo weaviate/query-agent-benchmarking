@@ -2,7 +2,7 @@
 
 import pytest
 
-from query_agent_benchmarking.internal.core.analysis import aggregate_metrics
+from query_agent_benchmarking.internal.core.domain.analysis import aggregate_metrics
 
 
 class TestAggregateMetrics:
