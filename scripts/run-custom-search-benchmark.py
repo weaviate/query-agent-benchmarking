@@ -1,6 +1,6 @@
 import query_agent_benchmarking
 
-from query_agent_benchmarking.models import (
+from query_agent_benchmarking.internal.core.domain.models import (
     DocsCollection,
     QueriesCollection,
 )

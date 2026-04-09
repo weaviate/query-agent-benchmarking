@@ -1,14 +1,17 @@
+from dotenv import load_dotenv
+
 from .experimental.add_hard_negatives import add_hard_negatives
 
 # Search benchmark exports
-from .search_benchmark_run import run_search_eval, run_search_evals
+from .internal.core.services import run_search_eval, run_search_evals
 
 # Ask benchmark exports
-from .ask_benchmark_run import run_ask_eval
+from .internal.core.services import run_ask_eval
 
-from .compare_embeddings import compare_embeddings
-from .database import database_loader
-from .dataset import (
+from .internal.core.services import compare_embeddings
+from .internal.core.services import populate_db
+from .internal.adapters.database import database_loader
+from .internal.adapters.dataset import (
     in_memory_dataset_loader,
     in_memory_ask_dataset_loader,
     load_ask_queries_from_weaviate,
@@ -16,7 +19,7 @@ from .dataset import (
 )
 
 # Models
-from .models import (
+from .internal.core.domain.models import (
     DocsCollection,
     QueriesCollection,
     InMemoryQuery,
@@ -32,32 +35,25 @@ from .models import (
 )
 
 # Agent exports
-from .agent import (
-    SearchAgentBuilder,
-    AskAgentBuilder,
-    BaseAgentBuilder,
-    EngramDSPyAgent,
-)
+from .internal.adapters.agents.factory import create_search_agent, create_ask_agent
+from .internal.adapters.agents.engram_dspy_agent import EngramDSPyAgent
 
 # Metrics
-from .metrics import (
-    # IR Metrics
+from .internal.adapters.metrics.ir_metrics import (
     calculate_recall_at_k,
     calculate_success_at_k,
     calculate_nDCG_at_k,
     calculate_coverage,
     calculate_alpha_ndcg,
-    # LLM Judge
-    LMJudge,
-    calculate_alignment_score,
-    # Exact Match
-    calculate_exact_match,
-    # OfficeQA
-    officeqa_score_answer,
+)
+from .internal.adapters.metrics.lmjudge_alignment import LMJudge
+from .internal.adapters.metrics.exact_match import calculate_exact_match
+from .internal.adapters.metrics.officeqa_metric import (
+    score_answer as officeqa_score_answer,
 )
 
 from .experimental.create_benchmark import create_benchmark
-from .config import (
+from .internal.config.config import (
     print_supported_datasets,
     print_supported_ask_datasets,
     print_named_vector_targets,
@@ -67,7 +63,14 @@ from .config import (
     supported_search_datasets,
     supported_ask_datasets,
 )
-from .result_serialization import save_trial_results, save_ask_trial_results, save_trial_metrics, save_aggregated_results
+from .internal.adapters.results.serialization import (
+    save_trial_results,
+    save_ask_trial_results,
+    save_trial_metrics,
+    save_aggregated_results,
+)
+
+load_dotenv()
 
 __all__ = [
     # Main entry points
@@ -76,6 +79,7 @@ __all__ = [
     "run_ask_eval",
     # Utilities
     "add_hard_negatives",
+    "populate_db",
     "database_loader",
     "in_memory_dataset_loader",
     "in_memory_ask_dataset_loader",
@@ -103,9 +107,8 @@ __all__ = [
     "AskResult",
     "AskQueriesCollection",
     # Agents
-    "SearchAgentBuilder",
-    "AskAgentBuilder",
-    "BaseAgentBuilder",
+    "create_search_agent",
+    "create_ask_agent",
     "EngramDSPyAgent",
     # Metrics - IR
     "calculate_recall_at_k",
@@ -115,7 +118,6 @@ __all__ = [
     "calculate_alpha_ndcg",
     # Metrics - LLM Judge
     "LMJudge",
-    "calculate_alignment_score",
     # Metrics - Exact Match
     "calculate_exact_match",
     # Metrics - OfficeQA
