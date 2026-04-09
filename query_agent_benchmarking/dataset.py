@@ -471,13 +471,21 @@ def split_dataset(dataset, train_ratio=0.8, shuffle=True):
 # Ask Query Loaders
 # ============================================================================
 
-def in_memory_ask_dataset_loader(dataset_name: str) -> list[InMemoryAskQuery]:
+def in_memory_ask_dataset_loader(
+    dataset_name: str,
+    longmemeval_subset: Optional[dict] = None,
+) -> list[InMemoryAskQuery]:
     """
     Load ask queries from a supported dataset.
-    
+
     This abstracts away the underlying key mappings - users just specify the dataset name.
     Similar to in_memory_dataset_loader() for search benchmarks.
-    
+
+    Args:
+        dataset_name: Name of the built-in ask dataset.
+        longmemeval_subset: Optional dict with ``users_to_test`` key containing
+            a ``[lower_bound, upper_bound)`` list for tenant filtering.
+
     Note: The dataset_name also determines which Weaviate collection the agent uses:
     - "irpapers" -> IRPapers_Default
     - "multihoprag" -> MultiHopRAG_Default
@@ -488,10 +496,16 @@ def in_memory_ask_dataset_loader(dataset_name: str) -> list[InMemoryAskQuery]:
         return _in_memory_ask_loader_multihoprag()
     elif dataset_name == "officeqa":
         return _in_memory_ask_loader_officeqa()
+    elif dataset_name == "longmemeval-s":
+        users_to_test = (longmemeval_subset or {}).get("users_to_test")
+        return _in_memory_ask_loader_longmemeval("weaviate/longmemeval-s-cleaned", users_to_test=users_to_test)
+    elif dataset_name == "longmemeval-m":
+        users_to_test = (longmemeval_subset or {}).get("users_to_test")
+        return _in_memory_ask_loader_longmemeval("weaviate/longmemeval-m-cleaned", users_to_test=users_to_test)
     else:
         raise ValueError(
             f"Unknown ask dataset: {dataset_name}. "
-            f"Supported ask datasets: irpapers, multihoprag, officeqa"
+            f"Supported ask datasets: irpapers, multihoprag, officeqa, longmemeval-s, longmemeval-m"
         )
 
 
@@ -593,3 +607,92 @@ def load_ask_queries_from_weaviate(
         return queries
     finally:
         client.close()
+
+
+def _resolve_longmemeval_tenant_subset(
+    all_tenant_ids: list[str],
+    users_to_test: Optional[list[int]] = None,
+) -> set[str]:
+    """
+    Resolve the tenant IDs to include based on a [lower_bound, upper_bound) range
+    over the sorted tenant list. Returns the full set if no subset is requested.
+    """
+    if users_to_test is None:
+        return set(all_tenant_ids)
+
+    lower, upper = users_to_test
+    selected = sorted(all_tenant_ids)[lower:upper]
+    print(f"  LongMemEval subset: tenants [{lower}, {upper}) → {len(selected)} tenants")
+    return set(selected)
+
+
+def _in_memory_ask_loader_longmemeval(
+    hf_path: str,
+    users_to_test: Optional[list[int]] = None,
+) -> list[InMemoryAskQuery]:
+    """Load LongMemEval as ask queries with ground truth answers and tenant IDs."""
+    print(f"Loading LongMemEval ask queries from {hf_path}...")
+
+    raw_queries = load_dataset(hf_path, "queries")["train"]
+
+    all_tenant_ids = sorted({str(item["tenant_id"]) for item in raw_queries})
+    keep_tenants = _resolve_longmemeval_tenant_subset(all_tenant_ids, users_to_test)
+
+    queries: list[InMemoryAskQuery] = []
+    for item in raw_queries:
+        tid = str(item["tenant_id"])
+        if tid not in keep_tenants:
+            continue
+        queries.append(
+            InMemoryAskQuery(
+                question=item["question"],
+                ground_truth_answer=item["answer"],
+                tenant_id=tid,
+            )
+        )
+
+    print(f"Loaded {len(queries)} ask queries")
+    return queries
+
+
+def load_longmemeval_docs_by_tenant(
+    dataset_name: str,
+    users_to_test: Optional[list[int]] = None,
+) -> dict[str, list[dict]]:
+    """
+    Load LongMemEval session documents grouped by tenant_id.
+
+    Args:
+        dataset_name: "longmemeval-s" or "longmemeval-m".
+        users_to_test: Optional [lower_bound, upper_bound) range over sorted tenant indices.
+
+    Returns a dict mapping tenant_id -> list of session dicts.
+    Each session dict has keys: tenant_id, session_id, session_date, session_text.
+    """
+    hf_path = {
+        "longmemeval-s": "weaviate/longmemeval-s-cleaned",
+        "longmemeval-m": "weaviate/longmemeval-m-cleaned",
+    }[dataset_name]
+
+    print(f"Loading LongMemEval docs from {hf_path}...")
+    raw_docs = load_dataset(hf_path, "docs")["train"]
+
+    all_tenant_ids = sorted({str(item["tenant_id"]) for item in raw_docs})
+    keep_tenants = _resolve_longmemeval_tenant_subset(all_tenant_ids, users_to_test)
+
+    docs_by_tenant: dict[str, list[dict]] = {}
+    for item in raw_docs:
+        tid = str(item["tenant_id"])
+        if tid not in keep_tenants:
+            continue
+        if tid not in docs_by_tenant:
+            docs_by_tenant[tid] = []
+        docs_by_tenant[tid].append({
+            "tenant_id": tid,
+            "session_id": str(item["session_id"]),
+            "session_date": item["session_date"],
+            "session_text": item["session_text"],
+        })
+
+    print(f"Loaded {sum(len(v) for v in docs_by_tenant.values())} docs across {len(docs_by_tenant)} tenants")
+    return docs_by_tenant

@@ -8,8 +8,10 @@ from typing import Any, Callable, Mapping, Optional, Sequence
 import weaviate
 import weaviate.collections.classes.config as wvcc
 
+from .database_config import validate_database_dataset
 from .database_registry import resolve_spec
-from ..dataset import in_memory_dataset_loader
+from .engram_loader import engram_ingest_all_tenants
+from ..dataset import in_memory_dataset_loader, load_longmemeval_docs_by_tenant
 from ..utils import (
     get_weaviate_client,
     get_provider_headers,
@@ -122,8 +124,12 @@ def create_collection_with_vector_config(
 # Public API: primary entry point used by `scripts/populate-db.py` and package users.
 def database_loader(recreate: bool = True, tag: str = "Default") -> None:
     """
-    Load dataset from config and populate Weaviate collection.
-    
+    Load dataset from config and populate the target database.
+
+    Reads ``database_loader_config.yml`` to determine the dataset and target.
+    When ``database_target`` is ``"engram"``, sessions are ingested into Engram
+    (no Weaviate connection required). Otherwise defaults to Weaviate.
+
     Args:
         recreate: Whether to drop existing collection before creating
         tag: Suffix to add to collection name
@@ -131,6 +137,37 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
     config_path = Path(__file__).parent / "database_loader_config.yml"
     config = load_config(config_path)
 
+    dataset_name: str = config["dataset_name"]
+    validate_database_dataset(dataset_name)
+    database_target = config.get("database_target", "weaviate")
+
+    if database_target == "engram":
+        _run_engram_loader(config, dataset_name)
+        return
+
+    _run_weaviate_loader(config, dataset_name, recreate=recreate, tag=tag)
+
+
+def _run_engram_loader(config: dict, dataset_name: str) -> None:
+    """Ingest LongMemEval sessions into Engram."""
+    subset_cfg = config.get("longmemeval_subset")
+    users_to_test = subset_cfg.get("users_to_test") if subset_cfg else None
+
+    docs_by_tenant = load_longmemeval_docs_by_tenant(
+        dataset_name,
+        users_to_test=users_to_test,
+    )
+
+    engram_ingest_all_tenants(docs_by_tenant)
+
+
+def _run_weaviate_loader(
+    config: dict,
+    dataset_name: str,
+    recreate: bool = True,
+    tag: str = "Default",
+) -> None:
+    """Load dataset into a Weaviate collection."""
     # Get provider headers for all configured embedding providers.
     headers = _resolve_provider_headers(
         embedding_providers=config.get("embedding_providers"),
@@ -145,7 +182,6 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
     client = get_weaviate_client(headers=headers)
 
     try:
-        dataset_name: str = config["dataset_name"]
         objects = _load_documents(dataset_name)
 
         print("\033[92mFirst Document:\033[0m")

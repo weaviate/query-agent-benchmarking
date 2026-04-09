@@ -1,0 +1,35 @@
+# =============================================================================
+# Agent Configuration
+#
+# Agent-specific parameters, decoupled from benchmark evaluation settings.
+# The benchmark config (benchmark-config.yml) references an agent by name
+# via `search_agent_name` / `ask_agent_name`; this file defines how each
+# agent is constructed.
+# =============================================================================
+
+# =============================================================================
+# Weaviate Query Agent (default)
+# =============================================================================
+query-agent-ask:
+  agents_host: https://api.agents.weaviate.io
+
+query-agent-search-only:
+  agents_host: https://api.agents.weaviate.io
+
+# =============================================================================
+# External Service (BYOS)
+# =============================================================================
+external_service:
+  external_service_host: http://localhost:8000/search
+
+# =============================================================================
+# Engram + DSPy
+# =============================================================================
+engram:
+  engram_base_url: https://dev-engram.labs.weaviate.io
+  # engram_api_key: loaded from ENGRAM_API_KEY env var by default
+  dspy_lm_model: "openai/gpt-5.4"
+  retrieval_limit: 10
+  retrieval_type: hybrid
+  engram_group: default
+  user_id_prefix: "longmemeval-"

@@ -10,7 +10,7 @@ import asyncio
 from pathlib import Path
 from typing import Optional, Any, Union
 
-from query_agent_benchmarking.agent import AskAgentBuilder
+from query_agent_benchmarking.agent import AskAgentBuilder, EngramDSPyAgent
 from query_agent_benchmarking.models import (
     DocsCollection,
     AskQueriesCollection,
@@ -40,6 +40,14 @@ from query_agent_benchmarking.qa_system_prompt_registry import get_system_prompt
 
 
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "benchmark-config.yml"
+DEFAULT_AGENT_CONFIG_PATH = Path(__file__).parent / "agent" / "agent-config.yml"
+
+
+def _load_agent_config(agent_name: str, agent_config_path: Optional[Path] = None) -> dict[str, Any]:
+    """Load agent-specific parameters from agent-config.yml."""
+    path = agent_config_path or DEFAULT_AGENT_CONFIG_PATH
+    all_agents = load_config(path)
+    return dict(all_agents.get(agent_name, {}))
 
 
 async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
@@ -75,7 +83,10 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
         elif isinstance(queries_input, str):
             # Built-in dataset name - loader handles all key mappings internally
             if queries_input in supported_ask_datasets:
-                queries = in_memory_ask_dataset_loader(queries_input)
+                queries = in_memory_ask_dataset_loader(
+                    queries_input,
+                    longmemeval_subset=config.get("longmemeval_subset"),
+                )
             else:
                 raise ValueError(
                     f"Unknown ask dataset: '{queries_input}'. "
@@ -95,6 +106,8 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
         dataset_identifier = docs_collection.collection_name
     elif dataset_name:
         dataset_identifier = dataset_name
+    elif isinstance(queries_input, str):
+        dataset_identifier = queries_input
     else:
         dataset_identifier = "custom"
     
@@ -138,24 +151,38 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     # Add agent_name to config for result serialization
     config["agent_name"] = agent_name
 
-    if docs_collection:
+    if agent_name == "engram":
+        use_async = False  # EngramDSPyAgent is sync-only
+        agent_cfg = _load_agent_config(agent_name)
+        ask_agent = EngramDSPyAgent(
+            engram_base_url=agent_cfg.get("engram_base_url", "https://dev-engram.labs.weaviate.io"),
+            engram_api_key=agent_cfg.get("engram_api_key"),
+            dspy_lm_model=agent_cfg.get("dspy_lm_model", "openai/gpt-5.4"),
+            retrieval_limit=agent_cfg.get("retrieval_limit", 10),
+            retrieval_type=agent_cfg.get("retrieval_type", "hybrid"),
+            engram_group=agent_cfg.get("engram_group", "default"),
+            user_id_prefix=agent_cfg.get("user_id_prefix", "longmemeval-"),
+        )
+    elif docs_collection:
+        agent_cfg = _load_agent_config(agent_name)
         ask_agent = AskAgentBuilder(
             agent_name=agent_name,
             docs_collection=docs_collection,
-            agents_host=agents_host,
+            agents_host=agent_cfg.get("agents_host", agents_host),
             use_async=use_async,
             embedding_model=embedding_model,
-            external_service_host=external_service_host,
+            external_service_host=agent_cfg.get("external_service_host", external_service_host),
             system_prompt=system_prompt,
         )
     elif dataset_name:
+        agent_cfg = _load_agent_config(agent_name)
         ask_agent = AskAgentBuilder(
             agent_name=agent_name,
             dataset_name=dataset_name,
-            agents_host=agents_host,
+            agents_host=agent_cfg.get("agents_host", agents_host),
             use_async=use_async,
             embedding_model=embedding_model,
-            external_service_host=external_service_host,
+            external_service_host=agent_cfg.get("external_service_host", external_service_host),
             system_prompt=system_prompt,
         )
     else:
@@ -266,6 +293,7 @@ def run_ask_eval(
     output_path: Optional[str] = None,
     random_seed: Optional[int] = None,
     embedding_model: Optional[str] = None,
+    longmemeval_subset: Optional[dict] = None,
     **kwargs
 ) -> dict[str, Any]:
     """
@@ -345,6 +373,7 @@ def run_ask_eval(
         "output_path": output_path,
         "random_seed": random_seed,
         "embedding_model": embedding_model,
+        "longmemeval_subset": longmemeval_subset,
         **kwargs
     }
     

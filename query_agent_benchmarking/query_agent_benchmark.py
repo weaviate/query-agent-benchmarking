@@ -282,10 +282,10 @@ def run_ask_queries(
         query_start_time = time.time()
         
         try:
-            # Pass oracle_context_id if available (for external mode)
             response = ask_agent.run(
                 query=query.question,
-                oracle_context_id=query.oracle_context_id
+                oracle_context_id=query.oracle_context_id,
+                tenant_id=query.tenant_id,
             )
             query_time_taken = time.time() - query_start_time
             
@@ -348,7 +348,8 @@ async def run_ask_queries_async(
                 print(f"Running ask query {index}: {query.question[:50]}...")
                 response = await ask_agent.run_async(
                     query=query.question,
-                    oracle_context_id=query.oracle_context_id
+                    oracle_context_id=query.oracle_context_id,
+                    tenant_id=query.tenant_id,
                 )
                 query_time_taken = time.time() - query_start_time
 

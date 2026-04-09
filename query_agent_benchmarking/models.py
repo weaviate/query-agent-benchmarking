@@ -37,6 +37,7 @@ class InMemoryAskQuery(BaseModel):
     question: str
     ground_truth_answer: str  # Ground truth answer for LLM judge comparison
     oracle_context_id: Optional[str] = None  # Optional: for oracle/hard-negative experiments
+    tenant_id: Optional[str] = None  # Optional: for multi-tenant datasets (e.g., LongMemEval)
 
 
 # ============================================================================

@@ -12,6 +12,7 @@ from .dataset import (
     in_memory_dataset_loader,
     in_memory_ask_dataset_loader,
     load_ask_queries_from_weaviate,
+    load_longmemeval_docs_by_tenant,
 )
 
 # Models
@@ -35,6 +36,7 @@ from .agent import (
     SearchAgentBuilder,
     AskAgentBuilder,
     BaseAgentBuilder,
+    EngramDSPyAgent,
 )
 
 # Metrics
@@ -78,6 +80,7 @@ __all__ = [
     "in_memory_dataset_loader",
     "in_memory_ask_dataset_loader",
     "load_ask_queries_from_weaviate",
+    "load_longmemeval_docs_by_tenant",
     "compare_embeddings",
     "create_benchmark",
     "print_supported_datasets",
@@ -103,6 +106,7 @@ __all__ = [
     "SearchAgentBuilder",
     "AskAgentBuilder",
     "BaseAgentBuilder",
+    "EngramDSPyAgent",
     # Metrics - IR
     "calculate_recall_at_k",
     "calculate_success_at_k",
