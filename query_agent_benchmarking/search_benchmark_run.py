@@ -47,6 +47,14 @@ from query_agent_benchmarking.config import (
 
 
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "benchmark-config.yml"
+DEFAULT_AGENT_CONFIG_PATH = Path(__file__).parent / "agent-config.yml"
+
+
+def _load_agent_config(agent_name: str, agent_config_path: Optional[Path] = None) -> dict[str, Any]:
+    """Load agent-specific parameters from agent-config.yml."""
+    path = agent_config_path or DEFAULT_AGENT_CONFIG_PATH
+    all_agents = load_config(path)
+    return dict(all_agents.get(agent_name, {}))
 
 
 def _resolve_search_agent_name(
@@ -225,31 +233,33 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
     if embedding_providers:
         config["embedding_providers"] = embedding_providers
     
-    external_service_host = config.get("external_service_host")
-    
+    agent_cfg = _load_agent_config(agent_name)
+    resolved_agents_host = agent_cfg.get("agents_host", agents_host)
+    resolved_external_service_host = agent_cfg.get("external_service_host", config.get("external_service_host"))
+
     if dataset_name:
         query_agent = SearchAgentBuilder(
             agent_name=agent_name,
             dataset_name=dataset_name,
-            agents_host=agents_host,
+            agents_host=resolved_agents_host,
             use_async=use_async,
             embedding_model=text_embedding_model,
             text_embedding_model=text_embedding_model,
             image_embedding_model=image_embedding_model,
             embedding_providers=embedding_providers,
-            external_service_host=external_service_host,
+            external_service_host=resolved_external_service_host,
         )
     else:
         query_agent = SearchAgentBuilder(
             agent_name=agent_name,
             docs_collection=docs_collection,
-            agents_host=agents_host,
+            agents_host=resolved_agents_host,
             use_async=use_async,
             embedding_model=text_embedding_model,
             text_embedding_model=text_embedding_model,
             image_embedding_model=image_embedding_model,
             embedding_providers=embedding_providers,
-            external_service_host=external_service_host,
+            external_service_host=resolved_external_service_host,
         )
 
     num_trials = config.get("num_trials", 1)
