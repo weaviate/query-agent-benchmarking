@@ -40,7 +40,7 @@ from query_agent_benchmarking.qa_system_prompt_registry import get_system_prompt
 
 
 DEFAULT_CONFIG_PATH = Path(__file__).parent / "benchmark-config.yml"
-DEFAULT_AGENT_CONFIG_PATH = Path(__file__).parent / "agent-config.yml"
+DEFAULT_AGENT_CONFIG_PATH = Path(__file__).parent / "agent" / "agent-config.yml"
 
 
 def _load_agent_config(agent_name: str, agent_config_path: Optional[Path] = None) -> dict[str, Any]:
