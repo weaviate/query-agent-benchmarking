@@ -12,7 +12,6 @@ Run with:
 import os
 
 import pytest
-import weaviate
 
 from query_agent_benchmarking.internal.adapters.dataset import in_memory_dataset_loader
 from query_agent_benchmarking.internal.adapters.database.database_registry import resolve_spec

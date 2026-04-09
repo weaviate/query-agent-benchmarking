@@ -7,7 +7,6 @@ work together correctly without requiring a live Weaviate or LLM instance.
 
 import pytest
 from unittest.mock import MagicMock
-from dataclasses import dataclass
 
 from query_agent_benchmarking.internal.core.domain.models import InMemoryAskQuery, AskResult
 from query_agent_benchmarking.internal.core.domain.query_execution import run_ask_queries

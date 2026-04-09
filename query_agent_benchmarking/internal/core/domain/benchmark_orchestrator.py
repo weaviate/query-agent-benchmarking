@@ -5,13 +5,11 @@ These orchestrators coordinate the benchmark flow using port interfaces
 (dependency injection). They have no direct dependencies on infrastructure.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from query_agent_benchmarking.internal.core.domain.models import (
     InMemoryQuery,
     InMemoryAskQuery,
-    QueryResult,
-    AskResult,
 )
 from query_agent_benchmarking.internal.core.domain.analysis import aggregate_metrics
 

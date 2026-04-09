@@ -1,5 +1,4 @@
 from dotenv import load_dotenv
-load_dotenv()
 
 from .experimental.add_hard_negatives import add_hard_negatives
 
@@ -70,6 +69,8 @@ from .internal.adapters.results.serialization import (
     save_trial_metrics,
     save_aggregated_results,
 )
+
+load_dotenv()
 
 __all__ = [
     # Main entry points

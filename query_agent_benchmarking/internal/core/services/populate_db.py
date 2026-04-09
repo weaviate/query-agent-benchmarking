@@ -6,7 +6,6 @@ then orchestrates dataset loading, collection creation, and batch insert.
 """
 
 from pathlib import Path
-from typing import Optional
 
 from query_agent_benchmarking.internal.adapters.database.database_config import validate_database_dataset
 from query_agent_benchmarking.internal.adapters.database.database_registry import resolve_spec

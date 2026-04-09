@@ -8,7 +8,7 @@ import json
 import random
 from typing import Optional
 
-from query_agent_benchmarking.internal.core.domain.models import InMemoryQuery, InMemoryAskQuery
+from query_agent_benchmarking.internal.core.domain.models import InMemoryAskQuery
 
 from .registry import load_search_dataset, load_ask_dataset
 from .weaviate_loader import (
@@ -16,6 +16,16 @@ from .weaviate_loader import (
     load_ask_queries_from_weaviate,
 )
 from .huggingface_loader import load_longmemeval_docs_by_tenant
+
+__all__ = [
+    "in_memory_dataset_loader",
+    "in_memory_ask_dataset_loader",
+    "split_dataset",
+    "load_dataset_from_json",
+    "load_queries_from_weaviate_collection",
+    "load_ask_queries_from_weaviate",
+    "load_longmemeval_docs_by_tenant",
+]
 
 
 def in_memory_dataset_loader(

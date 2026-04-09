@@ -6,7 +6,7 @@ for a given dataset name.
 
 from typing import Optional
 
-from query_agent_benchmarking.internal.core.domain.models import InMemoryQuery, InMemoryAskQuery
+from query_agent_benchmarking.internal.core.domain.models import InMemoryAskQuery
 
 
 def load_search_dataset(

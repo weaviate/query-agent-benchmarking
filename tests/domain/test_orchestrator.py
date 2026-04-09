@@ -1,6 +1,5 @@
 """Tests for the benchmark orchestrator with all-mocked dependencies."""
 
-import pytest
 
 from query_agent_benchmarking.internal.core.domain.benchmark_orchestrator import (
     SearchBenchmarkOrchestrator,
@@ -13,7 +12,6 @@ from query_agent_benchmarking.internal.core.domain.models import (
     QueryResult,
     AskResult,
 )
-from query_agent_benchmarking.internal.core.ports.ask_agent import AskResponse
 
 
 # ============================================================================

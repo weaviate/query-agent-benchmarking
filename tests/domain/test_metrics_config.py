@@ -4,7 +4,6 @@ import pytest
 
 from query_agent_benchmarking.internal.core.domain.metrics_config import (
     MetricSpec,
-    MetricsProfile,
     resolve_metrics_profile,
     DATASET_METRICS_REGISTRY,
 )

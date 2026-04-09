@@ -17,7 +17,6 @@ from query_agent_benchmarking.internal.core.domain.query_execution import run_se
 from query_agent_benchmarking.internal.core.domain.analysis import aggregate_metrics
 from query_agent_benchmarking.internal.core.domain.benchmark_orchestrator import SearchBenchmarkOrchestrator
 from query_agent_benchmarking.internal.adapters.metrics.ir_metrics_calculator import IRMetricsCalculator
-from query_agent_benchmarking.internal.adapters.results.json_file_repository import JsonFileResultRepository
 
 
 # ============================================================================

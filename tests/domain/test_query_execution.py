@@ -1,6 +1,5 @@
 """Tests for domain query execution functions."""
 
-import pytest
 
 from query_agent_benchmarking.internal.core.domain.query_execution import (
     run_search_queries,
