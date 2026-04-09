@@ -8,7 +8,8 @@ import asyncio
 from pathlib import Path
 from typing import Optional, Any, Union
 
-from query_agent_benchmarking.internal.agents import SearchAgentBuilder
+from query_agent_benchmarking.internal.adapters.agents.factory import create_search_agent
+from query_agent_benchmarking.internal.adapters.agents.weaviate_search import parse_agent_name
 from query_agent_benchmarking.internal.adapters.dataset import (
     in_memory_dataset_loader,
     load_queries_from_weaviate_collection,
@@ -74,7 +75,7 @@ def _resolve_search_agent_name(
                 "(e.g., hybrid-search[text_content_weaviate]) or "
                 "search_target/search_target_vector, not both."
             )
-        base_name, inline_target = SearchAgentBuilder._parse_agent_name(raw_agent_name)
+        base_name, inline_target = parse_agent_name(raw_agent_name)
         resolved_inline_target = resolve_named_vector_target(
             dataset_name=dataset_identifier,
             target_vector=inline_target,
@@ -188,7 +189,7 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
         config,
         dataset_identifier=dataset_identifier,
     )
-    _, resolved_target_vector = SearchAgentBuilder._parse_agent_name(agent_name)
+    _, resolved_target_vector = parse_agent_name(agent_name)
     embedding_providers = resolve_embedding_providers(
         dataset_name=dataset_identifier,
         target_vector=resolved_target_vector,
@@ -214,30 +215,17 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
     resolved_agents_host = agent_cfg.get("agents_host", agents_host)
     resolved_external_service_host = agent_cfg.get("external_service_host", config.get("external_service_host"))
 
-    if dataset_name:
-        query_agent = SearchAgentBuilder(
-            agent_name=agent_name,
-            dataset_name=dataset_name,
-            agents_host=resolved_agents_host,
-            use_async=use_async,
-            embedding_model=text_embedding_model,
-            text_embedding_model=text_embedding_model,
-            image_embedding_model=image_embedding_model,
-            embedding_providers=embedding_providers,
-            external_service_host=resolved_external_service_host,
-        )
-    else:
-        query_agent = SearchAgentBuilder(
-            agent_name=agent_name,
-            docs_collection=docs_collection,
-            agents_host=resolved_agents_host,
-            use_async=use_async,
-            embedding_model=text_embedding_model,
-            text_embedding_model=text_embedding_model,
-            image_embedding_model=image_embedding_model,
-            embedding_providers=embedding_providers,
-            external_service_host=resolved_external_service_host,
-        )
+    query_agent = create_search_agent(
+        agent_name,
+        dataset_name=dataset_name,
+        docs_collection=docs_collection,
+        agents_host=resolved_agents_host,
+        embedding_model=text_embedding_model,
+        text_embedding_model=text_embedding_model,
+        image_embedding_model=image_embedding_model,
+        embedding_providers=embedding_providers,
+        external_service_host=resolved_external_service_host,
+    )
 
     num_trials = config.get("num_trials", 1)
     metrics_across_trials = []

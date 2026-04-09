@@ -36,12 +36,8 @@ from .internal.core.domain.models import (
 )
 
 # Agent exports
-from .internal.agents import (
-    SearchAgentBuilder,
-    AskAgentBuilder,
-    BaseAgentBuilder,
-    EngramDSPyAgent,
-)
+from .internal.adapters.agents.factory import create_search_agent, create_ask_agent
+from .internal.adapters.agents.engram_dspy_agent import EngramDSPyAgent
 
 # Metrics
 from .internal.adapters.metrics.ir_metrics import (
@@ -110,9 +106,8 @@ __all__ = [
     "AskResult",
     "AskQueriesCollection",
     # Agents
-    "SearchAgentBuilder",
-    "AskAgentBuilder",
-    "BaseAgentBuilder",
+    "create_search_agent",
+    "create_ask_agent",
     "EngramDSPyAgent",
     # Metrics - IR
     "calculate_recall_at_k",

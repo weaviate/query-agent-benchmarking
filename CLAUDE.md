@@ -68,7 +68,12 @@ internal/
 │       └── compare_embeddings.py  # compare_embeddings
 │
 ├── adapters/       # Concrete implementations that plug into ports
-│   ├── agents/         # SearchAgent & AskAgent implementations
+│   ├── agents/         # SearchAgent & AskAgent implementations + factory
+│   │   ├── factory.py            # create_search_agent(), create_ask_agent()
+│   │   ├── weaviate_query_agent.py  # Weaviate QueryAgent (search + ask)
+│   │   ├── weaviate_search.py    # Hybrid, vector, BM25 search
+│   │   ├── external_service.py   # HTTP-based BYOS evaluation
+│   │   └── engram_dspy_agent.py  # Engram + DSPy for LongMemEval
 │   ├── clients/        # Weaviate client factory, provider header resolution
 │   ├── database/       # Collection creation, batch insert, dataset specs
 │   ├── dataset/        # Data loaders (HuggingFace, ir_datasets, Weaviate, local)
@@ -76,7 +81,6 @@ internal/
 │   └── results/        # JSON file persistence
 │
 ├── config/         # YAML config loading, dataset/metric registries, system prompts
-├── agents/         # Agent builder factories (create the right adapter from config)
 ├── mocks/          # No-op implementations for testing
 └── testutil/       # Query/result factory helpers for tests
 ```
@@ -103,7 +107,7 @@ The domain declares seven port protocols in `core/ports/`, each a Python `Protoc
 
 1. **Configuration** (`config/`): YAML files are loaded and merged with programmatic kwargs.
 2. **Dataset loading** (`adapters/dataset/`): Queries and corpus are loaded into Pydantic models (`InMemoryQuery`, `InMemoryAskQuery`) via the dataset registry.
-3. **Agent construction** (`agents/`): Builder factories read config and instantiate the right `SearchAgent` or `AskAgent` adapter.
+3. **Agent construction** (`adapters/agents/factory.py`): Factory functions (`create_search_agent`, `create_ask_agent`) map an agent name string from config to the right adapter instance implementing the `SearchAgent` or `AskAgent` port.
 4. **Query execution** (`core/domain/query_execution.py`): Queries are run through the agent (sync or async with semaphore concurrency), producing `QueryResult` or `AskResult` objects.
 5. **Metrics** (`adapters/metrics/`): A `MetricsCalculator` adapter computes scores. Which metrics to use is determined by `core/domain/metrics_config.py` based on dataset name patterns.
 6. **Persistence** (`adapters/results/`): A `ResultRepository` adapter saves per-trial results, per-trial metrics, and cross-trial aggregations.

@@ -9,7 +9,8 @@ import asyncio
 from pathlib import Path
 from typing import Optional, Any, Union
 
-from query_agent_benchmarking.internal.agents import AskAgentBuilder, EngramDSPyAgent
+from query_agent_benchmarking.internal.adapters.agents.factory import create_ask_agent
+from query_agent_benchmarking.internal.adapters.agents.engram_dspy_agent import EngramDSPyAgent
 from query_agent_benchmarking.internal.core.domain.models import (
     DocsCollection,
     AskQueriesCollection,
@@ -147,24 +148,13 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
             engram_group=agent_cfg.get("engram_group", "default"),
             user_id_prefix=agent_cfg.get("user_id_prefix", "longmemeval-"),
         )
-    elif docs_collection:
+    elif docs_collection or dataset_name:
         agent_cfg = _load_agent_config(agent_name)
-        ask_agent = AskAgentBuilder(
-            agent_name=agent_name,
+        ask_agent = create_ask_agent(
+            agent_name,
+            dataset_name=dataset_name,
             docs_collection=docs_collection,
             agents_host=agent_cfg.get("agents_host", agents_host),
-            use_async=use_async,
-            embedding_model=embedding_model,
-            external_service_host=agent_cfg.get("external_service_host", external_service_host),
-            system_prompt=system_prompt,
-        )
-    elif dataset_name:
-        agent_cfg = _load_agent_config(agent_name)
-        ask_agent = AskAgentBuilder(
-            agent_name=agent_name,
-            dataset_name=dataset_name,
-            agents_host=agent_cfg.get("agents_host", agents_host),
-            use_async=use_async,
             embedding_model=embedding_model,
             external_service_host=agent_cfg.get("external_service_host", external_service_host),
             system_prompt=system_prompt,
