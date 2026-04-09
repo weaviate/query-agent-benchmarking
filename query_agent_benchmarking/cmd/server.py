@@ -93,7 +93,7 @@ def run_search(req: RunSearchBenchmarkRequest) -> dict[str, Any]:
         return {"status": "ok", "result": result}
     except Exception as e:
         traceback.print_exc()
-        return {"status": "error", "error": str(e)}
+        return {"status": "error", "error": "An internal error occurred."}
 
 
 @app.post("/run-ask-benchmark")
@@ -105,7 +105,7 @@ def run_ask(req: RunAskBenchmarkRequest) -> dict[str, Any]:
         return {"status": "ok", "result": result}
     except Exception as e:
         traceback.print_exc()
-        return {"status": "error", "error": str(e)}
+        return {"status": "error", "error": "An internal error occurred."}
 
 
 @app.post("/compare-embeddings")
@@ -117,7 +117,7 @@ def run_compare(req: CompareEmbeddingsRequest) -> dict[str, Any]:
         return {"status": "ok", "result": result}
     except Exception as e:
         traceback.print_exc()
-        return {"status": "error", "error": str(e)}
+        return {"status": "error", "error": "An internal error occurred."}
 
 
 @app.post("/populate-db")
@@ -131,4 +131,4 @@ def populate_db_endpoint(req: PopulateDatabaseRequest) -> dict[str, Any]:
         return {"status": "ok"}
     except Exception as e:
         traceback.print_exc()
-        return {"status": "error", "error": str(e)}
+        return {"status": "error", "error": "An internal error occurred."}
