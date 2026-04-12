@@ -19,7 +19,7 @@ ensemble_k: 3
 
 # LongMemEval subset — must match the range ingested via database_loader
 longmemeval_subset:
-  users_to_test: [0, 1]
+  users_to_test: [0, 10]
 
 # =============================================================================
 # Shared Settings

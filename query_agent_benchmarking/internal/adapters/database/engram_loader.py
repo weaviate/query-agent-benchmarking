@@ -10,7 +10,39 @@ import time
 from typing import Optional
 from dataclasses import dataclass
 
-from engram import EngramClient
+from engram import EngramClient, ConversationInput, MessageInput
+
+
+def _parse_session_text(session_text: str) -> ConversationInput:
+    """Parse a ``user: ... \\nassistant: ...`` session string into a ConversationInput."""
+    messages: list[MessageInput] = []
+    current_role: str | None = None
+    current_lines: list[str] = []
+
+    for line in session_text.split("\n"):
+        if line.startswith("user: ") or line.startswith("assistant: "):
+            # Flush the previous message
+            if current_role is not None:
+                messages.append(
+                    MessageInput(role=current_role, content="\n".join(current_lines))
+                )
+            if line.startswith("user: "):
+                current_role = "user"
+                current_lines = [line[len("user: "):]]
+            else:
+                current_role = "assistant"
+                current_lines = [line[len("assistant: "):]]
+        else:
+            # Continuation line of the current message
+            current_lines.append(line)
+
+    # Flush the last message
+    if current_role is not None:
+        messages.append(
+            MessageInput(role=current_role, content="\n".join(current_lines))
+        )
+
+    return ConversationInput(messages=messages)
 
 
 @dataclass
@@ -43,8 +75,9 @@ def engram_ingest_tenant(
     run_ids: list[str] = []
 
     for i, session in enumerate(sessions):
+        conversation = _parse_session_text(session["session_text"])
         run = client.memories.add(
-            session["session_text"],
+            conversation,
             user_id=user_id,
             group=group,
         )
