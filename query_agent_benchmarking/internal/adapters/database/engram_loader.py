@@ -8,7 +8,7 @@ sessions into Engram's memory system on a per-tenant basis.
 import os
 import time
 from typing import Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from engram import EngramClient, ConversationInput, MessageInput
 
@@ -46,6 +46,23 @@ def _parse_session_text(session_text: str) -> ConversationInput:
 
 
 @dataclass
+class RunRecord:
+    """Tracks a single submitted run for later polling."""
+    run_id: str
+    tenant_id: str
+    submitted_at: float
+
+
+@dataclass
+class IngestionResult:
+    """Result of a bulk ingestion run."""
+    run_records: list[RunRecord]
+    tenant_session_counts: dict[str, int]
+    submit_elapsed_seconds: float
+    stats: Optional[list["TenantIngestionStats"]] = None
+
+
+@dataclass
 class TenantIngestionStats:
     tenant_id: str
     num_sessions: int
@@ -53,80 +70,113 @@ class TenantIngestionStats:
     total_created: int = 0
     total_updated: int = 0
     total_deleted: int = 0
+    run_durations: list[float] = field(default_factory=list)
 
 
-def engram_ingest_tenant(
+def _submit_all(
     client: EngramClient,
-    tenant_id: str,
-    sessions: list[dict],
-    group: str = "default",
-    user_id_prefix: str = "longmemeval-",
-    ingest_delay: float = 0.1,
-    poll_interval: float = 2.0,
-    verbose: bool = True,
-) -> TenantIngestionStats:
-    """
-    Ingest all sessions for a single tenant into Engram.
+    docs_by_tenant: dict[str, list[dict]],
+    group: str,
+    user_id_prefix: str,
+    ingest_delay: float,
+    verbose: bool,
+) -> list[RunRecord]:
+    """Submit every session across all tenants. Returns run records for polling."""
+    records: list[RunRecord] = []
+    total = sum(len(sessions) for sessions in docs_by_tenant.values())
+    submitted = 0
 
-    Each session dict must have at least a ``session_text`` key.
-    """
-    user_id = f"{user_id_prefix}{tenant_id}"
-    t0 = time.time()
-    run_ids: list[str] = []
+    for tenant_id in sorted(docs_by_tenant.keys()):
+        user_id = f"{user_id_prefix}{tenant_id}"
+        sessions = docs_by_tenant[tenant_id]
 
-    for i, session in enumerate(sessions):
-        conversation = _parse_session_text(session["session_text"])
-        run = client.memories.add(
-            conversation,
-            user_id=user_id,
-            group=group,
-        )
-        run_ids.append(run.run_id)
+        for session in sessions:
+            conversation = _parse_session_text(session["session_text"])
+            t_submit = time.time()
+            run = client.memories.add(
+                conversation,
+                user_id=user_id,
+                group=group,
+            )
+            records.append(RunRecord(
+                run_id=run.run_id,
+                tenant_id=tenant_id,
+                submitted_at=t_submit,
+            ))
+            submitted += 1
 
-        if verbose and (i + 1) % 10 == 0:
-            print(f"  [{i + 1}/{len(sessions)}] submitted")
+            if verbose and submitted % 50 == 0:
+                print(f"  Submitted {submitted}/{total}")
 
-        time.sleep(ingest_delay)
+            if ingest_delay > 0:
+                time.sleep(ingest_delay)
 
-    # Wait for all runs to complete
     if verbose:
-        print(f"  Waiting for {len(run_ids)} runs to complete...")
-    for i, run_id in enumerate(run_ids):
+        print(f"  All {submitted} sessions submitted across {len(docs_by_tenant)} tenants")
+
+    return records
+
+
+def _poll_and_collect(
+    client: EngramClient,
+    records: list[RunRecord],
+    poll_interval: float,
+    verbose: bool,
+) -> dict[str, TenantIngestionStats]:
+    """Poll all runs to completion and build per-tenant stats."""
+    # Group records by tenant for stats aggregation
+    tenant_sessions: dict[str, int] = {}
+    for rec in records:
+        tenant_sessions[rec.tenant_id] = tenant_sessions.get(rec.tenant_id, 0) + 1
+
+    stats_map: dict[str, TenantIngestionStats] = {}
+    completed = 0
+    t_poll_start = time.time()
+
+    for rec in records:
+        # Poll until done
         while True:
-            status = client.runs.get(run_id)
+            status = client.runs.get(rec.run_id)
             if status.status in ("completed", "failed", "deleted"):
                 break
             time.sleep(poll_interval)
-        if verbose and (i + 1) % 10 == 0:
-            print(f"  [{i + 1}/{len(run_ids)}] runs completed")
 
-    elapsed = time.time() - t0
+        completed += 1
+        run_duration = time.time() - rec.submitted_at
 
-    # Collect memory operation counts
-    total_created = 0
-    total_updated = 0
-    total_deleted = 0
-    for run_id in run_ids:
-        run_status = client.runs.get(run_id)
-        ops = run_status.committed_operations
-        total_created += len(getattr(ops, "created", []))
-        total_updated += len(getattr(ops, "updated", []))
-        total_deleted += len(getattr(ops, "deleted", []))
+        # Collect memory operation counts
+        ops = status.committed_operations
+        created = len(getattr(ops, "created", []))
+        updated = len(getattr(ops, "updated", []))
+        deleted = len(getattr(ops, "deleted", []))
 
-    stats = TenantIngestionStats(
-        tenant_id=tenant_id,
-        num_sessions=len(sessions),
-        elapsed_seconds=elapsed,
-        total_created=total_created,
-        total_updated=total_updated,
-        total_deleted=total_deleted,
-    )
+        if rec.tenant_id not in stats_map:
+            stats_map[rec.tenant_id] = TenantIngestionStats(
+                tenant_id=rec.tenant_id,
+                num_sessions=tenant_sessions[rec.tenant_id],
+                elapsed_seconds=0.0,
+            )
+
+        tenant_stats = stats_map[rec.tenant_id]
+        tenant_stats.total_created += created
+        tenant_stats.total_updated += updated
+        tenant_stats.total_deleted += deleted
+        tenant_stats.run_durations.append(run_duration)
+
+        if verbose and completed % 50 == 0:
+            print(f"  Completed {completed}/{len(records)}")
+
+    # Set elapsed_seconds to wall-clock time from first submission to last completion
+    for tenant_id, ts in stats_map.items():
+        tenant_records = [r for r in records if r.tenant_id == tenant_id]
+        first_submit = min(r.submitted_at for r in tenant_records)
+        ts.elapsed_seconds = time.time() - first_submit
 
     if verbose:
-        print(f"  Tenant {tenant_id}: {len(sessions)} sessions in {elapsed:.0f}s")
-        print(f"  Created: {total_created}  Updated: {total_updated}  Deleted: {total_deleted}")
+        poll_elapsed = time.time() - t_poll_start
+        print(f"  All {completed} runs completed (poll phase: {poll_elapsed:.0f}s)")
 
-    return stats
+    return stats_map
 
 
 def engram_ingest_all_tenants(
@@ -136,11 +186,17 @@ def engram_ingest_all_tenants(
     group: str = "default",
     user_id_prefix: str = "longmemeval-",
     ingest_delay: float = 0.1,
+    poll: bool = False,
     poll_interval: float = 2.0,
     verbose: bool = True,
-) -> list[TenantIngestionStats]:
+) -> IngestionResult:
     """
     Ingest sessions for all tenants into Engram.
+
+    Submits all sessions across every tenant first. If ``poll=True``, also
+    polls every run to completion and populates per-tenant stats with
+    operation counts and run durations. Otherwise returns immediately after
+    submission (fire-and-forget).
 
     Args:
         docs_by_tenant: Dict mapping tenant_id -> list of session dicts.
@@ -149,33 +205,63 @@ def engram_ingest_all_tenants(
         group: Engram memory group name.
         user_id_prefix: Prefix for Engram user IDs.
         ingest_delay: Seconds to sleep between session submissions.
-        poll_interval: Seconds between run-status polls.
+        poll: Whether to poll runs to completion and collect stats.
+        poll_interval: Seconds between run-status polls (only used when poll=True).
         verbose: Print progress updates.
 
     Returns:
-        Per-tenant ingestion stats.
+        An ``IngestionResult`` with run records and submission timing.
+        If ``poll=True``, ``result.stats`` contains per-tenant stats.
     """
     client = EngramClient(
         api_key=engram_api_key or os.environ["ENGRAM_API_KEY"],
         base_url=engram_base_url,
     )
 
-    all_stats: list[TenantIngestionStats] = []
-    tenant_ids = sorted(docs_by_tenant.keys())
+    t0 = time.time()
 
-    for i, tenant_id in enumerate(tenant_ids):
+    # Phase 1: submit everything
+    if verbose:
+        total = sum(len(s) for s in docs_by_tenant.values())
+        print(f"Submitting {total} sessions across {len(docs_by_tenant)} tenants...")
+    records = _submit_all(client, docs_by_tenant, group, user_id_prefix, ingest_delay, verbose)
+
+    submit_elapsed = time.time() - t0
+    tenant_session_counts = {}
+    for rec in records:
+        tenant_session_counts[rec.tenant_id] = tenant_session_counts.get(rec.tenant_id, 0) + 1
+
+    result = IngestionResult(
+        run_records=records,
+        tenant_session_counts=tenant_session_counts,
+        submit_elapsed_seconds=submit_elapsed,
+    )
+
+    if verbose:
+        print(f"  Submission complete in {submit_elapsed:.0f}s")
+
+    if not poll:
         if verbose:
-            print(f"\n[{i + 1}/{len(tenant_ids)}] Ingesting tenant {tenant_id}")
-        stats = engram_ingest_tenant(
-            client=client,
-            tenant_id=tenant_id,
-            sessions=docs_by_tenant[tenant_id],
-            group=group,
-            user_id_prefix=user_id_prefix,
-            ingest_delay=ingest_delay,
-            poll_interval=poll_interval,
-            verbose=verbose,
-        )
-        all_stats.append(stats)
+            print("  Polling disabled — returning immediately (fire-and-forget)")
+        return result
 
-    return all_stats
+    # Phase 2: poll all runs to completion
+    if verbose:
+        print(f"Polling {len(records)} runs for completion...")
+    stats_map = _poll_and_collect(client, records, poll_interval, verbose)
+
+    result.stats = [stats_map[tid] for tid in sorted(stats_map)]
+
+    if verbose:
+        wall = time.time() - t0
+        print(f"\nTotal wall-clock time: {wall:.0f}s")
+        for tid in sorted(stats_map):
+            s = stats_map[tid]
+            avg_dur = sum(s.run_durations) / len(s.run_durations) if s.run_durations else 0
+            print(
+                f"  {tid}: {s.num_sessions} sessions, "
+                f"created={s.total_created} updated={s.total_updated} deleted={s.total_deleted}, "
+                f"avg run duration={avg_dur:.1f}s"
+            )
+
+    return result
