@@ -21,9 +21,10 @@ from query_agent_benchmarking.internal.adapters.metrics.officeqa_metric import (
 class LMJudgeAskCalculator:
     """Ask metrics calculator using LLM-as-judge for semantic alignment."""
 
-    def __init__(self, model: str = "openai/gpt-4.1", ensemble_k: int = 3):
+    def __init__(self, model: str = "openai/gpt-4.1", ensemble_k: int = 3, use_reasoning: bool = False):
         self.model = model
         self.ensemble_k = ensemble_k
+        self.use_reasoning = use_reasoning
         self.judge = LMJudge(model=model, ensemble_k=ensemble_k)
 
     def compute(self, results: list[AskResult]) -> dict:
@@ -31,6 +32,7 @@ class LMJudgeAskCalculator:
         print(f"Judge model: {self.model}, Ensemble K: {self.ensemble_k}")
 
         alignment_scores = []
+        judge_reasonings = []
         query_times = []
         misaligned_indices = []
         total_input_tokens = 0
@@ -39,6 +41,8 @@ class LMJudgeAskCalculator:
         for i, result in enumerate(tqdm(results, desc="Running LLM judge")):
             if result.system_answer.startswith("[ERROR]"):
                 print(f"\n\033[91mSkipping evaluation for query {i} due to error.\033[0m")
+                if self.use_reasoning:
+                    judge_reasonings.append(None)
                 continue
 
             judge_result = self.judge.evaluate_with_details(
@@ -52,6 +56,9 @@ class LMJudgeAskCalculator:
             total_input_tokens += judge_result.get("input_tokens", 0)
             total_output_tokens += judge_result.get("output_tokens", 0)
             query_times.append(result.time_taken)
+
+            if self.use_reasoning:
+                judge_reasonings.append(judge_result.get("reasoning"))
 
             if not aligned:
                 misaligned_indices.append(i)
@@ -74,6 +81,9 @@ class LMJudgeAskCalculator:
             "judge_model": self.model,
             "ensemble_k": self.ensemble_k,
         }
+
+        if self.use_reasoning:
+            results_dict["judge_reasonings"] = judge_reasonings
 
         self._print_summary(alignment_scores, results_dict, misaligned_indices,
                             total_input_tokens, total_output_tokens)

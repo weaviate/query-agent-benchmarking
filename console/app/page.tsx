@@ -1,4 +1,18 @@
-import { loadAllExperiments, getKeyMetric } from "@/lib/results";
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+
+interface ExperimentSummary {
+  id: string;
+  dataset: string;
+  agent_name: string;
+  mode: "search" | "ask" | "unknown";
+  num_trials: number;
+  timestamp: string;
+  keyMetric: { name: string; value: number | null };
+}
+
+const POLL_INTERVAL_MS = 5_000;
 
 function ScoreBadge({ value }: { value: number | null }) {
   if (value === null) return <span className="text-gray-400">--</span>;
@@ -31,7 +45,24 @@ function ModeBadge({ mode }: { mode: string }) {
 }
 
 export default function Dashboard() {
-  const experiments = loadAllExperiments();
+  const [experiments, setExperiments] = useState<ExperimentSummary[] | null>(null);
+
+  const fetchExperiments = useCallback(() => {
+    fetch("/api/experiments")
+      .then((r) => r.json())
+      .then((data) => setExperiments(data))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchExperiments();
+    const interval = setInterval(fetchExperiments, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [fetchExperiments]);
+
+  if (experiments === null) {
+    return <div className="py-20 text-center text-gray-500">Loading...</div>;
+  }
 
   if (experiments.length === 0) {
     return (
@@ -64,39 +95,36 @@ export default function Dashboard() {
             </tr>
           </thead>
           <tbody>
-            {experiments.map((exp) => {
-              const metric = getKeyMetric(exp);
-              return (
-                <tr
-                  key={exp.id}
-                  className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900"
-                >
-                  <td className="py-3 pr-4 font-medium">{exp.dataset}</td>
-                  <td className="py-3 pr-4 font-mono text-xs">{exp.agent_name}</td>
-                  <td className="py-3 pr-4">
-                    <ModeBadge mode={exp.mode} />
-                  </td>
-                  <td className="py-3 pr-4">
-                    <div className="flex items-center gap-2">
-                      <ScoreBadge value={metric.value} />
-                      <span className="text-xs text-gray-400">{metric.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 pr-4">{exp.num_trials}</td>
-                  <td className="py-3 pr-4 text-xs text-gray-500">
-                    {exp.timestamp ? new Date(exp.timestamp).toLocaleString() : "--"}
-                  </td>
-                  <td className="py-3">
-                    <a
-                      href={`/experiments/${exp.id}`}
-                      className="text-blue-600 dark:text-blue-400 hover:underline text-xs"
-                    >
-                      View details
-                    </a>
-                  </td>
-                </tr>
-              );
-            })}
+            {experiments.map((exp) => (
+              <tr
+                key={exp.id}
+                className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900"
+              >
+                <td className="py-3 pr-4 font-medium">{exp.dataset}</td>
+                <td className="py-3 pr-4 font-mono text-xs">{exp.agent_name}</td>
+                <td className="py-3 pr-4">
+                  <ModeBadge mode={exp.mode} />
+                </td>
+                <td className="py-3 pr-4">
+                  <div className="flex items-center gap-2">
+                    <ScoreBadge value={exp.keyMetric.value} />
+                    <span className="text-xs text-gray-400">{exp.keyMetric.name}</span>
+                  </div>
+                </td>
+                <td className="py-3 pr-4">{exp.num_trials}</td>
+                <td className="py-3 pr-4 text-xs text-gray-500">
+                  {exp.timestamp ? new Date(exp.timestamp).toLocaleString() : "--"}
+                </td>
+                <td className="py-3">
+                  <a
+                    href={`/experiments/${exp.id}`}
+                    className="text-blue-600 dark:text-blue-400 hover:underline text-xs"
+                  >
+                    View details
+                  </a>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

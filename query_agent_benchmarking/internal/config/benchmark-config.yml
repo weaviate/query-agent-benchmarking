@@ -16,6 +16,7 @@ queries: "longmemeval-s"
 # LLM Judge configuration
 judge_model: "openai/gpt-5.4"
 ensemble_k: 3
+use_reasoning: True
 
 # LongMemEval subset — must match the range ingested via database_loader
 longmemeval_subset:

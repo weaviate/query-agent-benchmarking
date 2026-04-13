@@ -36,6 +36,7 @@ export interface AskQuery {
   is_error?: boolean;
   oracle_context_id?: string;
   tenant_id?: string;
+  judge_reasoning?: string;
 }
 
 export interface TrialResultFile {

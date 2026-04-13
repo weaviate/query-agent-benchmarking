@@ -164,6 +164,7 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
 
     judge_model = config.get("judge_model", "openai/gpt-4.1")
     ensemble_k = config.get("ensemble_k", 3)
+    use_reasoning = config.get("use_reasoning", False)
 
     num_trials = config.get("num_trials", 1)
     metrics_across_trials = []
@@ -173,7 +174,7 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     elif use_exact_match:
         metrics_calculator = ExactMatchAskCalculator()
     else:
-        metrics_calculator = LMJudgeAskCalculator(model=judge_model, ensemble_k=ensemble_k)
+        metrics_calculator = LMJudgeAskCalculator(model=judge_model, ensemble_k=ensemble_k, use_reasoning=use_reasoning)
 
     result_repo = JsonFileResultRepository()
 
@@ -218,12 +219,14 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
         print(f"  Avg Query Time: {metrics['avg_query_time']:.2f}s")
 
         alignment_scores = metrics.get(scores_key, [])
+        judge_reasonings = metrics.get("judge_reasonings")
 
         result_repo.save_ask_trial_results(
             results=results,
             config=config,
             trial_number=trial+1,
             alignment_scores=alignment_scores,
+            judge_reasonings=judge_reasonings,
         )
 
         result_repo.save_trial_metrics(
@@ -263,6 +266,7 @@ def run_ask_eval(
     random_seed: Optional[int] = None,
     embedding_model: Optional[str] = None,
     longmemeval_subset: Optional[dict] = None,
+    use_reasoning: Optional[bool] = None,
     **kwargs
 ) -> dict[str, Any]:
     """
@@ -293,6 +297,7 @@ def run_ask_eval(
         output_path: Path to save results.
         random_seed: Random seed for reproducibility.
         embedding_model: Embedding model to use.
+        use_reasoning: Whether to capture and persist LLM judge reasoning.
         **kwargs: Additional config overrides.
 
     Returns:
@@ -323,6 +328,7 @@ def run_ask_eval(
         "random_seed": random_seed,
         "embedding_model": embedding_model,
         "longmemeval_subset": longmemeval_subset,
+        "use_reasoning": use_reasoning,
         **kwargs
     }
 

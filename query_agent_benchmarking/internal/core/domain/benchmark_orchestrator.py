@@ -142,8 +142,9 @@ class AskBenchmarkOrchestrator:
             metrics.get("exact_match_accuracy_scores",
                         metrics.get("officeqa_accuracy_scores")),
         )
+        judge_reasonings = metrics.get("judge_reasonings")
         self.result_repository.save_ask_trial_results(
-            results, config, trial_number, alignment_scores
+            results, config, trial_number, alignment_scores, judge_reasonings
         )
         self.result_repository.save_trial_metrics(metrics, config, trial_number)
 

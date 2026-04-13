@@ -222,6 +222,16 @@ function AskQueriesTable({ queries }: { queries: AskQuery[] }) {
                 </p>
               </div>
             </div>
+            {q.judge_reasoning && (
+              <details className="mt-3">
+                <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
+                  Judge Reasoning
+                </summary>
+                <p className="mt-1 text-sm bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded p-2 text-gray-700 dark:text-gray-300">
+                  {q.judge_reasoning}
+                </p>
+              </details>
+            )}
           </div>
         );
       })}

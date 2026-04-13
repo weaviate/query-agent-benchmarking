@@ -92,6 +92,7 @@ def save_ask_trial_results(
     config: dict[str, Any],
     trial_number: int,
     alignment_scores: list[int] | None = None,
+    judge_reasonings: list[str | None] | None = None,
 ) -> None:
     """
     Save raw query results for a single ask trial.
@@ -101,6 +102,7 @@ def save_ask_trial_results(
         config: Configuration dictionary (must contain dataset_identifier, agent_name, etc.)
         trial_number: Current trial number (1-indexed)
         alignment_scores: Optional list of per-query scores (1=correct, 0=incorrect)
+        judge_reasonings: Optional list of per-query judge reasoning strings
     """
     _ensure_results_dir()
     base_path = _build_base_path(config)
@@ -130,6 +132,8 @@ def save_ask_trial_results(
             query_data["score"] = alignment_scores[idx]
             if not is_error and alignment_scores[idx] == 0:
                 misaligned_query_ids.append(query_id)
+        if judge_reasonings and idx < len(judge_reasonings) and judge_reasonings[idx]:
+            query_data["judge_reasoning"] = judge_reasonings[idx]
         if is_error:
             failed_query_ids.append(query_id)
 
