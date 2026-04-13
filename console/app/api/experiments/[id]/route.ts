@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loadExperiment, deleteExperimentFiles } from "@/lib/results";
+import { loadExperiment, deleteExperimentFiles, saveLabel } from "@/lib/results";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +69,17 @@ export async function GET(
       metrics: t.metrics,
     })),
   });
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const body = await request.json();
+  const label = typeof body.label === "string" ? body.label : "";
+  saveLabel(id, label);
+  return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(

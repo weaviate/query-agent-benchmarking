@@ -1,7 +1,14 @@
 dataset_name: longmemeval-s
 
+# Multiple datasets — used by populate_db_multi
+dataset_names:
+  - bright/earth_science
+  - bright/economics
+  - bright/psychology
+  - bright/robotics
+
 # Target database: "weaviate" (default) or "engram"
-database_target: engram
+database_target: weaviate
 
 # NOTE: This is a work in progess, need a better abstraction for multiple models from the same provider.
 # The problem is X_weaviate_snowflake_... ends up being really verbose when you need to
