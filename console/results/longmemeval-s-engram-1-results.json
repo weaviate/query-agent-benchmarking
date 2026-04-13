@@ -3,19 +3,19 @@
   "trials": [
     {
       "trial": 1,
-      "avg_query_time": 1.9367804288864137,
-      "avg_alignment_score": 0.6
+      "avg_query_time": 1.7435544013977051,
+      "avg_alignment_score": 0.7
     }
   ],
-  "avg_query_time_mean": 1.9367804288864137,
+  "avg_query_time_mean": 1.7435544013977051,
   "avg_query_time_std": 0.0,
-  "avg_query_time_min": 1.9367804288864137,
-  "avg_query_time_max": 1.9367804288864137,
-  "avg_alignment_score_mean": 0.6,
+  "avg_query_time_min": 1.7435544013977051,
+  "avg_query_time_max": 1.7435544013977051,
+  "avg_alignment_score_mean": 0.7,
   "avg_alignment_score_std": 0.0,
-  "avg_alignment_score_min": 0.6,
-  "avg_alignment_score_max": 0.6,
-  "timestamp": "2026-04-13T08:13:01.016746",
+  "avg_alignment_score_min": 0.7,
+  "avg_alignment_score_max": 0.7,
+  "timestamp": "2026-04-13T08:14:30.531950",
   "config": {
     "dataset": "longmemeval-s",
     "agent_name": "engram",

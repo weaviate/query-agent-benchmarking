@@ -15,6 +15,17 @@ def _ensure_results_dir() -> None:
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
 
+def _get_run_id(config: dict[str, Any]) -> str:
+    """Get or create a stable run ID for this benchmark run.
+
+    The run ID is generated once and cached in the config dict so that all
+    files produced by the same run share the same identifier.
+    """
+    if "run_id" not in config:
+        config["run_id"] = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return config["run_id"]
+
+
 def _build_base_path(config: dict[str, Any]) -> str:
     """Build the base filename (without extension) from config."""
     dataset_identifier = config["dataset_identifier"]
@@ -24,7 +35,8 @@ def _build_base_path(config: dict[str, Any]) -> str:
 
     if output_path is None:
         dataset_name_for_file = dataset_identifier.replace("/", "-")
-        return f"{dataset_name_for_file}-{agent_name}-{num_trials}-results"
+        run_id = _get_run_id(config)
+        return f"{dataset_name_for_file}-{agent_name}-{num_trials}-{run_id}-results"
     else:
         if not output_path.endswith(".json"):
             output_path = f"{output_path}.json"
@@ -187,7 +199,8 @@ def save_aggregated_results(
 
     if output_path is None:
         dataset_name_for_file = dataset_identifier.replace("/", "-")
-        filename = f"{dataset_name_for_file}-{agent_name}-{num_trials}-results.json"
+        run_id = _get_run_id(config)
+        filename = f"{dataset_name_for_file}-{agent_name}-{num_trials}-{run_id}-results.json"
     else:
         if not output_path.endswith(".json"):
             output_path = f"{output_path}.json"

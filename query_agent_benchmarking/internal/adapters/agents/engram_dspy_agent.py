@@ -26,15 +26,18 @@ class MemoryWithTimestamp(BaseModel):
 
 
 class AnswerUserQueryWithMemory(dspy.Signature):
-    """Answer the user's question using ONLY the information contained in the retrieved memories.
-    
-    Do not use any outside knowledge. If the retrieved memories do not contain
-    enough information to answer the question, say so explicitly rather than guessing."""
+    """Answer the user's question using ONLY facts explicitly stated in the retrieved memories.
+
+    Rules:
+    - Do NOT infer, assume, or supplement with outside knowledge.
+    - Only mention specific products, brands, or details if they appear verbatim in the memories.
+    - If the memories do not contain enough information to fully answer the question, state what IS known from the memories and clearly identify what is missing.
+    - Do NOT fabricate plausible-sounding details to fill gaps."""
 
     user_question: str = dspy.InputField()
     retrieved_memories: list[MemoryWithTimestamp] = dspy.InputField()
     answer: str = dspy.OutputField(
-        desc="Answer based strictly on the retrieved memories. If the memories lack sufficient information, state that clearly."
+        desc="Answer grounded strictly in the retrieved memories. Only reference specifics (products, names, dates, preferences) that appear explicitly in the memories. State gaps honestly."
     )
 
 
