@@ -13,8 +13,8 @@ class MockResultRepository:
     def save_trial_results(self, results, config, trial_number):
         self.saved_trials.append((results, config, trial_number))
 
-    def save_ask_trial_results(self, results, config, trial_number, alignment_scores=None):
-        self.saved_ask_trials.append((results, config, trial_number, alignment_scores))
+    def save_ask_trial_results(self, results, config, trial_number, alignment_scores=None, judge_reasonings=None):
+        self.saved_ask_trials.append((results, config, trial_number, alignment_scores, judge_reasonings))
 
     def save_trial_metrics(self, metrics, config, trial_number):
         self.saved_metrics.append((metrics, config, trial_number))

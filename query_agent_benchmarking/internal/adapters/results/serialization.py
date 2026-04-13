@@ -6,13 +6,24 @@ import json
 from query_agent_benchmarking.internal.core.domain.models import QueryResult, AskResult
 
 
-# All results are saved to the result-visualizer/results/ directory
-RESULTS_DIR = Path(__file__).parent.parent / "result-visualizer" / "results"
+# All results are saved to console/results/ at the project root
+RESULTS_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "console" / "results"
 
 
 def _ensure_results_dir() -> None:
     """Create the results directory if it doesn't exist."""
     os.makedirs(RESULTS_DIR, exist_ok=True)
+
+
+def _get_run_id(config: dict[str, Any]) -> str:
+    """Get or create a stable run ID for this benchmark run.
+
+    The run ID is generated once and cached in the config dict so that all
+    files produced by the same run share the same identifier.
+    """
+    if "run_id" not in config:
+        config["run_id"] = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return config["run_id"]
 
 
 def _build_base_path(config: dict[str, Any]) -> str:
@@ -24,7 +35,8 @@ def _build_base_path(config: dict[str, Any]) -> str:
 
     if output_path is None:
         dataset_name_for_file = dataset_identifier.replace("/", "-")
-        return f"{dataset_name_for_file}-{agent_name}-{num_trials}-results"
+        run_id = _get_run_id(config)
+        return f"{dataset_name_for_file}-{agent_name}-{num_trials}-{run_id}-results"
     else:
         if not output_path.endswith(".json"):
             output_path = f"{output_path}.json"
@@ -80,6 +92,7 @@ def save_ask_trial_results(
     config: dict[str, Any],
     trial_number: int,
     alignment_scores: list[int] | None = None,
+    judge_reasonings: list[str | None] | None = None,
 ) -> None:
     """
     Save raw query results for a single ask trial.
@@ -89,24 +102,41 @@ def save_ask_trial_results(
         config: Configuration dictionary (must contain dataset_identifier, agent_name, etc.)
         trial_number: Current trial number (1-indexed)
         alignment_scores: Optional list of per-query scores (1=correct, 0=incorrect)
+        judge_reasonings: Optional list of per-query judge reasoning strings
     """
     _ensure_results_dir()
     base_path = _build_base_path(config)
     trial_output_path = RESULTS_DIR / f"{base_path}-trial-{trial_number}.json"
 
     queries = []
+    failed_query_ids = []
+    misaligned_query_ids = []
+
     for idx, result in enumerate(results):
+        query_id = f"q{idx}"
+        is_error = result.system_answer.startswith("[ERROR]")
+
         query_data = {
-            "query_id": f"q{idx}",
+            "query_id": query_id,
             "question": result.query.question,
             "ground_truth_answer": result.query.ground_truth_answer,
             "system_answer": result.system_answer,
             "time_taken": result.time_taken,
+            "is_error": is_error,
         }
         if result.query.oracle_context_id:
             query_data["oracle_context_id"] = result.query.oracle_context_id
+        if result.query.tenant_id:
+            query_data["tenant_id"] = result.query.tenant_id
         if alignment_scores and idx < len(alignment_scores):
             query_data["score"] = alignment_scores[idx]
+            if not is_error and alignment_scores[idx] == 0:
+                misaligned_query_ids.append(query_id)
+        if judge_reasonings and idx < len(judge_reasonings) and judge_reasonings[idx]:
+            query_data["judge_reasoning"] = judge_reasonings[idx]
+        if is_error:
+            failed_query_ids.append(query_id)
+
         queries.append(query_data)
 
     trial_data = {
@@ -115,9 +145,13 @@ def save_ask_trial_results(
             "agent_name": config["agent_name"],
             "trial_number": trial_number,
             "total_queries": len(results),
+            "total_errors": len(failed_query_ids),
+            "total_misaligned": len(misaligned_query_ids),
             "timestamp": datetime.now().isoformat(),
             "mode": "ask",
         },
+        "failed_query_ids": failed_query_ids,
+        "misaligned_query_ids": misaligned_query_ids,
         "queries": queries,
     }
 
@@ -169,7 +203,8 @@ def save_aggregated_results(
 
     if output_path is None:
         dataset_name_for_file = dataset_identifier.replace("/", "-")
-        filename = f"{dataset_name_for_file}-{agent_name}-{num_trials}-results.json"
+        run_id = _get_run_id(config)
+        filename = f"{dataset_name_for_file}-{agent_name}-{num_trials}-{run_id}-results.json"
     else:
         if not output_path.endswith(".json"):
             output_path = f"{output_path}.json"

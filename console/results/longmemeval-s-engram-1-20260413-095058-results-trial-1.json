@@ -1,0 +1,129 @@
+{
+  "metadata": {
+    "dataset": "longmemeval-s",
+    "agent_name": "engram",
+    "trial_number": 1,
+    "total_queries": 10,
+    "total_errors": 0,
+    "total_misaligned": 2,
+    "timestamp": "2026-04-13T09:50:58.822959",
+    "mode": "ask"
+  },
+  "failed_query_ids": [],
+  "misaligned_query_ids": [
+    "q2",
+    "q3"
+  ],
+  "queries": [
+    {
+      "query_id": "q0",
+      "question": "How long did I wait for the decision on my asylum application?",
+      "ground_truth_answer": "over a year",
+      "system_answer": "The memories say you waited over a year for the decision on your asylum application, and it was approved.",
+      "time_taken": 3.2083561420440674,
+      "is_error": false,
+      "tenant_id": "001be529",
+      "score": 1,
+      "judge_reasoning": "The correct answer is \"over a year.\" The system answer states that the user \"waited over a year for the decision on your asylum application,\" which matches the required duration. Although it adds extra information that it \"was approved,\" that does not contradict the correct answer. Therefore, the system answer is semantically aligned with the correct answer."
+    },
+    {
+      "query_id": "q1",
+      "question": "How many doctor's appointments did I go to in March?",
+      "ground_truth_answer": "2",
+      "system_answer": "Based on the retrieved memories, you went to 2 doctor\u2019s appointments in March:\n- March 3: saw Dr. Smith\n- March 20: follow-up with Dr. Thompson",
+      "time_taken": 3.07538104057312,
+      "is_error": false,
+      "tenant_id": "00ca467f",
+      "score": 1,
+      "judge_reasoning": "The correct answer is simply \"2.\" The system answer states that there were 2 doctor\u2019s appointments in March and provides extra detail listing the two appointments. This is fully consistent with and semantically equivalent to the correct answer."
+    },
+    {
+      "query_id": "q2",
+      "question": "Can you suggest some accessories that would complement my current photography setup?",
+      "ground_truth_answer": "The user would prefer suggestions of Sony-compatible accessories or high-quality photography gear that can enhance their photography experience. They may not prefer suggestions of other brands' equipment or low-quality gear.",
+      "system_answer": "Based on the retrieved memories, the accessories explicitly connected to your current photography setup are:\n\n- External battery packs that can charge a Sony A7R IV and other devices while traveling/on the go\n- A more comfortable and durable camera bag designed for Sony camera gear\n- A Gitzo GT3543LS tripod, which you are considering buying\n- A Godox V1 (Sony version) flash for use with your Sony A7R IV\n- Protective cases or pouches for a Godox V1 flash",
+      "time_taken": 9.257477760314941,
+      "is_error": false,
+      "tenant_id": "06878be2",
+      "score": 0,
+      "judge_reasoning": "The correct answer describes the user's preference: they want suggestions focused on Sony-compatible accessories or high-quality photography gear, and they likely do not want unrelated brands or low-quality items. The system answer instead lists specific accessories supposedly connected to the user's setup, including Sony-compatible and high-quality items, but it does not express the key preference stated in the correct answer. It answers with concrete examples rather than the underlying preference/constraint. Because it misses that essential meaning, the answers are not semantically equivalent."
+    },
+    {
+      "query_id": "q3",
+      "question": "What should I serve for dinner this weekend with my homegrown ingredients?",
+      "ground_truth_answer": "The user would prefer dinner suggestions that incorporate their homegrown cherry tomatoes and herbs like basil and mint, highlighting recipes that showcase their garden produce. They might not prefer suggestions that do not utilize these specific ingredients or do not emphasize the use of homegrown elements.",
+      "system_answer": "The memories do not specify any homegrown ingredients. What they do show is that you want healthy meal ideas for a big family gathering, especially using mixed greens with a vinaigrette dressing, and that you often use fresh basil and mint in your cooking.\n\nBased strictly on the memories, the relevant dinner information is:\n- healthy meal ideas for a big family gathering\n- mixed greens with a vinaigrette dressing\n- fresh basil and mint in cooking",
+      "time_taken": 3.6628479957580566,
+      "is_error": false,
+      "tenant_id": "06f04340",
+      "score": 0,
+      "judge_reasoning": "The system answer says the memories do not specify any homegrown ingredients, but then mentions fresh basil and mint and mixed greens. The correct answer clearly states that the user prefers dinner suggestions using homegrown cherry tomatoes and herbs like basil and mint, with an emphasis on showcasing garden produce. \n\nThe system answer misses a key ingredient: homegrown cherry tomatoes. It also fails to capture the main preference that dinner suggestions should specifically highlight and use the user's homegrown produce. Instead, it gives a more limited summary of general healthy meal ideas and ingredients. Because it omits essential information and weakens the central preference, it is not semantically equivalent to the correct answer."
+    },
+    {
+      "query_id": "q4",
+      "question": "How much did I spend on each coffee mug for my coworkers?",
+      "ground_truth_answer": "$12",
+      "system_answer": "The memories say you bought 5 coffee mugs for about $60 total, so that comes to about $12 per mug.",
+      "time_taken": 1.4994869232177734,
+      "is_error": false,
+      "tenant_id": "0100672e",
+      "score": 1,
+      "judge_reasoning": "The correct answer is \"$12\". The system answer states that 5 coffee mugs cost about $60 total and concludes this is about \"$12 per mug.\" This matches the intended meaning and provides the correct per-item cost."
+    },
+    {
+      "query_id": "q5",
+      "question": "Where do I initially keep my old sneakers?",
+      "ground_truth_answer": "under my bed",
+      "system_answer": "Your old sneakers are initially kept under your bed.",
+      "time_taken": 1.078613042831421,
+      "is_error": false,
+      "tenant_id": "07741c44",
+      "score": 1,
+      "judge_reasoning": "The system answer says \"Your old sneakers are initially kept under your bed,\" while the correct answer is \"under my bed.\" These express the same location and meaning. The pronoun shift from \"my\" to \"your\" is just adapting to the question wording and does not change the answer."
+    },
+    {
+      "query_id": "q6",
+      "question": "How many engineers do I lead when I just started my new role as Senior Software Engineer? How many engineers do I lead now?",
+      "ground_truth_answer": "When you just started your new role as Senior Software Engineer, you led 4 engineers. Now, you lead 5 engineers",
+      "system_answer": "Based on the memories, the earlier count was 4 engineers, and now you lead 5 engineers.",
+      "time_taken": 2.831943988800049,
+      "is_error": false,
+      "tenant_id": "031748ae",
+      "score": 1,
+      "judge_reasoning": "The system answer matches the correct answer in both quantities and timeline: it says the earlier count was 4 engineers and now the user leads 5 engineers. This is semantically equivalent to the reference answer."
+    },
+    {
+      "query_id": "q7",
+      "question": "How many new postcards have I added to my collection since I started collecting again?",
+      "ground_truth_answer": "25",
+      "system_answer": "Since you started collecting again, you have added 25 new postcards to your collection.",
+      "time_taken": 1.4900438785552979,
+      "is_error": false,
+      "tenant_id": "01493427",
+      "score": 1,
+      "judge_reasoning": "The system answer states that since you started collecting again, you have added 25 new postcards. The correct answer is 25. These are semantically equivalent, with the system answer simply restating the number in a full sentence."
+    },
+    {
+      "query_id": "q8",
+      "question": "How many projects have I completed since starting painting classes?",
+      "ground_truth_answer": "5",
+      "system_answer": "You have completed 5 painting projects since starting painting classes.",
+      "time_taken": 1.4611258506774902,
+      "is_error": false,
+      "tenant_id": "06db6396",
+      "score": 1,
+      "judge_reasoning": "The correct answer is \"5\". The system answer states \"You have completed 5 painting projects since starting painting classes.\" This conveys the same quantity and meaning as the correct answer, with only added contextual wording. Therefore, the answers are semantically aligned."
+    },
+    {
+      "query_id": "q9",
+      "question": "How many engineers do I lead when I just started my new role as Software Engineer Manager?",
+      "ground_truth_answer": "The information provided is not enough. You mentioned starting the role as Senior Software Engineer but not Software Engineer Manager.",
+      "system_answer": "The memories say there are five engineers plus their manager Rachel. They also say your manager is Rachel. Based on the retrieved memories, the supported number is five engineers, but the memories do not support that you are the one leading them as a Software Engineer Manager.",
+      "time_taken": 3.511187791824341,
+      "is_error": false,
+      "tenant_id": "031748ae_abs",
+      "score": 1,
+      "judge_reasoning": "The correct answer says there is insufficient information because the user is only stated to have started a role as Senior Software Engineer, not Software Engineer Manager. The system answer also concludes that the memories do not support that the user is the one leading the engineers as a Software Engineer Manager. Although it mentions an unsupported detail about five engineers, its main conclusion matches the correct answer: the premise is not supported and there is not enough information to answer as asked."
+    }
+  ]
+}

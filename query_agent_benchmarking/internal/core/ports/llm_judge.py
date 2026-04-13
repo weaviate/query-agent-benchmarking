@@ -39,6 +39,6 @@ class LLMJudge(Protocol):
             correct_answer: The ground truth answer.
 
         Returns:
-            Dictionary with 'aligned', 'votes', 'ensemble_k', and token usage.
+            Dictionary with 'aligned', 'votes', 'ensemble_k', 'reasoning', and token usage.
         """
         ...

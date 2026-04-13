@@ -1,7 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { TrialResultFile, SearchQuery, AskQuery } from "@/lib/results";
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [text]);
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
+      title="Copy formatted query to clipboard"
+    >
+      {copied ? "Copied!" : "Copy"}
+    </button>
+  );
+}
+
+function formatAskQueryForCopy(q: AskQuery): string {
+  return `Question: ${q.question}
+
+Ground Truth: ${q.ground_truth_answer}
+
+System Answer: ${q.system_answer}
+
+Judge Reasoning: ${q.judge_reasoning ?? "N/A"}`;
+}
 
 // We load data via an API route to support client-side filtering
 // But since we're using SSR, we'll use a hybrid approach
@@ -13,7 +44,7 @@ export default function TrialQueriesPage({
 }) {
   const [params, setParams] = useState<{ id: string; trialNum: string } | null>(null);
   const [data, setData] = useState<TrialResultFile | null>(null);
-  const [filter, setFilter] = useState<"all" | "correct" | "incorrect">("all");
+  const [filter, setFilter] = useState<"all" | "correct" | "incorrect" | "errors">("all");
   const [sortBy, setSortBy] = useState<"id" | "time">("id");
   const [loading, setLoading] = useState(true);
 
@@ -48,9 +79,12 @@ export default function TrialQueriesPage({
   if (isAsk) {
     let askQueries = data.queries as AskQuery[];
     if (filter !== "all") {
-      askQueries = askQueries.filter((q) =>
-        filter === "correct" ? q.score === 1 : q.score === 0
-      );
+      askQueries = askQueries.filter((q) => {
+        if (filter === "correct") return q.score === 1 && !q.is_error;
+        if (filter === "incorrect") return q.score === 0 && !q.is_error;
+        if (filter === "errors") return q.is_error;
+        return true;
+      });
     }
     if (sortBy === "time") {
       askQueries = [...askQueries].sort((a, b) => b.time_taken - a.time_taken);
@@ -81,7 +115,23 @@ export default function TrialQueriesPage({
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400">
           {data.metadata.total_queries} queries &middot; Mode: {mode}
+          {data.metadata.total_errors != null && data.metadata.total_errors > 0 && (
+            <span className="text-red-500"> &middot; {data.metadata.total_errors} errors</span>
+          )}
+          {data.metadata.total_misaligned != null && data.metadata.total_misaligned > 0 && (
+            <span className="text-yellow-500"> &middot; {data.metadata.total_misaligned} misaligned</span>
+          )}
         </p>
+        {data.failed_query_ids && data.failed_query_ids.length > 0 && (
+          <p className="text-xs text-red-500 mt-1">
+            Failed IDs: {data.failed_query_ids.join(", ")}
+          </p>
+        )}
+        {data.misaligned_query_ids && data.misaligned_query_ids.length > 0 && (
+          <p className="text-xs text-yellow-500 mt-1">
+            Misaligned IDs: {data.misaligned_query_ids.join(", ")}
+          </p>
+        )}
       </div>
 
       {/* Filters */}
@@ -89,7 +139,7 @@ export default function TrialQueriesPage({
         {isAsk && (
           <div className="flex gap-1 items-center">
             <span className="text-xs text-gray-500 mr-1">Filter:</span>
-            {(["all", "correct", "incorrect"] as const).map((f) => (
+            {(["all", "correct", "incorrect", "errors"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -139,35 +189,49 @@ function AskQueriesTable({ queries }: { queries: AskQuery[] }) {
   return (
     <div className="space-y-3">
       {queries.map((q) => {
-        const isCorrect = q.score === 1;
-        const borderColor =
-          q.score === undefined
+        const isError = q.is_error === true;
+        const isCorrect = q.score === 1 && !isError;
+        const borderColor = isError
+          ? "border-orange-400 dark:border-orange-700"
+          : q.score === undefined
             ? "border-gray-200 dark:border-gray-700"
             : isCorrect
               ? "border-green-300 dark:border-green-800"
               : "border-red-300 dark:border-red-800";
-        const bgColor =
-          q.score === undefined
+        const bgColor = isError
+          ? "bg-orange-50 dark:bg-orange-950/30"
+          : q.score === undefined
             ? ""
             : isCorrect
               ? "bg-green-50 dark:bg-green-950/30"
               : "bg-red-50 dark:bg-red-950/30";
+
+        const statusLabel = isError
+          ? "Error"
+          : isCorrect
+            ? "Correct"
+            : q.score === 0
+              ? "Incorrect"
+              : undefined;
+        const statusColor = isError
+          ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+          : isCorrect
+            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
 
         return (
           <div key={q.query_id} className={`border rounded-lg p-4 ${borderColor} ${bgColor}`}>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-mono text-gray-500">{q.query_id}</span>
               <div className="flex items-center gap-3">
+                <CopyButton text={formatAskQueryForCopy(q)} />
                 <span className="text-xs text-gray-400">{q.time_taken.toFixed(2)}s</span>
-                {q.score !== undefined && (
-                  <span
-                    className={`text-xs font-medium px-2 py-0.5 rounded ${
-                      isCorrect
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                    }`}
-                  >
-                    {isCorrect ? "Correct" : "Incorrect"}
+                {q.tenant_id && (
+                  <span className="text-xs text-gray-400">tenant: {q.tenant_id}</span>
+                )}
+                {statusLabel && (
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${statusColor}`}>
+                    {statusLabel}
                   </span>
                 )}
               </div>
@@ -190,6 +254,16 @@ function AskQueriesTable({ queries }: { queries: AskQuery[] }) {
                 </p>
               </div>
             </div>
+            {q.judge_reasoning && (
+              <details className="mt-3">
+                <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
+                  Judge Reasoning
+                </summary>
+                <p className="mt-1 text-sm bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded p-2 text-gray-700 dark:text-gray-300">
+                  {q.judge_reasoning}
+                </p>
+              </details>
+            )}
           </div>
         );
       })}

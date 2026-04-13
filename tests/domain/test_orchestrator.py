@@ -50,7 +50,7 @@ class MockResultRepo:
     def save_trial_results(self, results, config, trial_number):
         self.trials.append(trial_number)
 
-    def save_ask_trial_results(self, results, config, trial_number, alignment_scores=None):
+    def save_ask_trial_results(self, results, config, trial_number, alignment_scores=None, judge_reasonings=None):
         self.ask_trials.append(trial_number)
 
     def save_trial_metrics(self, metrics, config, trial_number):

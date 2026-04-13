@@ -9,8 +9,8 @@ from .database_loader import (
 )
 from .database_config import supported_database_datasets, validate_database_dataset
 from .engram_loader import (
-    engram_ingest_tenant,
     engram_ingest_all_tenants,
+    IngestionResult,
     TenantIngestionStats,
 )
 
@@ -24,7 +24,7 @@ __all__ = [
     "get_vector_config",
     "supported_database_datasets",
     "validate_database_dataset",
-    "engram_ingest_tenant",
     "engram_ingest_all_tenants",
+    "IngestionResult",
     "TenantIngestionStats",
 ]

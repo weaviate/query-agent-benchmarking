@@ -34,8 +34,9 @@ class JsonFileResultRepository:
         config: dict[str, Any],
         trial_number: int,
         alignment_scores: list[int] | None = None,
+        judge_reasonings: list[str | None] | None = None,
     ) -> None:
-        _save_ask_trial_results(results, config, trial_number, alignment_scores)
+        _save_ask_trial_results(results, config, trial_number, alignment_scores, judge_reasonings)
 
     def save_trial_metrics(
         self,

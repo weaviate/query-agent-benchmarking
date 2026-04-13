@@ -26,11 +26,24 @@ class MemoryWithTimestamp(BaseModel):
 
 
 class AnswerUserQueryWithMemory(dspy.Signature):
-    """Review the retrieved memories about the user to answer their question."""
+    """Answer the user's question using ONLY facts explicitly stated in the retrieved memories.
 
+    Rules:
+    - Do NOT infer, assume, or supplement with outside knowledge.
+    - Only mention specific products, brands, names, numbers, or details if they appear VERBATIM in the memories.
+    - BEFORE answering, verify that the question's premises match the memories. If the question assumes something that contradicts or is not supported by the memories (e.g. a wrong role title, wrong date, wrong location, wrong name), state what the memories actually say and explain the discrepancy.
+    - If the question is open-ended or asks for suggestions, answer using ALL relevant information from the memories. Incorporate every relevant detail the memories contain, even if the full picture is incomplete.
+    - If the memories contain NO relevant information at all, say so directly.
+    - Do NOT fabricate details. Do NOT repackage memory content into advice beyond what is stored."""
+    
     user_question: str = dspy.InputField()
     retrieved_memories: list[MemoryWithTimestamp] = dspy.InputField()
-    answer: str = dspy.OutputField()
+    premise_check: str = dspy.OutputField(
+        desc="Check whether the question's premises (role titles, names, dates, events, quantities) match what is in the retrieved memories. State any discrepancies. If all premises match, say 'Premises verified.'"
+    )
+    answer: str = dspy.OutputField(
+        desc="Answer grounded strictly in the retrieved memories. If the premise check found discrepancies, address those instead of answering the question as asked. Do not offer advice or suggestions beyond what the memories explicitly contain."
+    )
 
 
 # ---------------------------------------------------------------------------

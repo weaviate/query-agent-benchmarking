@@ -1,54 +1,76 @@
-import { loadExperiment } from "@/lib/results";
-import { notFound } from "next/navigation";
+"use client";
 
-export default async function ExperimentDetail({
-  params,
+import { useEffect, useState, useCallback } from "react";
+
+interface TrialSummary {
+  trialNumber: number;
+  hasResults: boolean;
+  totalQueries: number | null;
+  avgQueryTime: number | null;
+  metrics: Record<string, unknown> | null;
+}
+
+interface ExperimentDetail {
+  id: string;
+  dataset: string;
+  agent_name: string;
+  mode: "search" | "ask" | "unknown";
+  num_trials: number;
+  timestamp: string;
+  metricEntries: { key: string; value: string }[];
+  trials: TrialSummary[];
+}
+
+const POLL_INTERVAL_MS = 5_000;
+
+const KEY_SCORE_KEYS = [
+  "avg_alignment_score",
+  "avg_exact_match_accuracy",
+  "avg_recall@5",
+  "avg_nDCG@10",
+];
+
+export default function ExperimentDetailPage({
+  params: paramsPromise,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const experiment = loadExperiment(id);
+  const [id, setId] = useState<string | null>(null);
+  const [experiment, setExperiment] = useState<ExperimentDetail | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
-  if (!experiment) {
-    notFound();
+  useEffect(() => {
+    paramsPromise.then((p) => setId(p.id));
+  }, [paramsPromise]);
+
+  const fetchExperiment = useCallback(() => {
+    if (!id) return;
+    fetch(`/api/experiments/${id}`)
+      .then((r) => {
+        if (r.status === 404) {
+          setNotFound(true);
+          return null;
+        }
+        return r.json();
+      })
+      .then((data) => {
+        if (data) setExperiment(data);
+      })
+      .catch(() => {});
+  }, [id]);
+
+  useEffect(() => {
+    fetchExperiment();
+    const interval = setInterval(fetchExperiment, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [fetchExperiment]);
+
+  if (notFound) {
+    return <div className="py-20 text-center text-gray-500">Experiment not found.</div>;
   }
 
-  const agg = experiment.aggregated;
-
-  // Extract metric entries from aggregated results (skip non-metric keys)
-  const skipKeys = new Set(["timestamp", "config", "query_times", "misaligned_indices", "metric", "total_input_tokens", "total_output_tokens"]);
-  const metricEntries: { key: string; value: unknown }[] = [];
-  if (agg) {
-    // Check if there's a "mean" sub-object (multi-trial aggregation)
-    const mean = agg["mean"] as Record<string, unknown> | undefined;
-    const std = agg["std"] as Record<string, unknown> | undefined;
-
-    if (mean && typeof mean === "object") {
-      for (const [key, val] of Object.entries(mean)) {
-        if (typeof val === "number") {
-          const stdVal = std?.[key];
-          metricEntries.push({
-            key,
-            value:
-              typeof stdVal === "number"
-                ? `${(val * 100).toFixed(2)}% (+/- ${(stdVal * 100).toFixed(2)}%)`
-                : `${(val * 100).toFixed(2)}%`,
-          });
-        }
-      }
-    } else {
-      for (const [key, val] of Object.entries(agg)) {
-        if (skipKeys.has(key)) continue;
-        if (key === "mean" || key === "std" || key === "min" || key === "max") continue;
-        if (typeof val === "number") {
-          const isTime = key.includes("time");
-          metricEntries.push({
-            key,
-            value: isTime ? `${val.toFixed(2)}s` : `${(val * 100).toFixed(2)}%`,
-          });
-        }
-      }
-    }
+  if (!experiment) {
+    return <div className="py-20 text-center text-gray-500">Loading...</div>;
   }
 
   return (
@@ -69,11 +91,11 @@ export default async function ExperimentDetail({
       </div>
 
       {/* Aggregated metrics */}
-      {metricEntries.length > 0 && (
+      {experiment.metricEntries.length > 0 && (
         <section className="mb-10">
           <h2 className="text-lg font-semibold mb-4">Aggregated Metrics</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {metricEntries.map(({ key, value }) => (
+            {experiment.metricEntries.map(({ key, value }) => (
               <div
                 key={key}
                 className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
@@ -81,7 +103,7 @@ export default async function ExperimentDetail({
                 <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                   {key.replace(/_/g, " ")}
                 </div>
-                <div className="text-lg font-semibold">{String(value)}</div>
+                <div className="text-lg font-semibold">{value}</div>
               </div>
             ))}
           </div>
@@ -106,30 +128,22 @@ export default async function ExperimentDetail({
             </thead>
             <tbody>
               {experiment.trials.map((trial) => {
-                const totalQueries = trial.results?.metadata?.total_queries ?? "--";
+                const totalQueries = trial.totalQueries ?? "--";
                 const avgTime =
-                  trial.metrics?.avg_query_time != null
-                    ? `${trial.metrics.avg_query_time.toFixed(2)}s`
+                  trial.avgQueryTime != null
+                    ? `${trial.avgQueryTime.toFixed(2)}s`
                     : "--";
 
-                // Find key score from metrics
                 let keyScore = "--";
                 if (trial.metrics) {
-                  const m = trial.metrics as Record<string, unknown>;
-                  for (const k of [
-                    "avg_alignment_score",
-                    "avg_exact_match_accuracy",
-                    "avg_recall@5",
-                    "avg_nDCG@10",
-                  ]) {
+                  const m = trial.metrics;
+                  for (const k of KEY_SCORE_KEYS) {
                     if (typeof m[k] === "number") {
                       keyScore = `${((m[k] as number) * 100).toFixed(1)}%`;
                       break;
                     }
                   }
                 }
-
-                const hasResults = trial.results !== null;
 
                 return (
                   <tr
@@ -141,9 +155,9 @@ export default async function ExperimentDetail({
                     <td className="py-3 pr-4">{avgTime}</td>
                     <td className="py-3 pr-4">{keyScore}</td>
                     <td className="py-3">
-                      {hasResults ? (
+                      {trial.hasResults ? (
                         <a
-                          href={`/experiments/${id}/trial/${trial.trialNumber}`}
+                          href={`/experiments/${experiment.id}/trial/${trial.trialNumber}`}
                           className="text-blue-600 dark:text-blue-400 hover:underline text-xs"
                         >
                           View queries

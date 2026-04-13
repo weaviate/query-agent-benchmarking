@@ -10,6 +10,8 @@ export interface TrialMetadata {
   agent_name: string;
   trial_number: number;
   total_queries: number;
+  total_errors?: number;
+  total_misaligned?: number;
   timestamp: string;
   mode: "search" | "ask";
 }
@@ -31,12 +33,17 @@ export interface AskQuery {
   system_answer: string;
   time_taken: number;
   score?: number;
+  is_error?: boolean;
   oracle_context_id?: string;
+  tenant_id?: string;
+  judge_reasoning?: string;
 }
 
 export interface TrialResultFile {
   metadata: TrialMetadata;
   queries: SearchQuery[] | AskQuery[];
+  failed_query_ids?: string[];
+  misaligned_query_ids?: string[];
 }
 
 export interface AggregatedResultFile {
@@ -231,6 +238,25 @@ export function loadAllExperiments(): Experiment[] {
 export function loadExperiment(id: string): Experiment | null {
   const experiments = loadAllExperiments();
   return experiments.find((e) => e.id === id) || null;
+}
+
+/** Return all JSON filenames on disk that belong to the given experiment id. */
+export function getExperimentFiles(id: string): string[] {
+  const baseName = decodeURIComponent(id);
+  const allFiles = getResultFiles();
+  return allFiles.filter((filename) => {
+    const classification = classifyFile(filename);
+    return classification !== null && classification.baseName === baseName;
+  });
+}
+
+/** Delete all JSON files that belong to the given experiment id. Returns count deleted. */
+export function deleteExperimentFiles(id: string): number {
+  const files = getExperimentFiles(id);
+  for (const filename of files) {
+    fs.unlinkSync(path.join(RESULTS_DIR, filename));
+  }
+  return files.length;
 }
 
 export function getKeyMetric(experiment: Experiment): { name: string; value: number | null } {

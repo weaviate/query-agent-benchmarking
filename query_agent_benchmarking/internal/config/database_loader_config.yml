@@ -1,7 +1,7 @@
-dataset_name: bright/biology
+dataset_name: longmemeval-s
 
 # Target database: "weaviate" (default) or "engram"
-database_target: weaviate
+database_target: engram
 
 # NOTE: This is a work in progess, need a better abstraction for multiple models from the same provider.
 # The problem is X_weaviate_snowflake_... ends up being really verbose when you need to
@@ -25,4 +25,4 @@ ef: 500
 # within [lower_bound, upper_bound) are loaded/ingested.
 # Example: users_to_test: [20, 50] loads tenants at sorted indices 20..49.
 longmemeval_subset:
-  users_to_test: [0, 1]
+  users_to_test: [0, 10]
