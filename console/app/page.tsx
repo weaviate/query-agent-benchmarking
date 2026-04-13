@@ -40,7 +40,7 @@ export default function Dashboard() {
         <p className="text-gray-500 dark:text-gray-400">
           Run a benchmark to generate results in{" "}
           <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-sm">
-            result-visualizer/results/
+            console/results/
           </code>
         </p>
       </div>

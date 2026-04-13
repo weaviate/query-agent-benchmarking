@@ -1,0 +1,121 @@
+{
+  "metadata": {
+    "dataset": "longmemeval-s",
+    "agent_name": "engram",
+    "trial_number": 1,
+    "total_queries": 10,
+    "total_errors": 0,
+    "total_misaligned": 4,
+    "timestamp": "2026-04-13T08:13:01.012580",
+    "mode": "ask"
+  },
+  "failed_query_ids": [],
+  "misaligned_query_ids": [
+    "q3",
+    "q5",
+    "q6",
+    "q9"
+  ],
+  "queries": [
+    {
+      "query_id": "q0",
+      "question": "How long did I wait for the decision on my asylum application?",
+      "ground_truth_answer": "over a year",
+      "system_answer": "Based on the retrieved memories, your asylum application took over a year to get approved.",
+      "time_taken": 3.3877580165863037,
+      "is_error": false,
+      "tenant_id": "001be529",
+      "score": 1
+    },
+    {
+      "query_id": "q1",
+      "question": "How many doctor's appointments did I go to in March?",
+      "ground_truth_answer": "2",
+      "system_answer": "Based on the retrieved memories, you went to two doctor's appointments in March: one with your primary care physician, Dr. Smith, on March 3 for a lingering cough, and one with orthopedic surgeon Dr. Thompson on March 20 for a follow-up on your torn ACL.",
+      "time_taken": 2.6539058685302734,
+      "is_error": false,
+      "tenant_id": "00ca467f",
+      "score": 1
+    },
+    {
+      "query_id": "q2",
+      "question": "Can you suggest some accessories that would complement my current photography setup?",
+      "ground_truth_answer": "The user would prefer suggestions of Sony-compatible accessories or high-quality photography gear that can enhance their photography experience. They may not prefer suggestions of other brands' equipment or low-quality gear.",
+      "system_answer": "Based on your current photography setup and interests, some accessories that would complement your gear include:\n\n- An external battery pack capable of charging your Sony A7R IV and other devices while traveling.\n- A more comfortable and durable camera bag designed specifically for Sony camera gear.\n- A Gitzo GT3543LS tripod, which you have considered purchasing.\n- A Godox V1 (Sony version) flash for your Sony A7R IV, along with protective cases or pouches for the flash.\n\nIf you need suggestions for specific models or further details, please provide more information on your preferences.",
+      "time_taken": 1.9380829334259033,
+      "is_error": false,
+      "tenant_id": "06878be2",
+      "score": 1
+    },
+    {
+      "query_id": "q3",
+      "question": "What should I serve for dinner this weekend with my homegrown ingredients?",
+      "ground_truth_answer": "The user would prefer dinner suggestions that incorporate their homegrown cherry tomatoes and herbs like basil and mint, highlighting recipes that showcase their garden produce. They might not prefer suggestions that do not utilize these specific ingredients or do not emphasize the use of homegrown elements.",
+      "system_answer": "Based on the retrieved memories, you have been using fresh basil and mint in your cooking and are interested in healthy meals with mixed greens and vinaigrette dressing, especially for big family gatherings. However, there is no detailed list of your available homegrown ingredients or specific dinner recipes suggested in the memories. Therefore, I do not have enough information to give a precise recommendation for what you should serve for dinner with your homegrown ingredients this weekend.",
+      "time_taken": 2.421818733215332,
+      "is_error": false,
+      "tenant_id": "06f04340",
+      "score": 0
+    },
+    {
+      "query_id": "q4",
+      "question": "How much did I spend on each coffee mug for my coworkers?",
+      "ground_truth_answer": "$12",
+      "system_answer": "Based on the retrieved memories, you purchased 5 coffee mugs for your coworkers, spending about $60 total. This means you spent approximately $12 on each coffee mug ($60 divided by 5 mugs).",
+      "time_taken": 1.7981560230255127,
+      "is_error": false,
+      "tenant_id": "0100672e",
+      "score": 1
+    },
+    {
+      "query_id": "q5",
+      "question": "Where do I initially keep my old sneakers?",
+      "ground_truth_answer": "under my bed",
+      "system_answer": "Based on the retrieved memories, you initially keep your old sneakers under your bed and they are also taking up space in your closet.",
+      "time_taken": 1.7677710056304932,
+      "is_error": false,
+      "tenant_id": "07741c44",
+      "score": 0
+    },
+    {
+      "query_id": "q6",
+      "question": "How many engineers do I lead when I just started my new role as Senior Software Engineer? How many engineers do I lead now?",
+      "ground_truth_answer": "When you just started your new role as Senior Software Engineer, you led 4 engineers. Now, you lead 5 engineers",
+      "system_answer": "Based on the retrieved memories, when you just started your new role as Senior Software Engineer, it is not explicitly stated how many engineers you led at that time. However, currently, you lead 5 engineers (as described in the memory about your team outing, which mentions 5 engineers plus your manager). There is no direct information about the number of engineers you led when you first started.\n\nTherefore, I can only confirm that you currently lead 5 engineers, but there is insufficient information in the retrieved memories to answer how many you led when you just started the role.",
+      "time_taken": 2.118152141571045,
+      "is_error": false,
+      "tenant_id": "031748ae",
+      "score": 0
+    },
+    {
+      "query_id": "q7",
+      "question": "How many new postcards have I added to my collection since I started collecting again?",
+      "ground_truth_answer": "25",
+      "system_answer": "Since you started collecting postcards again, you have added 25 new postcards to your collection.",
+      "time_taken": 1.0098857879638672,
+      "is_error": false,
+      "tenant_id": "01493427",
+      "score": 1
+    },
+    {
+      "query_id": "q8",
+      "question": "How many projects have I completed since starting painting classes?",
+      "ground_truth_answer": "5",
+      "system_answer": "You have completed 5 painting projects since starting painting classes.",
+      "time_taken": 1.081718921661377,
+      "is_error": false,
+      "tenant_id": "06db6396",
+      "score": 1
+    },
+    {
+      "query_id": "q9",
+      "question": "How many engineers do I lead when I just started my new role as Software Engineer Manager?",
+      "ground_truth_answer": "The information provided is not enough. You mentioned starting the role as Senior Software Engineer but not Software Engineer Manager.",
+      "system_answer": "Based on the retrieved memory, your team consists of five engineers plus you as the manager. Therefore, when you just started your new role as Software Engineer Manager, you led five engineers.",
+      "time_taken": 1.1905548572540283,
+      "is_error": false,
+      "tenant_id": "031748ae_abs",
+      "score": 0
+    }
+  ]
+}

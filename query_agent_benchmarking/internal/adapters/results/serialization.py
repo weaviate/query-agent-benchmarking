@@ -6,8 +6,8 @@ import json
 from query_agent_benchmarking.internal.core.domain.models import QueryResult, AskResult
 
 
-# All results are saved to the result-visualizer/results/ directory
-RESULTS_DIR = Path(__file__).parent.parent / "result-visualizer" / "results"
+# All results are saved to console/results/ at the project root
+RESULTS_DIR = Path(__file__).resolve().parent.parent.parent.parent.parent / "console" / "results"
 
 
 def _ensure_results_dir() -> None:
@@ -95,18 +95,32 @@ def save_ask_trial_results(
     trial_output_path = RESULTS_DIR / f"{base_path}-trial-{trial_number}.json"
 
     queries = []
+    failed_query_ids = []
+    misaligned_query_ids = []
+
     for idx, result in enumerate(results):
+        query_id = f"q{idx}"
+        is_error = result.system_answer.startswith("[ERROR]")
+
         query_data = {
-            "query_id": f"q{idx}",
+            "query_id": query_id,
             "question": result.query.question,
             "ground_truth_answer": result.query.ground_truth_answer,
             "system_answer": result.system_answer,
             "time_taken": result.time_taken,
+            "is_error": is_error,
         }
         if result.query.oracle_context_id:
             query_data["oracle_context_id"] = result.query.oracle_context_id
+        if result.query.tenant_id:
+            query_data["tenant_id"] = result.query.tenant_id
         if alignment_scores and idx < len(alignment_scores):
             query_data["score"] = alignment_scores[idx]
+            if not is_error and alignment_scores[idx] == 0:
+                misaligned_query_ids.append(query_id)
+        if is_error:
+            failed_query_ids.append(query_id)
+
         queries.append(query_data)
 
     trial_data = {
@@ -115,9 +129,13 @@ def save_ask_trial_results(
             "agent_name": config["agent_name"],
             "trial_number": trial_number,
             "total_queries": len(results),
+            "total_errors": len(failed_query_ids),
+            "total_misaligned": len(misaligned_query_ids),
             "timestamp": datetime.now().isoformat(),
             "mode": "ask",
         },
+        "failed_query_ids": failed_query_ids,
+        "misaligned_query_ids": misaligned_query_ids,
         "queries": queries,
     }
 

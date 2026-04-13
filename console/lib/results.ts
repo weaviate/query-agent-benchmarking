@@ -10,6 +10,8 @@ export interface TrialMetadata {
   agent_name: string;
   trial_number: number;
   total_queries: number;
+  total_errors?: number;
+  total_misaligned?: number;
   timestamp: string;
   mode: "search" | "ask";
 }
@@ -31,12 +33,16 @@ export interface AskQuery {
   system_answer: string;
   time_taken: number;
   score?: number;
+  is_error?: boolean;
   oracle_context_id?: string;
+  tenant_id?: string;
 }
 
 export interface TrialResultFile {
   metadata: TrialMetadata;
   queries: SearchQuery[] | AskQuery[];
+  failed_query_ids?: string[];
+  misaligned_query_ids?: string[];
 }
 
 export interface AggregatedResultFile {
