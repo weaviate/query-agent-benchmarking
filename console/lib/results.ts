@@ -259,6 +259,34 @@ export function deleteExperimentFiles(id: string): number {
   return files.length;
 }
 
+// ============================================================================
+// Experiment labels (user-assigned names persisted in _labels.json)
+// ============================================================================
+
+const LABELS_FILE = path.join(RESULTS_DIR, "_labels.json");
+
+export function loadLabels(): Record<string, string> {
+  try {
+    if (fs.existsSync(LABELS_FILE)) {
+      return JSON.parse(fs.readFileSync(LABELS_FILE, "utf-8"));
+    }
+  } catch {
+    // ignore corrupt file
+  }
+  return {};
+}
+
+export function saveLabel(id: string, label: string): void {
+  const labels = loadLabels();
+  if (label.trim()) {
+    labels[id] = label.trim();
+  } else {
+    delete labels[id];
+  }
+  fs.mkdirSync(RESULTS_DIR, { recursive: true });
+  fs.writeFileSync(LABELS_FILE, JSON.stringify(labels, null, 2));
+}
+
 export function getKeyMetric(experiment: Experiment): { name: string; value: number | null } {
   const agg = experiment.aggregated;
   if (!agg) return { name: "N/A", value: null };

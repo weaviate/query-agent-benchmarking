@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
-import { loadAllExperiments, getKeyMetric } from "@/lib/results";
+import { loadAllExperiments, getKeyMetric, loadLabels } from "@/lib/results";
 
 export const dynamic = "force-dynamic";
 
 export function GET() {
   const experiments = loadAllExperiments();
+  const labels = loadLabels();
   const payload = experiments.map((exp) => {
     const metric = getKeyMetric(exp);
     return {
       id: exp.id,
+      label: labels[exp.id] ?? "",
       dataset: exp.dataset,
       agent_name: exp.agent_name,
       mode: exp.mode,
