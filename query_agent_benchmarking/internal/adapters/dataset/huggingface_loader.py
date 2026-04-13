@@ -310,9 +310,32 @@ def _resolve_longmemeval_tenant_subset(
     return set(selected)
 
 
+def _load_longmemeval_question_types() -> dict[str, str]:
+    """Load question_id -> question_type mapping from the original LongMemEval dataset.
+
+    Returns:
+        Dict mapping question_id to question_type (e.g., 'temporal-reasoning').
+        Returns empty dict if the original dataset is unavailable.
+    """
+    try:
+        from huggingface_hub import hf_hub_download
+        import json as _json
+
+        path = hf_hub_download(
+            "xiaowu0162/LongMemEval", "longmemeval_oracle", repo_type="dataset"
+        )
+        with open(path) as fh:
+            data = _json.load(fh)
+        return {item["question_id"]: item["question_type"] for item in data}
+    except Exception as e:
+        print(f"  Warning: could not load LongMemEval question types: {e}")
+        return {}
+
+
 def load_ask_longmemeval(
     hf_path: str,
     users_to_test: Optional[list[int]] = None,
+    load_question_types: bool = True,
 ) -> list[InMemoryAskQuery]:
     print(f"Loading LongMemEval ask queries from {hf_path}...")
     raw_queries = load_dataset(hf_path, "queries")["train"]
@@ -320,16 +343,24 @@ def load_ask_longmemeval(
     all_tenant_ids = sorted({str(item["tenant_id"]) for item in raw_queries})
     keep_tenants = _resolve_longmemeval_tenant_subset(all_tenant_ids, users_to_test)
 
+    qtype_map: dict[str, str] = {}
+    if load_question_types:
+        qtype_map = _load_longmemeval_question_types()
+        if qtype_map:
+            print(f"  Loaded question types for {len(qtype_map)} questions")
+
     queries: list[InMemoryAskQuery] = []
     for item in raw_queries:
         tid = str(item["tenant_id"])
         if tid not in keep_tenants:
             continue
+        qid = str(item["question_id"])
         queries.append(
             InMemoryAskQuery(
                 question=item["question"],
                 ground_truth_answer=item["answer"],
                 tenant_id=tid,
+                question_type=qtype_map.get(qid),
             )
         )
 
