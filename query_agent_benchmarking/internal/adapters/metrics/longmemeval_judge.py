@@ -2,7 +2,7 @@
 LongMemEval-specific LLM-as-Judge using type-specific prompts.
 
 Implements the evaluation protocol from the LongMemEval paper (Wu et al., ICLR 2025).
-Uses GPT-4o with separate prompt-engineered instructions per question type:
+Uses DSPy for LLM inference with separate prompt-engineered instructions per question type:
 - temporal-reasoning: allows off-by-one errors for day/week/month counts
 - knowledge-update: correct as long as the updated answer is present
 - single-session-preference: rubric-based, just needs to recall personal info correctly
@@ -15,7 +15,7 @@ Output format: simple yes/no (no chain-of-thought reasoning).
 import os
 from typing import Optional
 
-from openai import OpenAI
+import dspy
 
 # ============================================================================
 # Type-specific prompt templates (from the LongMemEval paper, Appendix G)
@@ -114,11 +114,24 @@ def _build_prompt(
     )
 
 
+class LongMemEvalJudgment(dspy.Signature):
+    """Judge whether a model response is correct given type-specific evaluation criteria.
+    Answer yes or no only.
+    """
+
+    evaluation_prompt: str = dspy.InputField(
+        description="The full evaluation prompt with type-specific instructions, question, correct answer, and model response."
+    )
+    judgment: str = dspy.OutputField(
+        description="Answer yes or no only."
+    )
+
+
 class LongMemEvalJudge:
     """LLM-as-Judge implementing the LongMemEval evaluation protocol.
 
-    Uses OpenAI's API directly (no DSPy) to match the paper's setup:
-    - GPT-4o with temperature=0
+    Uses DSPy for LLM inference with type-specific prompts per question category,
+    following the paper's setup:
     - Simple yes/no output (no chain-of-thought)
     - Type-specific prompts per question category
 
@@ -127,38 +140,54 @@ class LongMemEvalJudge:
 
     def __init__(
         self,
-        model: str = "gpt-4o-2024-08-06",
+        model: str = "openai/gpt-5.4",
         api_key: Optional[str] = None,
         default_question_type: str = "multi-session",
+        cache: bool = False,
     ):
         """Initialize the LongMemEval judge.
 
         Args:
-            model: OpenAI model ID. Defaults to gpt-4o-2024-08-06 per the paper.
-            api_key: OpenAI API key. Falls back to OPENAI_API_KEY env var.
+            model: LLM model ID in DSPy/litellm format (e.g. "openai/gpt-4o-2024-08-06").
+            api_key: API key for the LLM provider. Falls back to OPENAI_API_KEY env var.
             default_question_type: Fallback type when question_type is not provided.
+            cache: Whether to cache LLM responses. Disabled by default for evaluation.
         """
         self.model = model
         self.default_question_type = default_question_type
-        self._client = OpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
 
-    def _call_judge(self, prompt: str) -> bool:
-        """Call the LLM judge and parse yes/no response."""
-        completion = self._client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
+        self.lm = dspy.LM(
+            model,
+            cache=cache,
+            api_key=api_key or os.environ.get("OPENAI_API_KEY"),
             temperature=0,
             max_tokens=10,
-            n=1,
         )
-        content = completion.choices[0].message.content or ""
-        return "yes" in content.strip().lower()
+        dspy.configure(lm=self.lm, track_usage=True)
 
-    def _get_usage(self, completion) -> tuple[int, int]:
-        """Extract token usage from an OpenAI completion."""
-        if completion.usage:
-            return completion.usage.prompt_tokens, completion.usage.completion_tokens
-        return 0, 0
+        self.judge = dspy.Predict(LongMemEvalJudgment)
+
+    def _call_judge(self, prompt: str) -> tuple[bool, int, int]:
+        """Call the LLM judge and parse yes/no response.
+
+        Returns:
+            Tuple of (aligned, input_tokens, output_tokens).
+        """
+        response = self.judge(evaluation_prompt=prompt)
+        content = response.judgment or ""
+        aligned = "yes" in content.strip().lower()
+
+        input_tokens = 0
+        output_tokens = 0
+        try:
+            usage = response.get_lm_usage()
+            if usage and self.model in usage:
+                input_tokens = usage[self.model].get("prompt_tokens", 0)
+                output_tokens = usage[self.model].get("completion_tokens", 0)
+        except Exception:
+            pass  # Token tracking is best-effort
+
+        return aligned, input_tokens, output_tokens
 
     # ------------------------------------------------------------------
     # LLMJudge protocol methods
@@ -186,7 +215,8 @@ class LongMemEvalJudge:
         """
         qtype = question_type or self.default_question_type
         prompt = _build_prompt(qtype, question, correct_answer, system_answer, question_id)
-        return self._call_judge(prompt)
+        aligned, _, _ = self._call_judge(prompt)
+        return aligned
 
     def evaluate_with_details(
         self,
@@ -213,17 +243,7 @@ class LongMemEvalJudge:
         is_abstention = question_id is not None and "_abs" in question_id
         prompt = _build_prompt(qtype, question, correct_answer, system_answer, question_id)
 
-        completion = self._client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=10,
-            n=1,
-        )
-
-        response_text = (completion.choices[0].message.content or "").strip()
-        aligned = "yes" in response_text.lower()
-        input_tokens, output_tokens = self._get_usage(completion)
+        aligned, input_tokens, output_tokens = self._call_judge(prompt)
 
         return {
             "aligned": aligned,

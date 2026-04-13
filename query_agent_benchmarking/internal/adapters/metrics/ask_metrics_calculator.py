@@ -206,7 +206,7 @@ class LongMemEvalAskCalculator:
     evaluation protocol from the LongMemEval paper (Wu et al., ICLR 2025).
     """
 
-    def __init__(self, model: str = "gpt-4o-2024-08-06", api_key: str | None = None):
+    def __init__(self, model: str = "openai/gpt-5.4", api_key: str | None = None):
         self.model = model
         self.judge = LongMemEvalJudge(model=model, api_key=api_key)
 
