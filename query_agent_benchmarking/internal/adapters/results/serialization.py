@@ -4,6 +4,10 @@ from datetime import datetime
 from typing import Any
 import json
 from query_agent_benchmarking.internal.core.domain.models import QueryResult, AskResult
+from query_agent_benchmarking.internal.core.domain.metrics_config import (
+    resolve_primary_metric,
+    ASK_METRIC_KEY_MAP,
+)
 
 
 # All results are saved to console/results/ at the project root
@@ -180,6 +184,36 @@ def save_trial_metrics(
         json.dump(metrics, f, indent=2)
 
 
+def _resolve_key_metric(aggregated_metrics: dict[str, Any], dataset_identifier: str) -> str | None:
+    """Determine the headline metric for an experiment.
+
+    For search experiments we look up the dataset's primary metric from the
+    metrics config registry.  For ask experiments we detect which calculator
+    was used from the metric keys present in the aggregated results.
+
+    Returns the key as it appears in the aggregated dict (e.g.
+    ``avg_nDCG_at_10_mean``), or ``None`` if it cannot be determined.
+    """
+    # Ask-mode detection: check for known ask metric keys
+    for ask_key in ASK_METRIC_KEY_MAP.values():
+        candidate = f"avg_{ask_key}_mean"
+        if candidate in aggregated_metrics:
+            return candidate
+
+    # Search-mode: use the dataset's primary metric from the registry
+    try:
+        primary = resolve_primary_metric(dataset_identifier)
+    except (ValueError, TypeError):
+        primary = None
+
+    if primary:
+        candidate = f"avg_{primary}_mean"
+        if candidate in aggregated_metrics:
+            return candidate
+
+    return None
+
+
 def save_aggregated_results(
     aggregated_metrics: dict[str, Any],
     config: dict[str, Any],
@@ -212,8 +246,13 @@ def save_aggregated_results(
 
     full_output_path = RESULTS_DIR / filename
 
+    # Determine the key (headline) metric for this experiment.
+    key_metric = _resolve_key_metric(aggregated_metrics, dataset_identifier)
+
     # Add metadata
     aggregated_metrics["timestamp"] = datetime.now().isoformat()
+    if key_metric:
+        aggregated_metrics["key_metric"] = key_metric
     aggregated_metrics["config"] = {
         "dataset": dataset_identifier,
         "agent_name": agent_name,

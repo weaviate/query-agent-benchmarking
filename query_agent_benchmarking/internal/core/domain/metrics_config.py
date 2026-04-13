@@ -27,6 +27,7 @@ class MetricsProfile:
     """A set of metrics to compute for a specific dataset pattern."""
     dataset_pattern: str
     metrics: tuple[MetricSpec, ...]
+    primary_metric: str | None = None
 
 
 # ============================================================================
@@ -45,67 +46,95 @@ DATASET_METRICS_REGISTRY: tuple[MetricsProfile, ...] = (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),
         MetricSpec("recall", {"k": 20}),
-    )),
+    ), primary_metric="recall_at_5"),
     MetricsProfile("wixqa", (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),
         MetricSpec("recall", {"k": 20}),
-    )),
+    ), primary_metric="recall_at_5"),
     MetricsProfile("freshstack-", (
         MetricSpec("recall", {"k": 50}),
         MetricSpec("coverage", {"k": 5}),
         MetricSpec("coverage", {"k": 10}),
         MetricSpec("coverage", {"k": 20}),
         MetricSpec("alpha_ndcg", {"alpha": 0.5, "k": 10}),
-    )),
+    ), primary_metric="alpha_ndcg_at_10"),
     MetricsProfile("beir/", (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),
         MetricSpec("recall", {"k": 20}),
         MetricSpec("nDCG", {"k": 10}),
-    )),
+    ), primary_metric="nDCG_at_10"),
     MetricsProfile("lotte/", (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),
         MetricSpec("recall", {"k": 20}),
         MetricSpec("success", {"k": 5}),
-    )),
+    ), primary_metric="success_at_5"),
     MetricsProfile("bright/", (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),
         MetricSpec("recall", {"k": 20}),
         MetricSpec("nDCG", {"k": 10}),
-    )),
+    ), primary_metric="nDCG_at_10"),
     MetricsProfile("irpapers", (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),
         MetricSpec("recall", {"k": 20}),
-    )),
+    ), primary_metric="recall_at_5"),
     MetricsProfile("vidore_v3_hr", (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),
         MetricSpec("recall", {"k": 20}),
         MetricSpec("nDCG", {"k": 10}),
-    )),
+    ), primary_metric="nDCG_at_10"),
     MetricsProfile("longmemeval-s", (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),
         MetricSpec("recall", {"k": 10}),
         MetricSpec("nDCG", {"k": 10}),
-    )),
+    ), primary_metric="nDCG_at_10"),
     MetricsProfile("longmemeval-m", (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),
         MetricSpec("recall", {"k": 10}),
         MetricSpec("nDCG", {"k": 10}),
-    )),
+    ), primary_metric="nDCG_at_10"),
     MetricsProfile("reasonir-biology-subset", (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),
         MetricSpec("recall", {"k": 20}),
         MetricSpec("nDCG", {"k": 10}),
-    )),
+    ), primary_metric="nDCG_at_10"),
 )
+
+
+_DEFAULT_PRIMARY_METRIC = "nDCG_at_10"
+
+# Ask-mode calculators write their own metric key. Map the calculator's
+# "metric" field to the aggregated-result key that serves as the headline.
+ASK_METRIC_KEY_MAP: dict[str, str] = {
+    "llm_judge": "alignment_score",
+    "exact_match": "exact_match_accuracy",
+    "officeqa_fuzzy_match": "officeqa_accuracy",
+    "longmemeval_judge": "alignment_score",
+}
+
+
+def resolve_primary_metric(dataset_name: str | None) -> str:
+    """Return the primary (headline) metric key for a dataset.
+
+    The returned key matches the suffix used in the aggregated results file,
+    e.g. ``"nDCG_at_10"`` which appears as ``avg_nDCG_at_10_mean``.
+    """
+    if dataset_name is None:
+        return _DEFAULT_PRIMARY_METRIC
+
+    for profile in DATASET_METRICS_REGISTRY:
+        if dataset_name == profile.dataset_pattern or dataset_name.startswith(profile.dataset_pattern):
+            return profile.primary_metric or _DEFAULT_PRIMARY_METRIC
+
+    return _DEFAULT_PRIMARY_METRIC
 
 
 def resolve_metrics_profile(dataset_name: str | None) -> tuple[MetricSpec, ...]:

@@ -287,28 +287,53 @@ export function saveLabel(id: string, label: string): void {
   fs.writeFileSync(LABELS_FILE, JSON.stringify(labels, null, 2));
 }
 
+/**
+ * Format a raw metric key into a human-readable label.
+ * e.g. "avg_nDCG_at_10_mean" -> "nDCG@10"
+ */
+function formatMetricKey(key: string): string {
+  let name = key.replace(/^avg_/, "").replace(/_mean$/, "");
+  name = name.replace(/recall_at_(\d+)/g, "Recall@$1");
+  name = name.replace(/nDCG_at_(\d+)/g, "nDCG@$1");
+  name = name.replace(/success_at_(\d+)/g, "Success@$1");
+  name = name.replace(/coverage_at_(\d+)/g, "Coverage@$1");
+  name = name.replace(/alpha_ndcg_at_(\d+)/g, "alpha-nDCG@$1");
+  name = name.replace("alignment_score", "Alignment");
+  name = name.replace("exact_match_accuracy", "Exact Match");
+  name = name.replace("officeqa_accuracy", "OfficeQA");
+  return name;
+}
+
 export function getKeyMetric(experiment: Experiment): { name: string; value: number | null } {
   const agg = experiment.aggregated;
   if (!agg) return { name: "N/A", value: null };
 
-  // Check for common metric keys
-  const metricKeys = [
-    "avg_alignment_score",
-    "avg_exact_match_accuracy",
-    "avg_recall@5",
-    "avg_nDCG@10",
-    "avg_recall@20",
-    "avg_recall@1",
+  // Prefer the explicit key_metric written by the Python serializer.
+  const keyMetricField = agg["key_metric"] as string | undefined;
+  if (keyMetricField && typeof agg[keyMetricField] === "number") {
+    return {
+      name: formatMetricKey(keyMetricField),
+      value: agg[keyMetricField] as number,
+    };
+  }
+
+  // Fallback: scan for known _mean metric keys (supports older result files
+  // that don't have a key_metric field yet).
+  const fallbackKeys = [
+    "avg_nDCG_at_10_mean",
+    "avg_alignment_score_mean",
+    "avg_exact_match_accuracy_mean",
+    "avg_officeqa_accuracy_mean",
+    "avg_success_at_5_mean",
+    "avg_alpha_ndcg_at_10_mean",
+    "avg_recall_at_5_mean",
+    "avg_recall_at_20_mean",
+    "avg_recall_at_1_mean",
   ];
 
-  for (const key of metricKeys) {
-    // Check both top-level and nested in mean
+  for (const key of fallbackKeys) {
     if (typeof agg[key] === "number") {
-      return { name: key.replace("avg_", ""), value: agg[key] as number };
-    }
-    const mean = agg["mean"] as Record<string, number> | undefined;
-    if (mean && typeof mean[key] === "number") {
-      return { name: key.replace("avg_", ""), value: mean[key] };
+      return { name: formatMetricKey(key), value: agg[key] as number };
     }
   }
 
