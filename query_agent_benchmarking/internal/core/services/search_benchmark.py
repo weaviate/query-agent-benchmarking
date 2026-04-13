@@ -27,7 +27,7 @@ from query_agent_benchmarking.internal.core.domain.query_execution import (
 from query_agent_benchmarking.internal.core.domain.analysis import aggregate_metrics
 from query_agent_benchmarking.internal.adapters.metrics.ir_metrics_calculator import IRMetricsCalculator
 from query_agent_benchmarking.internal.adapters.results.json_file_repository import JsonFileResultRepository
-from query_agent_benchmarking.internal.core.domain.display import pretty_print_in_memory_query, print_results_comparison
+from query_agent_benchmarking.internal.core.domain.display import pretty_print_in_memory_query, print_results_comparison, print_suite_results
 from query_agent_benchmarking.internal.config.loader import load_config, merge_configs
 from query_agent_benchmarking.internal.config.config import (
     supported_search_datasets,
@@ -59,7 +59,7 @@ def _resolve_search_agent_name(
     if isinstance(raw_agent_name, list):
         raise ValueError(
             "run_search_eval expects a single agent name. "
-            "Use run_search_evals for multiple agents."
+            "Use compare_search_agents for multiple agents."
         )
 
     target_vector = config.get("search_target")
@@ -371,7 +371,7 @@ def run_search_eval(
     return asyncio.run(_run_search_eval(final_config))
 
 
-def run_search_evals(
+def compare_search_agents(
     config_path: Optional[str] = None,
     search_dataset: Optional[str] = None,
     docs_collection: Optional[DocsCollection] = None,
@@ -447,3 +447,121 @@ def run_search_evals(
     print_results_comparison(all_results)
 
     return all_results
+
+
+def run_search_evals(
+    config_path: Optional[str] = None,
+    search_datasets: Optional[list[str]] = None,
+    agent_name: Optional[str] = None,
+    num_trials: Optional[int] = None,
+    use_subset: Optional[bool] = None,
+    num_samples: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    max_concurrent: Optional[int] = None,
+    use_async: Optional[bool] = None,
+    agents_host: Optional[str] = None,
+    external_service_host: Optional[str] = None,
+    output_path: Optional[str] = None,
+    random_seed: Optional[int] = None,
+    embedding_model: Optional[str] = None,
+    text_embedding_model: Optional[str] = None,
+    image_embedding_model: Optional[str] = None,
+    embedding_providers: Optional[Union[str, list[str]]] = None,
+    search_target: Optional[str] = None,
+    search_target_vector: Optional[str] = None,
+    **kwargs
+) -> dict[str, dict[str, Any]]:
+    """
+    Run search benchmark across multiple datasets and compare results.
+
+    Iterates over a list of search datasets, running a full evaluation for each,
+    then prints a cross-dataset comparison summary.
+
+    Args:
+        config_path: Path to YAML config file. Defaults to built-in config.
+        search_datasets: List of dataset names (e.g., ["bright/biology", "bright/economics"]).
+            Falls back to ``search_datasets`` in the config file.
+        agent_name: Agent to use for all datasets.
+        num_trials: Number of evaluation trials per dataset.
+        use_subset: Whether to use a random subset of queries.
+        num_samples: Number of samples if use_subset is True.
+        batch_size: Batch size for async processing.
+        max_concurrent: Max concurrent requests for async.
+        use_async: Whether to use async execution.
+        agents_host: Host URL for the agents service.
+        external_service_host: Host URL for external mode.
+        output_path: Base path to save results (dataset name is appended).
+        random_seed: Random seed for reproducibility.
+        embedding_model: Deprecated alias for text_embedding_model.
+        text_embedding_model: Text embedding model.
+        image_embedding_model: Image/multimodal embedding model.
+        embedding_providers: Provider list for header injection.
+        search_target: Canonical named vector(s).
+        search_target_vector: Legacy vector-name key.
+        **kwargs: Additional config overrides.
+
+    Returns:
+        Dict mapping dataset name to its aggregated metrics.
+    """
+    if config_path is None:
+        config_path = DEFAULT_CONFIG_PATH
+
+    file_config = load_config(config_path)
+
+    datasets = search_datasets or file_config.get("search_datasets")
+    if not datasets:
+        raise ValueError(
+            "No search_datasets provided. Specify via parameter or "
+            "in config file (search_datasets list)."
+        )
+
+    if isinstance(datasets, str):
+        datasets = [datasets]
+
+    override_config = {
+        "agent_name": agent_name,
+        "num_trials": num_trials,
+        "use_subset": use_subset,
+        "num_samples": num_samples,
+        "batch_size": batch_size,
+        "max_concurrent": max_concurrent,
+        "use_async": use_async,
+        "agents_host": agents_host,
+        "external_service_host": external_service_host,
+        "random_seed": random_seed,
+        "embedding_model": embedding_model,
+        "text_embedding_model": text_embedding_model,
+        "image_embedding_model": image_embedding_model,
+        "embedding_providers": embedding_providers,
+        "search_target": search_target,
+        "search_target_vector": search_target_vector,
+        **kwargs
+    }
+
+    suite_results: dict[str, dict[str, Any]] = {}
+    for dataset in datasets:
+        print(f"\n{'=' * 60}")
+        print(f"\033[92mDataset: {dataset}\033[0m")
+        print(f"{'=' * 60}\n")
+
+        dataset_override = override_config.copy()
+        dataset_override["search_dataset"] = dataset
+
+        if output_path:
+            path = Path(output_path)
+            safe_name = dataset.replace("/", "_")
+            dataset_override["output_path"] = str(
+                path.parent / f"{path.stem}_{safe_name}{path.suffix}"
+            )
+
+        try:
+            suite_results[dataset] = asyncio.run(
+                _run_search_eval(merge_configs(file_config, dataset_override))
+            )
+        except Exception as e:
+            print(f"\033[91mError running {dataset}: {e}\033[0m")
+            suite_results[dataset] = {"error": str(e)}
+
+    print_suite_results(suite_results)
+
+    return suite_results

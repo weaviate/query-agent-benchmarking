@@ -59,8 +59,8 @@ embedding_providers: "auto"
 ```
 
 ```python
-# Ablate across strategies with run_search_evals
-query_agent_benchmarking.run_search_evals(
+# Ablate across strategies with compare_search_agents
+query_agent_benchmarking.compare_search_agents(
     agent_names=[
         "hybrid-search[text_content_weaviate]",
         "hybrid-search[image_content_weaviate]",

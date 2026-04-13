@@ -1,5 +1,11 @@
 dataset_name: longmemeval-s
 
+# Multiple datasets — used by populate_db_multi
+dataset_names:
+  - bright/biology
+  - bright/earth_science
+  - bright/economics
+
 # Target database: "weaviate" (default) or "engram"
 database_target: engram
 

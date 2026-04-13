@@ -94,3 +94,55 @@ def print_results_comparison(all_results: dict[str, dict[str, Any]]) -> None:
                 print(f"  {format_name(metric_key)}: {value:.3f}")
 
     print()
+
+
+def print_suite_results(suite_results: dict[str, dict[str, Any]]) -> None:
+    """Print a comparison table of metrics across multiple datasets."""
+    if not suite_results:
+        return
+
+    # Collect all mean metrics across datasets
+    all_mean_metrics: set[str] = set()
+    for results in suite_results.values():
+        if "error" not in results:
+            for key, value in results.items():
+                if key.endswith("_mean") and isinstance(value, (int, float)):
+                    all_mean_metrics.add(key)
+
+    if not all_mean_metrics:
+        print("\nNo metrics to compare across datasets.")
+        return
+
+    priority_order = ["recall", "ndcg", "precision", "mrr", "query_time"]
+
+    def metric_priority(key):
+        for i, term in enumerate(priority_order):
+            if term in key.lower():
+                return (i, key)
+        return (len(priority_order), key)
+
+    sorted_metrics = sorted(all_mean_metrics, key=metric_priority)
+
+    def format_name(key):
+        name = key.replace("avg_", "").replace("_mean", "")
+        name = name.replace("recall_at_", "Recall@").replace("ndcg_at_k", "NDCG@10")
+        name = name.replace("query_time", "Time(s)")
+        return name
+
+    print("\n" + "=" * 60)
+    print("Suite Results (across datasets)")
+    print("=" * 60)
+
+    for dataset_name, results in suite_results.items():
+        print(f"\n\033[92m{dataset_name}\033[0m:")
+
+        if "error" in results:
+            print(f"  \033[91mERROR: {results['error']}\033[0m")
+            continue
+
+        for metric_key in sorted_metrics:
+            value = results.get(metric_key)
+            if value is not None:
+                print(f"  {format_name(metric_key)}: {value:.3f}")
+
+    print()
