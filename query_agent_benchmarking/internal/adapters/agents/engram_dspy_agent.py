@@ -30,14 +30,19 @@ class AnswerUserQueryWithMemory(dspy.Signature):
 
     Rules:
     - Do NOT infer, assume, or supplement with outside knowledge.
-    - Only mention specific products, brands, or details if they appear verbatim in the memories.
-    - If the memories do not contain enough information to fully answer the question, state what IS known from the memories and clearly identify what is missing.
-    - Do NOT fabricate plausible-sounding details to fill gaps."""
+    - Only mention specific products, brands, names, numbers, or details if they appear VERBATIM in the memories.
+    - BEFORE answering, verify that the question's premise matches the memories. If the question assumes something that contradicts or is not supported by the memories (e.g. a wrong role title, wrong date, wrong location, wrong name), do NOT answer the question as asked. Instead, state what the memories actually say and explain the discrepancy.
+    - If the memories do not contain enough information to answer, say so directly. Do NOT construct a plausible answer and then add a disclaimer.
+    - Do NOT fabricate plausible-sounding details to fill gaps.
+    - Do NOT repackage or embellish memory content into advice or suggestions beyond what is explicitly stored."""
 
     user_question: str = dspy.InputField()
     retrieved_memories: list[MemoryWithTimestamp] = dspy.InputField()
+    premise_check: str = dspy.OutputField(
+        desc="Check whether the question's premises (role titles, names, dates, events, quantities) match what is in the retrieved memories. State any discrepancies. If all premises match, say 'Premises verified.'"
+    )
     answer: str = dspy.OutputField(
-        desc="Answer grounded strictly in the retrieved memories. Only reference specifics (products, names, dates, preferences) that appear explicitly in the memories. State gaps honestly."
+        desc="Answer grounded strictly in the retrieved memories. If the premise check found discrepancies, address those instead of answering the question as asked. Do not offer advice or suggestions beyond what the memories explicitly contain."
     )
 
 

@@ -1,0 +1,49 @@
+{
+  "avg_query_time": 2.70242178440094,
+  "query_times": [
+    3.210210084915161,
+    2.8767430782318115,
+    5.197033882141113,
+    3.3629088401794434,
+    1.4370150566101074,
+    2.0321929454803467,
+    2.0462229251861572,
+    1.7965459823608398,
+    1.2587730884552002,
+    3.8065719604492188
+  ],
+  "misaligned_indices": [
+    3,
+    9
+  ],
+  "total_input_tokens": 12780,
+  "total_output_tokens": 2815,
+  "metric": "llm_judge",
+  "avg_alignment_score": 0.8,
+  "alignment_score_scores": [
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0
+  ],
+  "judge_model": "openai/gpt-5.4",
+  "ensemble_k": 3,
+  "judge_reasonings": [
+    "The system answer states that the asylum application took \"over a year\" to get approved and notes it does not have a more exact length. The correct answer is \"over a year.\" The key meaning matches exactly, with no contradiction or missing essential information.",
+    "The correct answer is simply \"2.\" The system answer states that the user went to 2 doctor\u2019s appointments in March and provides supporting details. It also correctly distinguishes a planned discussion about hand numbness from an actual attended appointment. This is semantically aligned with the correct answer.",
+    "The correct answer states a preference: suggest Sony-compatible accessories or high-quality photography gear, and avoid other brands' equipment or low-quality gear.\n\nThe system answer gives concrete accessory suggestions that are largely aligned with that preference:\n- It explicitly mentions Sony compatibility several times, including the Sony A7R IV and the Godox V1 Sony version.\n- The suggested gear is generally photography-related and appears to be positioned as quality gear.\n- It does include non-Sony brands like Gitzo and Godox, but the correct answer does not forbid all other brands; it says the user may not prefer other brands' equipment. Since those are still high-quality, relevant accessories and one is explicitly Sony-compatible, this is not a clear semantic contradiction.\n\nThe system answer is more specific than the correct answer, but it remains consistent with the core meaning: recommend Sony-compatible or high-quality photography accessories.",
+    "The correct answer says the user prefers dinner suggestions that use their homegrown cherry tomatoes and herbs such as basil and mint, with emphasis on showcasing garden produce. The system answer does mention basil and mint and suggests a healthy dinner using those herbs, which partially aligns. However, it omits the key ingredient of homegrown cherry tomatoes and does not clearly emphasize showcasing the garden produce as the main preference. Instead, it focuses on uncertainty and adds mixed greens salad from other memories. Because it misses an important part of the preference, the meanings are not fully equivalent.",
+    "The correct answer is \"$12.\" The system answer states that 5 coffee mugs cost about $60 total, which comes to about \"$12 per mug.\" This matches the intended meaning of the correct answer.",
+    "The correct answer is \"under my bed.\" The system answer explicitly states that you initially keep your old sneakers \"under your bed,\" which matches the required meaning. Although it adds extra information about them taking up space in the closet, the key requested location is correctly given, so it is semantically aligned.",
+    "The system answer matches the correct answer in both key facts: it says that at the start of the new Senior Software Engineer role, the user led 4 engineers, and now they lead 5 engineers. The extra explanation about the memory source does not change the meaning. Therefore, it is semantically aligned with the correct answer.",
+    "The correct answer is 25. The system answer states that since restarting postcard collecting, the user has added 25 new postcards, while also mentioning an older conflicting memory of 17. Despite the extra note, it clearly identifies the current total as 25, which matches the correct answer in meaning.",
+    "The correct answer is \"5\". The system answer states \"You have completed 5 painting projects since starting painting classes.\" This conveys the same quantity and meaning as the correct answer, with only added contextual wording. Therefore, the system answer is semantically aligned with the correct answer.",
+    "The correct answer says there is insufficient information because the provided memories mention starting a role as Senior Software Engineer, not Software Engineer Manager. The system answer instead infers that the user leads 5 engineers based on a separate memory about \u201cfive engineers plus their manager Rachel.\u201d This is a different conclusion and does not match the reference answer\u2019s key point that the information is not enough and the role mismatch matters. Therefore, the system answer is not semantically aligned with the correct answer."
+  ]
+}
