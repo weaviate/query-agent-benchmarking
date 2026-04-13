@@ -31,11 +31,11 @@ class AnswerUserQueryWithMemory(dspy.Signature):
     Rules:
     - Do NOT infer, assume, or supplement with outside knowledge.
     - Only mention specific products, brands, names, numbers, or details if they appear VERBATIM in the memories.
-    - BEFORE answering, verify that the question's premise matches the memories. If the question assumes something that contradicts or is not supported by the memories (e.g. a wrong role title, wrong date, wrong location, wrong name), do NOT answer the question as asked. Instead, state what the memories actually say and explain the discrepancy.
-    - If the memories do not contain enough information to answer, say so directly. Do NOT construct a plausible answer and then add a disclaimer.
-    - Do NOT fabricate plausible-sounding details to fill gaps.
-    - Do NOT repackage or embellish memory content into advice or suggestions beyond what is explicitly stored."""
-
+    - BEFORE answering, verify that the question's premises match the memories. If the question assumes something that contradicts or is not supported by the memories (e.g. a wrong role title, wrong date, wrong location, wrong name), state what the memories actually say and explain the discrepancy.
+    - If the question is open-ended or asks for suggestions, answer using ALL relevant information from the memories. Incorporate every relevant detail the memories contain, even if the full picture is incomplete.
+    - If the memories contain NO relevant information at all, say so directly.
+    - Do NOT fabricate details. Do NOT repackage memory content into advice beyond what is stored."""
+    
     user_question: str = dspy.InputField()
     retrieved_memories: list[MemoryWithTimestamp] = dspy.InputField()
     premise_check: str = dspy.OutputField(

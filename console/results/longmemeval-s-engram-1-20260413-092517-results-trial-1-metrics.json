@@ -1,0 +1,49 @@
+{
+  "avg_query_time": 2.645207166671753,
+  "query_times": [
+    2.084317922592163,
+    4.098024129867554,
+    5.301332950592041,
+    3.49814510345459,
+    1.4847660064697266,
+    1.2875871658325195,
+    3.109996795654297,
+    1.3238680362701416,
+    1.1553857326507568,
+    3.1086478233337402
+  ],
+  "misaligned_indices": [
+    3,
+    9
+  ],
+  "total_input_tokens": 11958,
+  "total_output_tokens": 2658,
+  "metric": "llm_judge",
+  "avg_alignment_score": 0.8,
+  "alignment_score_scores": [
+    1,
+    1,
+    1,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0
+  ],
+  "judge_model": "openai/gpt-5.4",
+  "ensemble_k": 3,
+  "judge_reasonings": [
+    "The correct answer is \"over a year.\" The system answer says the asylum application \"took over a year to get approved,\" which conveys the same duration for waiting on the decision. The added wording about approval does not change the core meaning relevant to the question.",
+    "The correct answer is simply \"2.\" The system answer states that there were 2 doctor\u2019s appointments in March and provides supporting details for those two appointments. This is semantically aligned with the correct answer because it gives the same count and does not contradict it.",
+    "The correct answer gives a general preference: suggest Sony-compatible accessories or other high-quality photography gear, and avoid other-brand incompatible gear or low-quality items.\n\nThe system answer provides specific accessory suggestions:\n- external battery pack for Sony A7R IV\n- camera bag for Sony gear\n- Gitzo tripod\n- Godox V1 flash in Sony version\n- protective cases for the flash\n\nThese are all accessories/high-quality gear and are framed as compatible with the Sony setup. This matches the intent of the correct answer. Although the system answer is more specific than the reference and includes non-Sony brands (Gitzo, Godox), the correct answer explicitly allows high-quality photography gear in addition to Sony-compatible accessories. So the meanings are aligned.",
+    "The correct answer says the user prefers dinner suggestions that use their homegrown cherry tomatoes and herbs like basil and mint, with emphasis on showcasing garden produce. The system answer says there is not enough information to say definitively, but it does mention fresh basil and mint and says a healthy dinner for a big family gathering using those herbs would fit. However, it omits the key ingredient of homegrown cherry tomatoes and does not capture the main preference of highlighting garden produce broadly. Because it misses an important part of the preference and frames the answer as insufficiently specified, it is not semantically equivalent to the correct answer.",
+    "The correct answer is \"$12.\" The system answer states that 5 coffee mugs cost about $60 total, which comes to about $12 per mug. This directly matches the requested per-mug cost, with only extra explanatory detail. The meaning is equivalent.",
+    "The system answer says the old sneakers are initially kept \"under your bed,\" which matches the correct answer \"under my bed\" in meaning. The change from first person to second person does not alter the semantic content. Therefore, the answers are equivalent.",
+    "The system answer matches the correct answer's key facts: it states an earlier count of 4 engineers and a current count of 5 engineers. This is semantically the same as \"When you just started... you led 4 engineers. Now, you lead 5 engineers.\" The extra detail about attendees and Rachel does not change the meaning.",
+    "The system answer states that since you started collecting again, you have added 25 new postcards. The correct answer is 25. These are semantically equivalent; the system answer simply restates the number in a full sentence.",
+    "The correct answer is \"5\". The system answer says \"You have completed 5 painting projects since starting painting classes.\" This conveys the same quantity and meaning, just with extra wording. Therefore, the system answer is semantically aligned with the correct answer.",
+    "The correct answer says there is insufficient information because the user was mentioned as starting a role as Senior Software Engineer, not Software Engineer Manager. The system answer instead claims there are five engineers and adds unsupported details about Rachel and team composition. This does not match the intended meaning and fails to note the role mismatch and lack of sufficient information."
+  ]
+}

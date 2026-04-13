@@ -1,7 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { TrialResultFile, SearchQuery, AskQuery } from "@/lib/results";
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [text]);
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
+      title="Copy formatted query to clipboard"
+    >
+      {copied ? "Copied!" : "Copy"}
+    </button>
+  );
+}
+
+function formatAskQueryForCopy(q: AskQuery): string {
+  return `Question: ${q.question}
+
+Ground Truth: ${q.ground_truth_answer}
+
+System Answer: ${q.system_answer}
+
+Judge Reasoning: ${q.judge_reasoning ?? "N/A"}`;
+}
 
 // We load data via an API route to support client-side filtering
 // But since we're using SSR, we'll use a hybrid approach
@@ -193,6 +224,7 @@ function AskQueriesTable({ queries }: { queries: AskQuery[] }) {
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-mono text-gray-500">{q.query_id}</span>
               <div className="flex items-center gap-3">
+                <CopyButton text={formatAskQueryForCopy(q)} />
                 <span className="text-xs text-gray-400">{q.time_taken.toFixed(2)}s</span>
                 {q.tenant_id && (
                   <span className="text-xs text-gray-400">tenant: {q.tenant_id}</span>

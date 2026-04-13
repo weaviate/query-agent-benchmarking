@@ -1,0 +1,129 @@
+{
+  "metadata": {
+    "dataset": "longmemeval-s",
+    "agent_name": "engram",
+    "trial_number": 1,
+    "total_queries": 10,
+    "total_errors": 0,
+    "total_misaligned": 2,
+    "timestamp": "2026-04-13T09:25:17.650388",
+    "mode": "ask"
+  },
+  "failed_query_ids": [],
+  "misaligned_query_ids": [
+    "q3",
+    "q9"
+  ],
+  "queries": [
+    {
+      "query_id": "q0",
+      "question": "How long did I wait for the decision on my asylum application?",
+      "ground_truth_answer": "over a year",
+      "system_answer": "Your asylum application took over a year to get approved.",
+      "time_taken": 2.084317922592163,
+      "is_error": false,
+      "tenant_id": "001be529",
+      "score": 1,
+      "judge_reasoning": "The correct answer is \"over a year.\" The system answer says the asylum application \"took over a year to get approved,\" which conveys the same duration for waiting on the decision. The added wording about approval does not change the core meaning relevant to the question."
+    },
+    {
+      "query_id": "q1",
+      "question": "How many doctor's appointments did I go to in March?",
+      "ground_truth_answer": "2",
+      "system_answer": "Based on the retrieved memories, you went to 2 doctor\u2019s appointments in March:\n- March 3: saw Dr. Smith\n- March 20: follow-up appointment with Dr. Thompson",
+      "time_taken": 4.098024129867554,
+      "is_error": false,
+      "tenant_id": "00ca467f",
+      "score": 1,
+      "judge_reasoning": "The correct answer is simply \"2.\" The system answer states that there were 2 doctor\u2019s appointments in March and provides supporting details for those two appointments. This is semantically aligned with the correct answer because it gives the same count and does not contradict it."
+    },
+    {
+      "query_id": "q2",
+      "question": "Can you suggest some accessories that would complement my current photography setup?",
+      "ground_truth_answer": "The user would prefer suggestions of Sony-compatible accessories or high-quality photography gear that can enhance their photography experience. They may not prefer suggestions of other brands' equipment or low-quality gear.",
+      "system_answer": "Based on the retrieved memories, accessories that would complement your current photography setup include:\n\n- An external battery pack that can charge a Sony A7R IV and other devices while traveling/on the go\n- A more comfortable and durable camera bag designed for Sony camera gear\n- A Gitzo GT3543LS tripod\n- A Godox V1 (Sony version) flash for use with your Sony A7R IV\n- Protective cases or pouches for a Godox V1 flash",
+      "time_taken": 5.301332950592041,
+      "is_error": false,
+      "tenant_id": "06878be2",
+      "score": 1,
+      "judge_reasoning": "The correct answer gives a general preference: suggest Sony-compatible accessories or other high-quality photography gear, and avoid other-brand incompatible gear or low-quality items.\n\nThe system answer provides specific accessory suggestions:\n- external battery pack for Sony A7R IV\n- camera bag for Sony gear\n- Gitzo tripod\n- Godox V1 flash in Sony version\n- protective cases for the flash\n\nThese are all accessories/high-quality gear and are framed as compatible with the Sony setup. This matches the intent of the correct answer. Although the system answer is more specific than the reference and includes non-Sony brands (Gitzo, Godox), the correct answer explicitly allows high-quality photography gear in addition to Sony-compatible accessories. So the meanings are aligned."
+    },
+    {
+      "query_id": "q3",
+      "question": "What should I serve for dinner this weekend with my homegrown ingredients?",
+      "ground_truth_answer": "The user would prefer dinner suggestions that incorporate their homegrown cherry tomatoes and herbs like basil and mint, highlighting recipes that showcase their garden produce. They might not prefer suggestions that do not utilize these specific ingredients or do not emphasize the use of homegrown elements.",
+      "system_answer": "The memories do not specify enough about your homegrown ingredients to say definitively what you should serve.\n\nWhat the memories do say is:\n- You are planning a big family dinner for your mom's 60th birthday.\n- You want healthy meal ideas, especially for a big family gathering.\n- You often use fresh basil and mint in your cooking.\n\nSo the only grounded answer is that a healthy dinner for a big family gathering that uses fresh basil and mint would fit the preferences described in the memories.",
+      "time_taken": 3.49814510345459,
+      "is_error": false,
+      "tenant_id": "06f04340",
+      "score": 0,
+      "judge_reasoning": "The correct answer says the user prefers dinner suggestions that use their homegrown cherry tomatoes and herbs like basil and mint, with emphasis on showcasing garden produce. The system answer says there is not enough information to say definitively, but it does mention fresh basil and mint and says a healthy dinner for a big family gathering using those herbs would fit. However, it omits the key ingredient of homegrown cherry tomatoes and does not capture the main preference of highlighting garden produce broadly. Because it misses an important part of the preference and frames the answer as insufficiently specified, it is not semantically equivalent to the correct answer."
+    },
+    {
+      "query_id": "q4",
+      "question": "How much did I spend on each coffee mug for my coworkers?",
+      "ground_truth_answer": "$12",
+      "system_answer": "The memories say you bought 5 coffee mugs for about $60 total, so that comes to about $12 per mug.",
+      "time_taken": 1.4847660064697266,
+      "is_error": false,
+      "tenant_id": "0100672e",
+      "score": 1,
+      "judge_reasoning": "The correct answer is \"$12.\" The system answer states that 5 coffee mugs cost about $60 total, which comes to about $12 per mug. This directly matches the requested per-mug cost, with only extra explanatory detail. The meaning is equivalent."
+    },
+    {
+      "query_id": "q5",
+      "question": "Where do I initially keep my old sneakers?",
+      "ground_truth_answer": "under my bed",
+      "system_answer": "Your old sneakers are initially kept under your bed.",
+      "time_taken": 1.2875871658325195,
+      "is_error": false,
+      "tenant_id": "07741c44",
+      "score": 1,
+      "judge_reasoning": "The system answer says the old sneakers are initially kept \"under your bed,\" which matches the correct answer \"under my bed\" in meaning. The change from first person to second person does not alter the semantic content. Therefore, the answers are equivalent."
+    },
+    {
+      "query_id": "q6",
+      "question": "How many engineers do I lead when I just started my new role as Senior Software Engineer? How many engineers do I lead now?",
+      "ground_truth_answer": "When you just started your new role as Senior Software Engineer, you led 4 engineers. Now, you lead 5 engineers",
+      "system_answer": "The memories show an earlier count of 4 engineers and a current count of 5 engineers.\n\nSpecifically, one memory says the outing estimate was updated from 5 attendees total\u20144 engineers plus Rachel\u2014to 6 attendees total\u20145 engineers plus their manager Rachel.",
+      "time_taken": 3.109996795654297,
+      "is_error": false,
+      "tenant_id": "031748ae",
+      "score": 1,
+      "judge_reasoning": "The system answer matches the correct answer's key facts: it states an earlier count of 4 engineers and a current count of 5 engineers. This is semantically the same as \"When you just started... you led 4 engineers. Now, you lead 5 engineers.\" The extra detail about attendees and Rachel does not change the meaning."
+    },
+    {
+      "query_id": "q7",
+      "question": "How many new postcards have I added to my collection since I started collecting again?",
+      "ground_truth_answer": "25",
+      "system_answer": "Since you started collecting again, you have added 25 new postcards to your collection.",
+      "time_taken": 1.3238680362701416,
+      "is_error": false,
+      "tenant_id": "01493427",
+      "score": 1,
+      "judge_reasoning": "The system answer states that since you started collecting again, you have added 25 new postcards. The correct answer is 25. These are semantically equivalent; the system answer simply restates the number in a full sentence."
+    },
+    {
+      "query_id": "q8",
+      "question": "How many projects have I completed since starting painting classes?",
+      "ground_truth_answer": "5",
+      "system_answer": "You have completed 5 painting projects since starting painting classes.",
+      "time_taken": 1.1553857326507568,
+      "is_error": false,
+      "tenant_id": "06db6396",
+      "score": 1,
+      "judge_reasoning": "The correct answer is \"5\". The system answer says \"You have completed 5 painting projects since starting painting classes.\" This conveys the same quantity and meaning, just with extra wording. Therefore, the system answer is semantically aligned with the correct answer."
+    },
+    {
+      "query_id": "q9",
+      "question": "How many engineers do I lead when I just started my new role as Software Engineer Manager?",
+      "ground_truth_answer": "The information provided is not enough. You mentioned starting the role as Senior Software Engineer but not Software Engineer Manager.",
+      "system_answer": "The memories say there are five engineers plus their manager Rachel. They do not support that you are the manager. Based on the retrieved memories, the team has five engineers.",
+      "time_taken": 3.1086478233337402,
+      "is_error": false,
+      "tenant_id": "031748ae_abs",
+      "score": 0,
+      "judge_reasoning": "The correct answer says there is insufficient information because the user was mentioned as starting a role as Senior Software Engineer, not Software Engineer Manager. The system answer instead claims there are five engineers and adds unsupported details about Rachel and team composition. This does not match the intended meaning and fails to note the role mismatch and lack of sufficient information."
+    }
+  ]
+}
