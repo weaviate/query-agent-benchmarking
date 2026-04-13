@@ -14,7 +14,7 @@ query-agent-ask:
   agents_host: https://api.agents.weaviate.io
 
 query-agent-search-only:
-  agents_host: https://api.agents.weaviate.io
+  agents_host: http://localhost:8000
 
 # =============================================================================
 # External Service (BYOS)

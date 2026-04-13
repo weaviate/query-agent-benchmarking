@@ -81,6 +81,7 @@ __all__ = [
     # Utilities
     "add_hard_negatives",
     "populate_db",
+    "populate_db_multi",
     "database_loader",
     "in_memory_dataset_loader",
     "in_memory_ask_dataset_loader",
