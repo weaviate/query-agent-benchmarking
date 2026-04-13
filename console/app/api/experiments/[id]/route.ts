@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loadExperiment } from "@/lib/results";
+import { loadExperiment, deleteExperimentFiles } from "@/lib/results";
 
 export const dynamic = "force-dynamic";
 
@@ -69,4 +69,19 @@ export async function GET(
       metrics: t.metrics,
     })),
   });
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const experiment = loadExperiment(id);
+
+  if (!experiment) {
+    return NextResponse.json({ error: "Experiment not found" }, { status: 404 });
+  }
+
+  const deletedCount = deleteExperimentFiles(id);
+  return NextResponse.json({ deleted: deletedCount });
 }

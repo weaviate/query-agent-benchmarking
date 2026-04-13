@@ -240,6 +240,25 @@ export function loadExperiment(id: string): Experiment | null {
   return experiments.find((e) => e.id === id) || null;
 }
 
+/** Return all JSON filenames on disk that belong to the given experiment id. */
+export function getExperimentFiles(id: string): string[] {
+  const baseName = decodeURIComponent(id);
+  const allFiles = getResultFiles();
+  return allFiles.filter((filename) => {
+    const classification = classifyFile(filename);
+    return classification !== null && classification.baseName === baseName;
+  });
+}
+
+/** Delete all JSON files that belong to the given experiment id. Returns count deleted. */
+export function deleteExperimentFiles(id: string): number {
+  const files = getExperimentFiles(id);
+  for (const filename of files) {
+    fs.unlinkSync(path.join(RESULTS_DIR, filename));
+  }
+  return files.length;
+}
+
 export function getKeyMetric(experiment: Experiment): { name: string; value: number | null } {
   const agg = experiment.aggregated;
   if (!agg) return { name: "N/A", value: null };
