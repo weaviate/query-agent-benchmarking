@@ -230,7 +230,10 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
     num_trials = config.get("num_trials", 1)
     metrics_across_trials = []
 
-    metrics_calculator = IRMetricsCalculator(dataset_name=dataset_identifier)
+    metrics_calculator = IRMetricsCalculator(
+        dataset_name=dataset_identifier,
+        extra_metrics=config.get("extra_metrics"),
+    )
     result_repo = JsonFileResultRepository()
 
     for trial in range(num_trials):
