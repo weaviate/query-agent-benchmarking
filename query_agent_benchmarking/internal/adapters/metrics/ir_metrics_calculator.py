@@ -10,7 +10,7 @@ import numpy as np
 from tqdm import tqdm
 
 from query_agent_benchmarking.internal.core.domain.models import QueryResult, InMemoryQuery
-from query_agent_benchmarking.internal.core.domain.metrics_config import MetricSpec, resolve_metrics_profile
+from query_agent_benchmarking.internal.core.domain.metrics_config import MetricSpec, resolve_metrics_profile, parse_extra_metrics
 from query_agent_benchmarking.internal.adapters.metrics.ir_metrics import (
     calculate_recall_at_k,
     calculate_success_at_k,
@@ -36,9 +36,16 @@ class IRMetricsCalculator:
     over a set of search results.
     """
 
-    def __init__(self, dataset_name: Optional[str] = None):
+    def __init__(
+        self,
+        dataset_name: Optional[str] = None,
+        extra_metrics: Optional[list[dict]] = None,
+    ):
         self.dataset_name = dataset_name
-        self.metric_specs = resolve_metrics_profile(dataset_name)
+        self.metric_specs = resolve_metrics_profile(
+            dataset_name,
+            extra_metrics=parse_extra_metrics(extra_metrics),
+        )
 
     def compute(
         self,

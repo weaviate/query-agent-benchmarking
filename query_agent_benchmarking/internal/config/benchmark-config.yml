@@ -1,7 +1,7 @@
 # =============================================================================
 # Search Mode Settings
 # =============================================================================
-search_agent_name: "bm25-search"
+search_agent_name: "external_service"
 search_dataset: bright/biology
 
 # See `named_vectors.md` for supported target vectors.
@@ -37,6 +37,18 @@ num_samples: 100
 
 num_trials: 1
 batch_size: 5
+
+# =============================================================================
+# Extra Metrics (appended to the dataset's default metric set)
+# =============================================================================
+# Each entry needs a "name" (recall, nDCG, success, coverage, alpha_ndcg)
+# and a "params" dict (usually just "k").
+# Example:
+extra_metrics:
+   - name: recall
+     params: {k: 50}
+   - name: recall
+     params: {k: 100}
 
 # =============================================================================
 # Embedding Model Comparison

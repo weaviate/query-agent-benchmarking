@@ -5,6 +5,7 @@ import pytest
 from query_agent_benchmarking.internal.core.domain.metrics_config import (
     MetricSpec,
     resolve_metrics_profile,
+    parse_extra_metrics,
     DATASET_METRICS_REGISTRY,
 )
 
@@ -56,6 +57,50 @@ class TestResolveMetricsProfile:
     def test_unknown_dataset_raises(self):
         with pytest.raises(ValueError, match="Unknown dataset"):
             resolve_metrics_profile("nonexistent_dataset")
+
+
+class TestExtraMetrics:
+    def test_extra_metrics_appended(self):
+        extra = (MetricSpec("recall", {"k": 50}), MetricSpec("recall", {"k": 100}))
+        metrics = resolve_metrics_profile("bright/biology", extra_metrics=extra)
+        keys = [m.key for m in metrics]
+        assert "recall_at_50" in keys
+        assert "recall_at_100" in keys
+
+    def test_extra_metrics_deduplicates(self):
+        extra = (MetricSpec("recall", {"k": 1}),)  # already in bright/ profile
+        metrics = resolve_metrics_profile("bright/biology", extra_metrics=extra)
+        keys = [m.key for m in metrics]
+        assert keys.count("recall_at_1") == 1
+
+    def test_extra_metrics_none_is_noop(self):
+        base = resolve_metrics_profile("bright/biology")
+        with_none = resolve_metrics_profile("bright/biology", extra_metrics=None)
+        assert base == with_none
+
+    def test_extra_metrics_empty_is_noop(self):
+        base = resolve_metrics_profile("bright/biology")
+        with_empty = resolve_metrics_profile("bright/biology", extra_metrics=())
+        assert base == with_empty
+
+
+class TestParseExtraMetrics:
+    def test_parse_valid(self):
+        raw = [{"name": "recall", "params": {"k": 50}}]
+        result = parse_extra_metrics(raw)
+        assert len(result) == 1
+        assert result[0].key == "recall_at_50"
+
+    def test_parse_none(self):
+        assert parse_extra_metrics(None) is None
+
+    def test_parse_empty(self):
+        assert parse_extra_metrics([]) is None
+
+    def test_parse_missing_params(self):
+        raw = [{"name": "nDCG"}]
+        result = parse_extra_metrics(raw)
+        assert result[0].params == {}
 
 
 class TestRegistryCompleteness:

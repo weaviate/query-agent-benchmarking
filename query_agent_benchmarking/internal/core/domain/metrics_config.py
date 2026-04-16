@@ -137,11 +137,16 @@ def resolve_primary_metric(dataset_name: str | None) -> str:
     return _DEFAULT_PRIMARY_METRIC
 
 
-def resolve_metrics_profile(dataset_name: str | None) -> tuple[MetricSpec, ...]:
+def resolve_metrics_profile(
+    dataset_name: str | None,
+    extra_metrics: tuple[MetricSpec, ...] | None = None,
+) -> tuple[MetricSpec, ...]:
     """Resolve the metrics specs for a given dataset name using prefix matching.
 
     Args:
         dataset_name: The dataset name to look up, or None for defaults.
+        extra_metrics: Additional MetricSpec instances to append to the
+            dataset's default set. Duplicates (same key) are skipped.
 
     Returns:
         Tuple of MetricSpec instances for the dataset.
@@ -150,10 +155,38 @@ def resolve_metrics_profile(dataset_name: str | None) -> tuple[MetricSpec, ...]:
         ValueError: If no matching profile is found for a non-None dataset name.
     """
     if dataset_name is None:
-        return _DEFAULT_METRICS
+        base = _DEFAULT_METRICS
+    else:
+        base = None
+        for profile in DATASET_METRICS_REGISTRY:
+            if dataset_name == profile.dataset_pattern or dataset_name.startswith(profile.dataset_pattern):
+                base = profile.metrics
+                break
+        if base is None:
+            raise ValueError(f"Unknown dataset: {dataset_name}")
 
-    for profile in DATASET_METRICS_REGISTRY:
-        if dataset_name == profile.dataset_pattern or dataset_name.startswith(profile.dataset_pattern):
-            return profile.metrics
+    if not extra_metrics:
+        return base
 
-    raise ValueError(f"Unknown dataset: {dataset_name}")
+    existing_keys = {spec.key for spec in base}
+    merged = list(base)
+    for spec in extra_metrics:
+        if spec.key not in existing_keys:
+            merged.append(spec)
+            existing_keys.add(spec.key)
+    return tuple(merged)
+
+
+def parse_extra_metrics(raw: list[dict] | None) -> tuple[MetricSpec, ...] | None:
+    """Parse extra_metrics from a config dict (YAML or kwargs).
+
+    Args:
+        raw: List of dicts with "name" and "params" keys, e.g.
+            ``[{"name": "recall", "params": {"k": 50}}]``.
+
+    Returns:
+        Tuple of MetricSpec instances, or None if input is empty/None.
+    """
+    if not raw:
+        return None
+    return tuple(MetricSpec(entry["name"], entry.get("params", {})) for entry in raw)
