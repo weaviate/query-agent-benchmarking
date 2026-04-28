@@ -1,6 +1,6 @@
 # Query Agent Benchmarking
 
-A Python library for benchmarking retrieval and question answering systems. Built for [Weaviate's Query Agent](https://docs.weaviate.io/agents/query), but designed to evaluate any system you can plug in.
+A tool for benchmarking retrieval and question answering systems. Built for [Weaviate's Query Agent](https://docs.weaviate.io/agents/query), but designed to evaluate any system you can plug in.
 
 It supports two evaluation modes:
 - **Search mode** — Ranked retrieval evaluation using IR metrics (Recall@K, nDCG@K, Coverage, alpha-nDCG)
@@ -10,17 +10,67 @@ It supports two evaluation modes:
 
 [9/25] 📊 Search Mode Benchmarking is [live](https://weaviate.io/blog/search-mode-benchmarking) on the Weaviate Blog.
 
-## Installation
+## Quick Start
+
+Clone the repo and install dependencies:
+```bash
+git clone https://github.com/weaviate/query-agent-benchmarking.git
+cd query-agent-benchmarking
+uv sync
+```
+
+Populate Weaviate with benchmark data:
+```bash
+uv run python3 scripts/populate-db.py
+```
+
+Run search eval:
+```bash
+uv run python3 scripts/run-search-benchmark.py
+```
+
+Run ask eval:
+```bash
+uv run python3 scripts/run-ask-benchmark.py
+```
+
+See `query_agent_benchmarking/benchmark-config.yml` to change the dataset, agent type (`hybrid-search`, `query-agent-search-mode`, etc.), number of samples, and concurrency parameters.
+
+## Using as a Python Library
+
+You can also install the package as a dependency and use it programmatically:
 
 ```bash
 pip install query-agent-benchmarking
 ```
 
-## Quick Start
+### Evaluate Weaviate's built-in agents
 
-### Search: Evaluate your own retriever
+```python
+import query_agent_benchmarking
 
-Bring your own retriever by passing any object that implements the `SearchAgent` protocol:
+# Search eval
+query_agent_benchmarking.run_search_eval(
+    search_dataset="beir/scifact/test",
+    agent_name="query-agent-search-mode",
+)
+
+# Compare multiple search agents
+query_agent_benchmarking.compare_search_agents(
+    search_dataset="beir/scifact/test",
+    agent_names=["hybrid-search", "query-agent-search-mode"],
+)
+
+# Ask eval
+query_agent_benchmarking.run_ask_eval(
+    ask_dataset="multihoprag",
+    agent_name="query-agent-ask-mode",
+)
+```
+
+### Bring your own retriever
+
+Pass any object that implements the `SearchAgent` protocol directly to `run_search_eval`:
 
 ```python
 from query_agent_benchmarking import run_search_eval, ObjectID
@@ -46,20 +96,7 @@ metrics = run_search_eval(
 
 The library handles dataset loading, query execution, metric computation (Recall@K, nDCG@K, etc.), and results aggregation. See [Bring Your Own Retriever](docs/3.run-custom-evals.md#bring-your-own-retriever) for the full protocol definition and more examples.
 
-### Ask: Evaluate a QA system
-
-Run question answering evaluation against built-in benchmarks, scored by an LLM judge:
-
-```python
-import query_agent_benchmarking
-
-query_agent_benchmarking.run_ask_eval(
-    ask_dataset="multihoprag",
-    agent_name="query-agent-ask-mode",
-)
-```
-
-Or evaluate with your own questions and ground-truth answers:
+### Evaluate with custom questions and answers
 
 ```python
 from query_agent_benchmarking import run_ask_eval, DocsCollection, InMemoryAskQuery
@@ -80,49 +117,6 @@ run_ask_eval(
     queries=queries,
 )
 ```
-
-### Evaluate Weaviate's built-in agents
-
-```python
-import query_agent_benchmarking
-
-# Search eval with a built-in agent
-query_agent_benchmarking.run_search_eval(
-    search_dataset="beir/scifact/test",
-    agent_name="query-agent-search-mode",
-)
-
-# Compare multiple search agents
-query_agent_benchmarking.compare_search_agents(
-    search_dataset="beir/scifact/test",
-    agent_names=["hybrid-search", "query-agent-search-mode"],
-)
-
-# Ask eval
-query_agent_benchmarking.run_ask_eval(
-    ask_dataset="multihoprag",
-    agent_name="query-agent-ask-mode",
-)
-```
-
-## How to Run Scripts 🧰
-
-Populate Weaviate with benchmark data:
-```
-uv run python3 scripts/populate-db.py
-```
-
-Run search eval:
-```
-uv run python3 scripts/run-search-benchmark.py
-```
-
-Run ask eval:
-```
-uv run python3 scripts/run-ask-benchmark.py
-```
-
-See `query_agent_benchmarking/benchmark-config.yml` to change the dataset populated in your Weaviate instance, as well as ablate `hybrid-search` or `query-agent-search-mode`, as well as the number of samples and concurrency parameters.
 
 ## Documentation
 
