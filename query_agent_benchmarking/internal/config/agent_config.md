@@ -107,12 +107,12 @@ Expected response format:
 
 ## Ask Agent Names
 
-### `query-agent-ask`
+### `query-agent-ask-mode`
 
 Wraps the Weaviate Query Agent in ask (RAG) mode. The agent retrieves relevant context and generates an answer.
 
 ```yaml
-ask_agent_name: "query-agent-ask"
+ask_agent_name: "query-agent-ask-mode"
 ```
 
 ### `external_service`

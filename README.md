@@ -55,7 +55,7 @@ import query_agent_benchmarking
 
 query_agent_benchmarking.run_ask_eval(
     ask_dataset="multihoprag",
-    agent_name="query-agent-ask",
+    agent_name="query-agent-ask-mode",
 )
 ```
 
@@ -101,7 +101,7 @@ query_agent_benchmarking.compare_search_agents(
 # Ask eval
 query_agent_benchmarking.run_ask_eval(
     ask_dataset="multihoprag",
-    agent_name="query-agent-ask",
+    agent_name="query-agent-ask-mode",
 )
 ```
 

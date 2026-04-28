@@ -10,7 +10,7 @@
 # =============================================================================
 # Weaviate Query Agent (default)
 # =============================================================================
-query-agent-ask:
+query-agent-ask-mode:
   agents_host: https://api.agents.weaviate.io
 
 query-agent-search-mode:

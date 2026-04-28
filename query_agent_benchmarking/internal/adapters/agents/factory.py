@@ -121,7 +121,7 @@ def create_ask_agent(
     """Create an AskAgent adapter based on agent_name.
 
     Args:
-        agent_name: One of "query-agent-ask" or "external_service".
+        agent_name: One of "query-agent-ask-mode" or "external_service".
         dataset_name: Built-in dataset name for collection resolution.
         docs_collection: Custom DocsCollection config.
         agents_host: Host URL for the Weaviate agents service.
@@ -135,7 +135,7 @@ def create_ask_agent(
     Returns:
         An object implementing the AskAgent protocol.
     """
-    if agent_name == "query-agent-ask":
+    if agent_name == "query-agent-ask-mode":
         return WeaviateQueryAgentAsk(
             dataset_name=dataset_name,
             docs_collection=docs_collection,
@@ -154,5 +154,5 @@ def create_ask_agent(
 
     raise ValueError(
         f"Unknown ask agent: '{agent_name}'. "
-        "Supported: 'query-agent-ask', 'external_service'"
+        "Supported: 'query-agent-ask-mode', 'external_service'"
     )
