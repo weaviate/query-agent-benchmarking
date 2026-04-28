@@ -1,6 +1,10 @@
 # Query Agent Benchmarking
 
-A Python library for benchmarking retrieval systems against standard IR datasets. Built for [Weaviate's Query Agent](https://docs.weaviate.io/agents/query), but designed to evaluate any retriever that returns ranked document IDs.
+A Python library for benchmarking retrieval and question answering systems. Built for [Weaviate's Query Agent](https://docs.weaviate.io/agents/query), but designed to evaluate any system you can plug in.
+
+It supports two evaluation modes:
+- **Search mode** — Ranked retrieval evaluation using IR metrics (Recall@K, nDCG@K, Coverage, alpha-nDCG)
+- **Ask mode** — Question answering evaluation using LLM-as-judge (DSPy-based ensemble voting for semantic alignment) or exact match accuracy
 
 ## News 📯
 
@@ -14,29 +18,25 @@ pip install query-agent-benchmarking
 
 ## Quick Start
 
-### Evaluate your own retriever
+### Search: Evaluate your own retriever
 
 Bring your own retriever by passing any object that implements the `SearchAgent` protocol:
 
 ```python
-from query_agent_benchmarking import run_search_eval, SearchAgent, ObjectID
+from query_agent_benchmarking import run_search_eval, ObjectID
 
 class MyRetriever:
     """Any class with a run() method returning list[ObjectID]."""
 
     def run(self, query: str, tenant=None) -> list[ObjectID]:
-        # Your retrieval logic here
         results = my_search_function(query)
         return [ObjectID(object_id=doc_id) for doc_id in results]
 
     async def run_async(self, query: str, tenant=None) -> list[ObjectID]:
         return self.run(query, tenant)
 
-    async def initialize_async(self) -> None:
-        pass  # Set up async resources (e.g., connection pools)
-
-    async def close_async(self) -> None:
-        pass  # Clean up async resources
+    async def initialize_async(self) -> None: pass
+    async def close_async(self) -> None: pass
 
 metrics = run_search_eval(
     search_dataset="beir/scifact/test",
@@ -44,26 +44,40 @@ metrics = run_search_eval(
 )
 ```
 
-The library handles dataset loading, query execution, metric computation (Recall@K, nDCG@K, etc.), and results aggregation. See `SearchAgent` in `query_agent_benchmarking/internal/core/ports/search_agent.py` for the full protocol definition.
+The library handles dataset loading, query execution, metric computation (Recall@K, nDCG@K, etc.), and results aggregation. See [Bring Your Own Retriever](docs/3.run-custom-evals.md#bring-your-own-retriever) for the full protocol definition and more examples.
 
-### Evaluate with custom queries
+### Ask: Evaluate a QA system
+
+Run question answering evaluation against built-in benchmarks, scored by an LLM judge:
 
 ```python
-from query_agent_benchmarking import run_search_eval, InMemoryQuery, DocsCollection
+import query_agent_benchmarking
+
+query_agent_benchmarking.run_ask_eval(
+    ask_dataset="multihoprag",
+    agent_name="query-agent-ask",
+)
+```
+
+Or evaluate with your own questions and ground-truth answers:
+
+```python
+from query_agent_benchmarking import run_ask_eval, DocsCollection, InMemoryAskQuery
 
 queries = [
-    InMemoryQuery(question="What is vector search?", dataset_ids=["doc_1", "doc_5"]),
-    InMemoryQuery(question="How does HNSW work?", dataset_ids=["doc_3"]),
+    InMemoryAskQuery(
+        question="What is HyDE?",
+        ground_truth_answer="HyDE stands for Hypothetical Document Embeddings...",
+    ),
 ]
 
-metrics = run_search_eval(
+run_ask_eval(
     docs_collection=DocsCollection(
-        collection_name="MyCollection",
+        collection_name="MyDocs",
         content_key="content",
         id_key="doc_id",
     ),
     queries=queries,
-    search_agent=MyRetriever(),
 )
 ```
 
@@ -72,16 +86,22 @@ metrics = run_search_eval(
 ```python
 import query_agent_benchmarking
 
-# Run with a built-in agent
+# Search eval with a built-in agent
 query_agent_benchmarking.run_search_eval(
     search_dataset="beir/scifact/test",
     agent_name="query-agent-search-only",
 )
 
-# Compare multiple agents
+# Compare multiple search agents
 query_agent_benchmarking.compare_search_agents(
     search_dataset="beir/scifact/test",
     agent_names=["hybrid-search", "query-agent-search-only"],
+)
+
+# Ask eval
+query_agent_benchmarking.run_ask_eval(
+    ask_dataset="multihoprag",
+    agent_name="query-agent-ask",
 )
 ```
 
@@ -92,9 +112,14 @@ Populate Weaviate with benchmark data:
 uv run python3 scripts/populate-db.py
 ```
 
-Run eval:
+Run search eval:
 ```
 uv run python3 scripts/run-search-benchmark.py
+```
+
+Run ask eval:
+```
+uv run python3 scripts/run-ask-benchmark.py
 ```
 
 See `query_agent_benchmarking/benchmark-config.yml` to change the dataset populated in your Weaviate instance, as well as ablate `hybrid-search` or `query-agent-search-only`, as well as the number of samples and concurrency parameters.
@@ -102,6 +127,6 @@ See `query_agent_benchmarking/benchmark-config.yml` to change the dataset popula
 ## Documentation
 
 - [1. Populate Database](docs/1.populate-db.md) — Load benchmark datasets into Weaviate
-- [2. Run Built-in Evals](docs/2.run-built-in-evals.md) — Evaluate Weaviate agents on standard benchmarks
-- [3. Run Custom Evals](docs/3.run-custom-evals.md) — Bring your own retriever, queries, or collections
+- [2. Run Built-in Evals](docs/2.run-built-in-evals.md) — Evaluate Weaviate agents on standard search and ask benchmarks
+- [3. Run Custom Evals](docs/3.run-custom-evals.md) — Bring your own retriever, QA system, queries, or collections
 - [Experimental](docs/experimental.md) — Synthetic benchmark creation and hard negatives
