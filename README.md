@@ -4,7 +4,7 @@ This repo contains a package for benchmarking the performance of Weaviate's [Que
 
 ## News 📯
 
-[9/25] 📊 Search Mode Benchmarking is live on the [Weaviate Blog](https://weaviate.io/blog/search-mode-benchmarking).
+[9/25] 📊 Search Mode Benchmarking is [live]((https://weaviate.io/blog/search-mode-benchmarking) on the Weaviate Blog.
 
 ## How to Run 🧰
 
