@@ -10,6 +10,7 @@ from typing import Optional, Any, Union
 
 from query_agent_benchmarking.internal.adapters.agents.factory import create_search_agent
 from query_agent_benchmarking.internal.adapters.agents.weaviate_search import parse_agent_name
+from query_agent_benchmarking.internal.core.ports.search_agent import SearchAgent
 from query_agent_benchmarking.internal.adapters.dataset import (
     in_memory_dataset_loader,
     load_queries_from_weaviate_collection,
@@ -184,48 +185,63 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
         queries = queries[:config["num_samples"]]
         print(f"Using a subset of {config['num_samples']} queries.")
 
-    text_embedding_model, image_embedding_model = _resolve_embedding_models(config)
-    agent_name = _resolve_search_agent_name(
-        config,
-        dataset_identifier=dataset_identifier,
-    )
-    _, resolved_target_vector = parse_agent_name(agent_name)
-    embedding_providers = resolve_embedding_providers(
-        dataset_name=dataset_identifier,
-        target_vector=resolved_target_vector,
-        embedding_providers=config.get("embedding_providers") or config.get("external_providers"),
-        embedding_models=[
-            text_embedding_model,
-            image_embedding_model,
-            config.get("embedding_model"),
-        ],
-    )
+    # Use a user-provided search agent if available; otherwise build one from config.
+    user_provided_agent: Optional[SearchAgent] = config.pop("search_agent", None)
 
-    config["search_agent_name"] = agent_name
-    config["agent_name"] = agent_name
-    if text_embedding_model is not None:
-        config["text_embedding_model"] = text_embedding_model
-        config["embedding_model"] = text_embedding_model
-    if image_embedding_model is not None:
-        config["image_embedding_model"] = image_embedding_model
-    if embedding_providers:
-        config["embedding_providers"] = embedding_providers
+    if user_provided_agent is not None:
+        if not isinstance(user_provided_agent, SearchAgent):
+            raise TypeError(
+                "search_agent must implement the SearchAgent protocol "
+                "(run, run_async, initialize_async, close_async). "
+                "See query_agent_benchmarking.SearchAgent for the interface."
+            )
+        query_agent = user_provided_agent
+        agent_name = config.get("search_agent_name") or config.get("agent_name") or type(user_provided_agent).__name__
+        config["search_agent_name"] = agent_name
+        config["agent_name"] = agent_name
+    else:
+        text_embedding_model, image_embedding_model = _resolve_embedding_models(config)
+        agent_name = _resolve_search_agent_name(
+            config,
+            dataset_identifier=dataset_identifier,
+        )
+        _, resolved_target_vector = parse_agent_name(agent_name)
+        embedding_providers = resolve_embedding_providers(
+            dataset_name=dataset_identifier,
+            target_vector=resolved_target_vector,
+            embedding_providers=config.get("embedding_providers") or config.get("external_providers"),
+            embedding_models=[
+                text_embedding_model,
+                image_embedding_model,
+                config.get("embedding_model"),
+            ],
+        )
 
-    agent_cfg = _load_agent_config(agent_name)
-    resolved_agents_host = agent_cfg.get("agents_host", agents_host)
-    resolved_external_service_host = agent_cfg.get("external_service_host", config.get("external_service_host"))
+        config["search_agent_name"] = agent_name
+        config["agent_name"] = agent_name
+        if text_embedding_model is not None:
+            config["text_embedding_model"] = text_embedding_model
+            config["embedding_model"] = text_embedding_model
+        if image_embedding_model is not None:
+            config["image_embedding_model"] = image_embedding_model
+        if embedding_providers:
+            config["embedding_providers"] = embedding_providers
 
-    query_agent = create_search_agent(
-        agent_name,
-        dataset_name=dataset_name,
-        docs_collection=docs_collection,
-        agents_host=resolved_agents_host,
-        embedding_model=text_embedding_model,
-        text_embedding_model=text_embedding_model,
-        image_embedding_model=image_embedding_model,
-        embedding_providers=embedding_providers,
-        external_service_host=resolved_external_service_host,
-    )
+        agent_cfg = _load_agent_config(agent_name)
+        resolved_agents_host = agent_cfg.get("agents_host", agents_host)
+        resolved_external_service_host = agent_cfg.get("external_service_host", config.get("external_service_host"))
+
+        query_agent = create_search_agent(
+            agent_name,
+            dataset_name=dataset_name,
+            docs_collection=docs_collection,
+            agents_host=resolved_agents_host,
+            embedding_model=text_embedding_model,
+            text_embedding_model=text_embedding_model,
+            image_embedding_model=image_embedding_model,
+            embedding_providers=embedding_providers,
+            external_service_host=resolved_external_service_host,
+        )
 
     num_trials = config.get("num_trials", 1)
     metrics_across_trials = []
@@ -288,6 +304,7 @@ def run_search_eval(
     docs_collection: Optional[DocsCollection] = None,
     queries: Optional[Union[QueriesCollection, list[InMemoryQuery], list[InMemorySearchQuery]]] = None,
     agent_name: Optional[str] = None,
+    search_agent: Optional[SearchAgent] = None,
     num_trials: Optional[int] = None,
     use_subset: Optional[bool] = None,
     num_samples: Optional[int] = None,
@@ -316,7 +333,11 @@ def run_search_eval(
         search_dataset: Name of built-in dataset (e.g., "beir/scifact", "enron").
         docs_collection: DocsCollection for custom datasets.
         queries: Queries as QueriesCollection, list[InMemoryQuery], or list[InMemorySearchQuery].
-        agent_name: Agent to use ("query-agent-search-only", "hybrid-search", or "external_service").
+        agent_name: Agent to use ("query-agent-search-mode", "hybrid-search", or "external_service").
+            Ignored when search_agent is provided.
+        search_agent: A user-provided retriever instance implementing the SearchAgent protocol.
+            When provided, the agent_name factory lookup is skipped and this object is used
+            directly. Must implement run() and run_async() returning list[ObjectID].
         num_trials: Number of evaluation trials to run.
         use_subset: Whether to use a random subset of queries.
         num_samples: Number of samples if use_subset is True.
@@ -350,6 +371,7 @@ def run_search_eval(
         "docs_collection": docs_collection,
         "queries": queries,
         "agent_name": agent_name,
+        "search_agent": search_agent,
         "num_trials": num_trials,
         "use_subset": use_subset,
         "num_samples": num_samples,

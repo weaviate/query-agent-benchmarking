@@ -37,7 +37,7 @@ def create_search_agent(
     """Create a SearchAgent adapter based on agent_name.
 
     Args:
-        agent_name: One of "query-agent-search-only", "hybrid-search",
+        agent_name: One of "query-agent-search-mode", "hybrid-search",
             "vector-search", "bm25-search", or "external_service".
             Hybrid and vector search support a ``[target_vector]`` suffix,
             e.g. ``"hybrid-search[text_content_weaviate]"``.
@@ -62,7 +62,7 @@ def create_search_agent(
         embedding_providers=embedding_providers,
     )
 
-    if base_name == "query-agent-search-only":
+    if base_name == "query-agent-search-mode":
         return WeaviateQueryAgentSearch(
             dataset_name=dataset_name,
             docs_collection=docs_collection,
@@ -100,7 +100,7 @@ def create_search_agent(
 
     raise ValueError(
         f"Unknown search agent: '{base_name}'. "
-        "Supported: 'query-agent-search-only', 'hybrid-search', "
+        "Supported: 'query-agent-search-mode', 'hybrid-search', "
         "'vector-search', 'bm25-search', 'external_service'"
     )
 
@@ -121,7 +121,7 @@ def create_ask_agent(
     """Create an AskAgent adapter based on agent_name.
 
     Args:
-        agent_name: One of "query-agent-ask" or "external_service".
+        agent_name: One of "query-agent-ask-mode" or "external_service".
         dataset_name: Built-in dataset name for collection resolution.
         docs_collection: Custom DocsCollection config.
         agents_host: Host URL for the Weaviate agents service.
@@ -135,7 +135,7 @@ def create_ask_agent(
     Returns:
         An object implementing the AskAgent protocol.
     """
-    if agent_name == "query-agent-ask":
+    if agent_name == "query-agent-ask-mode":
         return WeaviateQueryAgentAsk(
             dataset_name=dataset_name,
             docs_collection=docs_collection,
@@ -154,5 +154,5 @@ def create_ask_agent(
 
     raise ValueError(
         f"Unknown ask agent: '{agent_name}'. "
-        "Supported: 'query-agent-ask', 'external_service'"
+        "Supported: 'query-agent-ask-mode', 'external_service'"
     )

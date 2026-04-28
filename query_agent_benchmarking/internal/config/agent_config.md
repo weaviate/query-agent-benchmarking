@@ -30,14 +30,14 @@ Validation uses the named-vector registry in `query_agent_benchmarking.config` a
 
 ## Search Agent Names
 
-### `query-agent-search-only`
+### `query-agent-search-mode`
 
 Wraps the Weaviate [Query Agent](https://weaviate.io/developers/weaviate/agents/query) in search-only mode.
 
-`query-agent-search-only` does not support target-vector suffixes.
+`query-agent-search-mode` does not support target-vector suffixes.
 
 ```yaml
-search_agent_name: "query-agent-search-only"
+search_agent_name: "query-agent-search-mode"
 ```
 
 ### `hybrid-search`
@@ -107,12 +107,12 @@ Expected response format:
 
 ## Ask Agent Names
 
-### `query-agent-ask`
+### `query-agent-ask-mode`
 
 Wraps the Weaviate Query Agent in ask (RAG) mode. The agent retrieves relevant context and generates an answer.
 
 ```yaml
-ask_agent_name: "query-agent-ask"
+ask_agent_name: "query-agent-ask-mode"
 ```
 
 ### `external_service`

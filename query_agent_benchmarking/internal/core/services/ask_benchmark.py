@@ -131,7 +131,7 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
         system_prompt = get_system_prompt(queries_input)
 
     embedding_model = config.get("embedding_model")
-    agent_name = config.get("ask_agent_name", "query-agent-ask")
+    agent_name = config.get("ask_agent_name", "query-agent-ask-mode")
     external_service_host = config.get("external_service_host")
 
     config["agent_name"] = agent_name
@@ -282,7 +282,7 @@ def run_ask_eval(
         config_path: Path to YAML config file. Defaults to built-in config.
         ask_dataset: Name of built-in dataset for agent initialization (e.g., "irpapers/images").
         docs_collection: DocsCollection for custom datasets.
-        agent_name: Agent to use ("query-agent-ask" or "external").
+        agent_name: Agent to use ("query-agent-ask-mode" or "external").
         judge_model: LLM model for the judge (e.g., "openai/gpt-4.1").
         ensemble_k: Number of ensemble votes for judge.
         num_trials: Number of evaluation trials to run.
