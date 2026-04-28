@@ -37,7 +37,7 @@ def create_search_agent(
     """Create a SearchAgent adapter based on agent_name.
 
     Args:
-        agent_name: One of "query-agent-search-only", "hybrid-search",
+        agent_name: One of "query-agent-search-mode", "hybrid-search",
             "vector-search", "bm25-search", or "external_service".
             Hybrid and vector search support a ``[target_vector]`` suffix,
             e.g. ``"hybrid-search[text_content_weaviate]"``.
@@ -62,7 +62,7 @@ def create_search_agent(
         embedding_providers=embedding_providers,
     )
 
-    if base_name == "query-agent-search-only":
+    if base_name == "query-agent-search-mode":
         return WeaviateQueryAgentSearch(
             dataset_name=dataset_name,
             docs_collection=docs_collection,
@@ -100,7 +100,7 @@ def create_search_agent(
 
     raise ValueError(
         f"Unknown search agent: '{base_name}'. "
-        "Supported: 'query-agent-search-only', 'hybrid-search', "
+        "Supported: 'query-agent-search-mode', 'hybrid-search', "
         "'vector-search', 'bm25-search', 'external_service'"
     )
 

@@ -89,13 +89,13 @@ import query_agent_benchmarking
 # Search eval with a built-in agent
 query_agent_benchmarking.run_search_eval(
     search_dataset="beir/scifact/test",
-    agent_name="query-agent-search-only",
+    agent_name="query-agent-search-mode",
 )
 
 # Compare multiple search agents
 query_agent_benchmarking.compare_search_agents(
     search_dataset="beir/scifact/test",
-    agent_names=["hybrid-search", "query-agent-search-only"],
+    agent_names=["hybrid-search", "query-agent-search-mode"],
 )
 
 # Ask eval
@@ -122,7 +122,7 @@ Run ask eval:
 uv run python3 scripts/run-ask-benchmark.py
 ```
 
-See `query_agent_benchmarking/benchmark-config.yml` to change the dataset populated in your Weaviate instance, as well as ablate `hybrid-search` or `query-agent-search-only`, as well as the number of samples and concurrency parameters.
+See `query_agent_benchmarking/benchmark-config.yml` to change the dataset populated in your Weaviate instance, as well as ablate `hybrid-search` or `query-agent-search-mode`, as well as the number of samples and concurrency parameters.
 
 ## Documentation
 

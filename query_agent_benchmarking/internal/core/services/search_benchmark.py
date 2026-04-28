@@ -333,7 +333,7 @@ def run_search_eval(
         search_dataset: Name of built-in dataset (e.g., "beir/scifact", "enron").
         docs_collection: DocsCollection for custom datasets.
         queries: Queries as QueriesCollection, list[InMemoryQuery], or list[InMemorySearchQuery].
-        agent_name: Agent to use ("query-agent-search-only", "hybrid-search", or "external_service").
+        agent_name: Agent to use ("query-agent-search-mode", "hybrid-search", or "external_service").
             Ignored when search_agent is provided.
         search_agent: A user-provided retriever instance implementing the SearchAgent protocol.
             When provided, the agent_name factory lookup is skipped and this object is used

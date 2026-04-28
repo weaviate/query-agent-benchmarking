@@ -13,7 +13,7 @@
 query-agent-ask:
   agents_host: https://api.agents.weaviate.io
 
-query-agent-search-only:
+query-agent-search-mode:
   agents_host: https://api.agents.weaviate.io
 
 # =============================================================================
