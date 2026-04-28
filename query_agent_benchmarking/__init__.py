@@ -35,6 +35,7 @@ from .internal.core.domain.models import (
 )
 
 # Agent exports
+from .internal.core.ports.search_agent import SearchAgent
 from .internal.adapters.agents.factory import create_search_agent, create_ask_agent
 from .internal.adapters.agents.engram_dspy_agent import EngramDSPyAgent
 
@@ -109,6 +110,7 @@ __all__ = [
     "AskResult",
     "AskQueriesCollection",
     # Agents
+    "SearchAgent",
     "create_search_agent",
     "create_ask_agent",
     "EngramDSPyAgent",
