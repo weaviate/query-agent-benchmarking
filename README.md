@@ -3,8 +3,8 @@
 A tool for benchmarking retrieval and question answering systems. Built for [Weaviate's Query Agent](https://docs.weaviate.io/agents/query), but designed to evaluate any system you can plug in.
 
 It supports two evaluation modes:
-- **Search mode** — Ranked retrieval evaluation using IR metrics (Recall@K, nDCG@K, Coverage, alpha-nDCG)
-- **Ask mode** — Question answering evaluation using LLM-as-judge (DSPy-based ensemble voting for semantic alignment) or exact match accuracy
+- **Search** — Ranked retrieval evaluation using IR metrics (Recall@K, nDCG@K, Coverage, alpha-nDCG)
+- **Ask** — Question answering evaluation using LLM-as-judge (DSPy-based ensemble voting for semantic alignment) or exact match accuracy
 
 ## News 📯
 
