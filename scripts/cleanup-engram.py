@@ -39,11 +39,11 @@ def delete_memories_for_user(client: EngramClient, user_id: str) -> int:
 
     while True:
         results = client.memories.search(
-            query="",
+            query="memory",
             user_id=user_id,
             group=GROUP,
             retrieval_config=RetrievalConfig(
-                retrieval_type="fetch",
+                retrieval_type="hybrid",
                 limit=FETCH_LIMIT,
             ),
         )
