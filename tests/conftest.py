@@ -1,5 +1,10 @@
 """Shared test fixtures for query agent benchmarking tests."""
 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*prefix.*InputField/OutputField.*")
+
+import dspy  # noqa: F401 — force dspy import while our filter is active
+
 import pytest
 
 from query_agent_benchmarking.internal.mocks import (

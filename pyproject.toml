@@ -38,6 +38,9 @@ exclude = ["notebooks*", "results*", "locust*", "ci*"]
 #   uv run pytest tests/functional/ -v
 testpaths = ["tests"]
 addopts = "--ignore=tests/functional"
+filterwarnings = [
+    "ignore:The 'prefix' argument:DeprecationWarning",
+]
 
 [dependency-groups]
 dev = [

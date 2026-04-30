@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore", message=".*prefix.*InputField/OutputField.*", category=DeprecationWarning)
+
 from dotenv import load_dotenv
 
 from .experimental.add_hard_negatives import add_hard_negatives

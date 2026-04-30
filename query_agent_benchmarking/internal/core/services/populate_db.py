@@ -64,7 +64,7 @@ def _run_engram_loader(config: dict, dataset_name: str) -> None:
         users_to_test=users_to_test,
     )
 
-    engram_ingest_all_tenants(docs_by_tenant)
+    engram_ingest_all_tenants(docs_by_tenant, poll=True)
 
 
 def _run_weaviate_loader(
