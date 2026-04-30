@@ -14,7 +14,11 @@ from engram import EngramClient, ConversationInput, MessageInput
 
 
 def _parse_session_text(session_text: str) -> ConversationInput:
-    """Parse a ``user: ... \\nassistant: ...`` session string into a ConversationInput."""
+    """Parse a ``user: ... \\nassistant: ...`` session string into a ConversationInput.
+
+    Filters out any messages with empty content, which can occur when the
+    dataset contains lines like ``user: \\nassistant: ...`` (empty user turn).
+    """
     messages: list[MessageInput] = []
     current_role: str | None = None
     current_lines: list[str] = []
@@ -23,9 +27,11 @@ def _parse_session_text(session_text: str) -> ConversationInput:
         if line.startswith("user: ") or line.startswith("assistant: "):
             # Flush the previous message
             if current_role is not None:
-                messages.append(
-                    MessageInput(role=current_role, content="\n".join(current_lines))
-                )
+                content = "\n".join(current_lines).strip()
+                if content:
+                    messages.append(
+                        MessageInput(role=current_role, content=content)
+                    )
             if line.startswith("user: "):
                 current_role = "user"
                 current_lines = [line[len("user: "):]]
@@ -38,9 +44,11 @@ def _parse_session_text(session_text: str) -> ConversationInput:
 
     # Flush the last message
     if current_role is not None:
-        messages.append(
-            MessageInput(role=current_role, content="\n".join(current_lines))
-        )
+        content = "\n".join(current_lines).strip()
+        if content:
+            messages.append(
+                MessageInput(role=current_role, content=content)
+            )
 
     return ConversationInput(messages=messages)
 
@@ -93,6 +101,12 @@ def _submit_all(
 
         for session in sessions:
             conversation = _parse_session_text(session["session_text"])
+            if not conversation.messages:
+                skipped += 1
+                if verbose:
+                    sid = session.get("session_id", "?")
+                    print(f"  Skipped session {sid} for tenant {tenant_id}: no valid messages after parsing")
+                continue
             t_submit = time.time()
             try:
                 run = client.memories.add(
@@ -146,20 +160,26 @@ def _poll_and_collect(
 
     for rec in records:
         # Poll until done
-        while True:
-            status = client.runs.get(rec.run_id)
-            if status.status in ("completed", "failed", "deleted"):
-                break
-            time.sleep(poll_interval)
+        try:
+            while True:
+                status = client.runs.get(rec.run_id)
+                if status.status in ("completed", "failed", "deleted"):
+                    break
+                time.sleep(poll_interval)
+        except Exception as e:
+            if verbose:
+                print(f"  Failed to poll run {rec.run_id} (tenant {rec.tenant_id}): {e}")
+            completed += 1
+            continue
 
         completed += 1
         run_duration = time.time() - rec.submitted_at
 
         # Collect memory operation counts
         ops = status.committed_operations
-        created = len(getattr(ops, "created", []))
-        updated = len(getattr(ops, "updated", []))
-        deleted = len(getattr(ops, "deleted", []))
+        created = len(getattr(ops, "created", []) or [])
+        updated = len(getattr(ops, "updated", []) or [])
+        deleted = len(getattr(ops, "deleted", []) or [])
 
         if rec.tenant_id not in stats_map:
             stats_map[rec.tenant_id] = TenantIngestionStats(

@@ -70,3 +70,18 @@ class TestParseSessionText:
     def test_empty_string(self):
         result = _parse_session_text("")
         assert len(result.messages) == 0
+
+    def test_empty_message_content_filtered(self):
+        """Messages with empty content should be dropped (Engram rejects them)."""
+        text = "user: \nassistant: Here is the answer"
+        result = _parse_session_text(text)
+        assert len(result.messages) == 1
+        assert result.messages[0].role == "assistant"
+        assert result.messages[0].content == "Here is the answer"
+
+    def test_whitespace_only_message_filtered(self):
+        """Messages with only whitespace should be dropped."""
+        text = "user:   \nassistant: Response"
+        result = _parse_session_text(text)
+        assert len(result.messages) == 1
+        assert result.messages[0].role == "assistant"
