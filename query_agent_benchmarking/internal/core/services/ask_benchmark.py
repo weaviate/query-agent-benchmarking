@@ -29,6 +29,7 @@ from query_agent_benchmarking.internal.adapters.metrics.ask_metrics_calculator i
     LMJudgeAskCalculator,
     ExactMatchAskCalculator,
     OfficeQAAskCalculator,
+    LongMemEvalAskCalculator,
 )
 from query_agent_benchmarking.internal.adapters.results.json_file_repository import JsonFileResultRepository
 from query_agent_benchmarking.internal.config.loader import load_config, merge_configs
@@ -121,10 +122,13 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     use_exact_match = config.get("use_exact_match", False)
     use_officeqa_metric = config.get("use_officeqa_metric", False)
     officeqa_tolerance = config.get("officeqa_tolerance", 0.00)
+    use_longmemeval = config.get("use_longmemeval_metric", False)
     if isinstance(queries_input, str) and queries_input == "multihoprag":
         use_exact_match = True
     if isinstance(queries_input, str) and queries_input == "officeqa":
         use_officeqa_metric = True
+    if isinstance(queries_input, str) and queries_input.startswith("longmemeval"):
+        use_longmemeval = True
 
     system_prompt = config.get("system_prompt")
     if not system_prompt and isinstance(queries_input, str):
@@ -169,7 +173,9 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     num_trials = config.get("num_trials", 1)
     metrics_across_trials = []
 
-    if use_officeqa_metric:
+    if use_longmemeval:
+        metrics_calculator = LongMemEvalAskCalculator(model=judge_model)
+    elif use_officeqa_metric:
         metrics_calculator = OfficeQAAskCalculator(tolerance=officeqa_tolerance)
     elif use_exact_match:
         metrics_calculator = ExactMatchAskCalculator()
@@ -178,7 +184,10 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
 
     result_repo = JsonFileResultRepository()
 
-    if use_officeqa_metric:
+    if use_longmemeval:
+        score_key = "avg_alignment_score"
+        scores_key = "alignment_score_scores"
+    elif use_officeqa_metric:
         score_key = "avg_officeqa_accuracy"
         scores_key = "officeqa_accuracy_scores"
     elif use_exact_match:
