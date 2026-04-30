@@ -1,5 +1,7 @@
 import warnings
-warnings.filterwarnings("ignore", message=".*prefix.*InputField/OutputField.*", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning, module=r"dspy\..*")
+
+import dspy  # noqa: F401 — force import while filter is active
 
 from dotenv import load_dotenv
 

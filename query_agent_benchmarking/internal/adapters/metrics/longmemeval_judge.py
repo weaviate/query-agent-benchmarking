@@ -163,7 +163,6 @@ class LongMemEvalJudge:
             temperature=1,
             max_tokens=10,
         )
-        dspy.configure(lm=self.lm, track_usage=True)
 
         self.judge = dspy.Predict(LongMemEvalJudgment)
 
@@ -173,7 +172,8 @@ class LongMemEvalJudge:
         Returns:
             Tuple of (aligned, input_tokens, output_tokens).
         """
-        response = self.judge(evaluation_prompt=prompt)
+        with dspy.context(lm=self.lm):
+            response = self.judge(evaluation_prompt=prompt)
         content = response.judgment or ""
         aligned = "yes" in content.strip().lower()
 

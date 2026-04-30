@@ -85,6 +85,7 @@ def _submit_all(
     records: list[RunRecord] = []
     total = sum(len(sessions) for sessions in docs_by_tenant.values())
     submitted = 0
+    skipped = 0
 
     for tenant_id in sorted(docs_by_tenant.keys()):
         user_id = f"{user_id_prefix}{tenant_id}"
@@ -93,11 +94,19 @@ def _submit_all(
         for session in sessions:
             conversation = _parse_session_text(session["session_text"])
             t_submit = time.time()
-            run = client.memories.add(
-                conversation,
-                user_id=user_id,
-                group=group,
-            )
+            try:
+                run = client.memories.add(
+                    conversation,
+                    user_id=user_id,
+                    group=group,
+                    conversation_id=session.get("session_id"),
+                )
+            except Exception as e:
+                skipped += 1
+                if verbose:
+                    sid = session.get("session_id", "?")
+                    print(f"  Skipped session {sid} for tenant {tenant_id}: {e}")
+                continue
             records.append(RunRecord(
                 run_id=run.run_id,
                 tenant_id=tenant_id,
@@ -113,6 +122,8 @@ def _submit_all(
 
     if verbose:
         print(f"  All {submitted} sessions submitted across {len(docs_by_tenant)} tenants")
+        if skipped:
+            print(f"  Skipped {skipped} sessions due to errors")
 
     return records
 
