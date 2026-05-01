@@ -99,7 +99,7 @@ class EngramDSPyAgent:
         # TODO: dspy.configure() sets a global LM — this will overwrite any
         # existing DSPy LM config in the process. Consider using dspy.context()
         # for scoped configuration once DSPy supports it cleanly.
-        lm = dspy.LM(dspy_lm_model, api_key=os.environ.get("OPENAI_API_KEY"))
+        lm = dspy.LM(dspy_lm_model, api_key=os.environ.get("OPENAI_API_KEY"), cache=False)
         dspy.configure(lm=lm)
         self.qa_system = dspy.Predict(AnswerUserQueryWithMemory)
 
