@@ -42,9 +42,22 @@ function displayName(exp: CompareExperiment): string {
   return exp.label || `${exp.dataset} / ${exp.agent_name}`;
 }
 
+/* Brand-aligned experiment colors using secondary palette */
+const EXP_COLORS = [
+  { fg: "var(--color-teal)", bg: "rgba(122,199,192,0.12)" },
+  { fg: "var(--color-lavender)", bg: "rgba(165,144,221,0.12)" },
+  { fg: "var(--color-sky)", bg: "rgba(122,214,235,0.12)" },
+  { fg: "var(--color-mint)", bg: "rgba(188,240,167,0.15)" },
+  { fg: "var(--color-periwinkle)", bg: "rgba(185,200,222,0.15)" },
+];
+
 export default function ComparePage() {
   return (
-    <Suspense fallback={<div className="py-20 text-center text-gray-500">Loading comparison...</div>}>
+    <Suspense
+      fallback={
+        <div className="py-20 text-center" style={{ color: "var(--text-muted)" }}>Loading comparison...</div>
+      }
+    >
       <ComparePageInner />
     </Suspense>
   );
@@ -68,20 +81,12 @@ function ComparePageInner() {
         if (!r.ok) throw new Error("Failed to load comparison data");
         return r.json();
       })
-      .then((d) => {
-        setData(d);
-        setLoading(false);
-      })
-      .catch((e) => {
-        setError(e.message);
-        setLoading(false);
-      });
+      .then((d) => { setData(d); setLoading(false); })
+      .catch((e) => { setError(e.message); setLoading(false); });
   }, [ids]);
 
-  // Compute analysis for each metric
   const analysis = useMemo(() => {
     if (!data) return null;
-
     const { metricKeys, experiments } = data;
     const metricAnalysis: Record<
       string,
@@ -108,7 +113,6 @@ function ComparePageInner() {
       };
     }
 
-    // Win counts (excluding time)
     const wins = experiments.map(() => 0);
     for (const key of metricKeys) {
       if (isTimeMetric(key)) continue;
@@ -120,14 +124,19 @@ function ComparePageInner() {
   }, [data]);
 
   if (loading) {
-    return <div className="py-20 text-center text-gray-500">Loading comparison...</div>;
+    return (
+      <div className="py-20 text-center" style={{ color: "var(--text-muted)" }}>
+        <div className="inline-block w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mb-3" style={{ borderColor: "var(--color-green)", borderTopColor: "transparent" }} />
+        <p>Loading comparison...</p>
+      </div>
+    );
   }
 
   if (error || !data) {
     return (
       <div className="py-20 text-center">
-        <p className="text-red-500 mb-4">{error ?? "Unknown error"}</p>
-        <a href="/" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
+        <p className="mb-4" style={{ color: "var(--color-coral)" }}>{error ?? "Unknown error"}</p>
+        <a href="/" className="text-sm font-semibold" style={{ color: "var(--color-green)" }}>
           &larr; Back to dashboard
         </a>
       </div>
@@ -135,72 +144,88 @@ function ComparePageInner() {
   }
 
   const { metricKeys, experiments } = data;
-  const colors = [
-    "text-blue-600 dark:text-blue-400",
-    "text-purple-600 dark:text-purple-400",
-    "text-emerald-600 dark:text-emerald-400",
-    "text-orange-600 dark:text-orange-400",
-    "text-pink-600 dark:text-pink-400",
-  ];
 
   return (
     <div>
-      <div className="mb-6">
-        <a href="/" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-          &larr; Back to dashboard
+      {/* ── Breadcrumb ───────────────────────────────────────────────────── */}
+      <nav className="flex items-center gap-2 mb-8 text-sm" style={{ color: "var(--text-muted)" }}>
+        <a href="/" className="transition-colors hover:underline" style={{ color: "var(--color-green)" }}>
+          Experiments
         </a>
-      </div>
+        <span>/</span>
+        <span style={{ color: "var(--text-primary)" }}>Compare</span>
+      </nav>
 
-      <h1 className="text-2xl font-bold mb-6">Compare Experiments</h1>
+      <h1 className="text-2xl font-bold mb-6" style={{ fontFamily: "var(--font-display)" }}>
+        Compare Experiments
+      </h1>
 
-      {/* Experiment legend */}
-      <div className="grid gap-3 mb-8" style={{ gridTemplateColumns: `repeat(${Math.min(experiments.length, 3)}, 1fr)` }}>
-        {experiments.map((exp, i) => (
-          <div
-            key={exp.id}
-            className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`font-bold text-lg ${colors[i % colors.length]}`}>
-                [{i + 1}]
-              </span>
-              <span className="font-semibold text-sm">{displayName(exp)}</span>
+      {/* ── Experiment legend ─────────────────────────────────────────────── */}
+      <div
+        className="grid gap-4 mb-8"
+        style={{ gridTemplateColumns: `repeat(${Math.min(experiments.length, 3)}, 1fr)` }}
+      >
+        {experiments.map((exp, i) => {
+          const c = EXP_COLORS[i % EXP_COLORS.length];
+          return (
+            <div
+              key={exp.id}
+              className="brand-card p-5"
+              style={{ borderLeft: `3px solid ${c.fg.replace("var(", "").replace(")", "")}` }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span
+                  className="brand-badge"
+                  style={{ background: c.bg, color: c.fg, fontWeight: 700 }}
+                >
+                  {i + 1}
+                </span>
+                <span className="font-semibold text-sm" style={{ fontFamily: "var(--font-display)" }}>
+                  {displayName(exp)}
+                </span>
+              </div>
+              {exp.label && (
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  {exp.dataset} &middot;{" "}
+                  <span style={{ fontFamily: "var(--font-mono)" }}>{exp.agent_name}</span>
+                </p>
+              )}
+              {!exp.label && (
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  Agent: <span style={{ fontFamily: "var(--font-mono)" }}>{exp.agent_name}</span>
+                </p>
+              )}
+              <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                {exp.num_trials} trials &middot;{" "}
+                {exp.timestamp ? new Date(exp.timestamp).toLocaleString() : "--"}
+              </p>
             </div>
-            {exp.label && (
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {exp.dataset} &middot; <span className="font-mono">{exp.agent_name}</span>
-              </p>
-            )}
-            {!exp.label && (
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Agent: <span className="font-mono">{exp.agent_name}</span>
-              </p>
-            )}
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Trials: {exp.num_trials} &middot;{" "}
-              {exp.timestamp ? new Date(exp.timestamp).toLocaleString() : "--"}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Metrics comparison table */}
+      {/* ── Metrics comparison table ─────────────────────────────────────── */}
       <section className="mb-10">
-        <h2 className="text-lg font-semibold mb-4">Metrics</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+        <h2 className="text-lg font-bold mb-4" style={{ fontFamily: "var(--font-display)" }}>
+          Metrics
+        </h2>
+        <div className="brand-card overflow-x-auto">
+          <table className="w-full text-sm text-left brand-table">
+            <thead>
               <tr>
-                <th className="py-3 pr-4">Metric</th>
-                {experiments.map((exp, i) => (
-                  <th key={exp.id} className="py-3 pr-4 text-right">
-                    <span className={colors[i % colors.length]}>[{i + 1}]</span>{" "}
-                    {exp.label || exp.agent_name}
-                  </th>
-                ))}
-                {experiments.length === 2 && (
-                  <th className="py-3 pr-4 text-right">Delta</th>
-                )}
+                <th>Metric</th>
+                {experiments.map((exp, i) => {
+                  const c = EXP_COLORS[i % EXP_COLORS.length];
+                  return (
+                    <th key={exp.id} className="text-right">
+                      <span className="brand-badge mr-1" style={{ background: c.bg, color: c.fg, fontWeight: 700 }}>
+                        {i + 1}
+                      </span>
+                      {exp.label || exp.agent_name}
+                    </th>
+                  );
+                })}
+                {experiments.length === 2 && <th className="text-right">Delta</th>}
               </tr>
             </thead>
             <tbody>
@@ -209,16 +234,13 @@ function ComparePageInner() {
                 const best = analysis?.metricAnalysis[key].bestIdx ?? null;
 
                 return (
-                  <tr
-                    key={key}
-                    className="border-b border-gray-100 dark:border-gray-800"
-                  >
-                    <td className="py-3 pr-4 font-medium">{formatMetricName(key)}</td>
+                  <tr key={key}>
+                    <td className="font-semibold">{formatMetricName(key)}</td>
                     {experiments.map((exp, i) => {
                       const val = exp.metrics[key];
                       if (val === null) {
                         return (
-                          <td key={i} className="py-3 pr-4 text-right text-gray-400">
+                          <td key={i} className="text-right" style={{ color: "var(--text-muted)" }}>
                             --
                           </td>
                         );
@@ -228,48 +250,57 @@ function ComparePageInner() {
                       return (
                         <td
                           key={i}
-                          className={`py-3 pr-4 text-right font-mono ${
-                            isBest
-                              ? "text-green-600 dark:text-green-400 font-bold"
-                              : ""
-                          }`}
+                          className="text-right"
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontWeight: isBest ? 700 : 400,
+                            color: isBest ? "var(--color-green)" : "var(--text-primary)",
+                          }}
                         >
                           {formatted}
                         </td>
                       );
                     })}
-                    {experiments.length === 2 && (() => {
-                      const v0 = experiments[0].metrics[key];
-                      const v1 = experiments[1].metrics[key];
-                      if (v0 === null || v1 === null) {
-                        return <td className="py-3 pr-4 text-right text-gray-400">--</td>;
-                      }
-                      const delta = v1 - v0;
-                      if (Math.abs(delta) < 1e-9) {
+                    {experiments.length === 2 &&
+                      (() => {
+                        const v0 = experiments[0].metrics[key];
+                        const v1 = experiments[1].metrics[key];
+                        if (v0 === null || v1 === null) {
+                          return (
+                            <td className="text-right" style={{ color: "var(--text-muted)" }}>
+                              --
+                            </td>
+                          );
+                        }
+                        const delta = v1 - v0;
+                        if (Math.abs(delta) < 1e-9) {
+                          return (
+                            <td
+                              className="text-right"
+                              style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}
+                            >
+                              0
+                            </td>
+                          );
+                        }
+                        const isImprovement = isTime ? delta < 0 : delta > 0;
+                        const sign = delta > 0 ? "+" : "";
+                        const formatted = isTime
+                          ? `${sign}${delta.toFixed(2)}s`
+                          : `${sign}${(delta * 100).toFixed(2)}%`;
                         return (
-                          <td className="py-3 pr-4 text-right text-gray-400 font-mono">
-                            0
+                          <td
+                            className="text-right"
+                            style={{
+                              fontFamily: "var(--font-mono)",
+                              fontWeight: 600,
+                              color: isImprovement ? "var(--color-green)" : "var(--color-coral)",
+                            }}
+                          >
+                            {formatted}
                           </td>
                         );
-                      }
-                      // For time: negative is better. For metrics: positive is better.
-                      const isImprovement = isTime ? delta < 0 : delta > 0;
-                      const sign = delta > 0 ? "+" : "";
-                      const formatted = isTime
-                        ? `${sign}${delta.toFixed(2)}s`
-                        : `${sign}${(delta * 100).toFixed(2)}%`;
-                      return (
-                        <td
-                          className={`py-3 pr-4 text-right font-mono ${
-                            isImprovement
-                              ? "text-green-600 dark:text-green-400"
-                              : "text-red-600 dark:text-red-400"
-                          }`}
-                        >
-                          {formatted}
-                        </td>
-                      );
-                    })()}
+                      })()}
                   </tr>
                 );
               })}
@@ -278,78 +309,91 @@ function ComparePageInner() {
         </div>
       </section>
 
-      {/* Analysis section */}
+      {/* ── Analysis section ──────────────────────────────────────────────── */}
       {analysis && (
         <section>
-          <h2 className="text-lg font-semibold mb-4">Analysis</h2>
+          <h2 className="text-lg font-bold mb-4" style={{ fontFamily: "var(--font-display)" }}>
+            Analysis
+          </h2>
 
           {/* Win counts */}
-          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 mb-6">
-            <h3 className="text-sm font-semibold mb-3 text-gray-500 uppercase">
-              Metric Wins (excluding time)
-            </h3>
+          <div className="brand-card p-6 mb-6">
+            <h3 className="eyebrow mb-4">Metric Wins (excluding time)</h3>
             <div className="flex gap-6">
               {experiments.map((exp, i) => {
+                const c = EXP_COLORS[i % EXP_COLORS.length];
                 const total = metricKeys.filter((k) => !isTimeMetric(k)).length;
                 const winPct = total > 0 ? (analysis.wins[i] / total) * 100 : 0;
                 return (
                   <div key={exp.id} className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className={`font-bold ${colors[i % colors.length]}`}>
-                        [{i + 1}]
+                      <span
+                        className="brand-badge"
+                        style={{ background: c.bg, color: c.fg, fontWeight: 700 }}
+                      >
+                        {i + 1}
                       </span>
-                      <span className="text-sm">{displayName(exp)}</span>
+                      <span className="text-sm font-semibold">{displayName(exp)}</span>
                     </div>
-                    <div className="text-2xl font-bold">{analysis.wins[i]}</div>
-                    <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 mt-2">
+                    <div className="text-3xl font-bold" style={{ fontFamily: "var(--font-display)", color: c.fg }}>
+                      {analysis.wins[i]}
+                    </div>
+                    <div className="w-full h-2 rounded-full mt-2" style={{ background: "var(--border-subtle)" }}>
                       <div
-                        className="bg-green-500 h-2 rounded-full transition-all"
-                        style={{ width: `${winPct}%` }}
+                        className="h-2 rounded-full transition-all"
+                        style={{ width: `${winPct}%`, background: c.fg }}
                       />
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">{winPct.toFixed(0)}%</div>
+                    <div className="text-xs mt-1" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                      {winPct.toFixed(0)}%
+                    </div>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          {/* Speed comparison (if time metric exists) */}
-          {experiments.length === 2 && (() => {
-            const timeKey = metricKeys.find((k) => isTimeMetric(k));
-            if (!timeKey) return null;
-            const t0 = experiments[0].metrics[timeKey];
-            const t1 = experiments[1].metrics[timeKey];
-            if (t0 === null || t1 === null) return null;
+          {/* Speed comparison */}
+          {experiments.length === 2 &&
+            (() => {
+              const timeKey = metricKeys.find((k) => isTimeMetric(k));
+              if (!timeKey) return null;
+              const t0 = experiments[0].metrics[timeKey];
+              const t1 = experiments[1].metrics[timeKey];
+              if (t0 === null || t1 === null) return null;
 
-            const faster = t0 < t1 ? 0 : 1;
-            const slower = 1 - faster;
-            const speedup = ((Math.max(t0, t1) - Math.min(t0, t1)) / Math.max(t0, t1)) * 100;
+              const faster = t0 < t1 ? 0 : 1;
+              const slower = 1 - faster;
+              const speedup =
+                ((Math.max(t0, t1) - Math.min(t0, t1)) / Math.max(t0, t1)) * 100;
 
-            if (speedup < 0.1) return null;
+              if (speedup < 0.1) return null;
 
-            return (
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-5 mb-6">
-                <h3 className="text-sm font-semibold mb-3 text-gray-500 uppercase">
-                  Speed
-                </h3>
-                <p className="text-sm">
-                  <span className={`font-bold ${colors[faster % colors.length]}`}>
-                    [{faster + 1}] {displayName(experiments[faster])}
-                  </span>{" "}
-                  is{" "}
-                  <span className="font-bold text-green-600 dark:text-green-400">
-                    {speedup.toFixed(1)}% faster
-                  </span>{" "}
-                  than{" "}
-                  <span className={`font-bold ${colors[slower % colors.length]}`}>
-                    [{slower + 1}] {displayName(experiments[slower])}
-                  </span>{" "}
-                  ({Math.min(t0, t1).toFixed(2)}s vs {Math.max(t0, t1).toFixed(2)}s avg query time)
-                </p>
-              </div>
-            );
-          })()}
+              const cFaster = EXP_COLORS[faster % EXP_COLORS.length];
+              const cSlower = EXP_COLORS[slower % EXP_COLORS.length];
+
+              return (
+                <div className="brand-card p-6 mb-6">
+                  <h3 className="eyebrow mb-3">Speed</h3>
+                  <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                    <span className="font-bold" style={{ color: cFaster.fg }}>
+                      [{faster + 1}] {displayName(experiments[faster])}
+                    </span>{" "}
+                    is{" "}
+                    <span className="font-bold" style={{ color: "var(--color-green)" }}>
+                      {speedup.toFixed(1)}% faster
+                    </span>{" "}
+                    than{" "}
+                    <span className="font-bold" style={{ color: cSlower.fg }}>
+                      [{slower + 1}] {displayName(experiments[slower])}
+                    </span>{" "}
+                    <span style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                      ({Math.min(t0, t1).toFixed(2)}s vs {Math.max(t0, t1).toFixed(2)}s)
+                    </span>
+                  </p>
+                </div>
+              );
+            })()}
 
           {/* Biggest differences */}
           {(() => {
@@ -365,25 +409,25 @@ function ComparePageInner() {
             if (diffs.length === 0) return null;
 
             return (
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-5">
-                <h3 className="text-sm font-semibold mb-3 text-gray-500 uppercase">
-                  Largest Differences
-                </h3>
-                <div className="space-y-2">
+              <div className="brand-card p-6">
+                <h3 className="eyebrow mb-4">Largest Differences</h3>
+                <div className="space-y-3">
                   {diffs.slice(0, 5).map((d) => (
                     <div key={d.key} className="flex items-center gap-3">
-                      <span className="text-sm font-medium w-40">
-                        {formatMetricName(d.key)}
-                      </span>
-                      <div className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-full h-2">
+                      <span className="text-sm font-semibold w-40">{formatMetricName(d.key)}</span>
+                      <div className="flex-1 h-2 rounded-full" style={{ background: "var(--border-subtle)" }}>
                         <div
-                          className="bg-blue-500 h-2 rounded-full"
+                          className="h-2 rounded-full"
                           style={{
                             width: `${Math.min((d.spread! / 0.5) * 100, 100)}%`,
+                            background: "var(--gradient-teal-green)",
                           }}
                         />
                       </div>
-                      <span className="text-xs font-mono text-gray-500 w-20 text-right">
+                      <span
+                        className="text-xs w-20 text-right"
+                        style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}
+                      >
                         {(d.spread! * 100).toFixed(2)}%
                       </span>
                     </div>
