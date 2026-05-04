@@ -46,6 +46,8 @@
   --text-muted: #8896ab;
   --border-default: #dce4ed;
   --border-subtle: #e8eef4;
+  --bg-card-success: #f2faf4;
+  --bg-card-error: #fef5f5;
 }
 
 .dark {
@@ -58,6 +60,8 @@
   --text-muted: #7b89a8;
   --border-default: #2d2775;
   --border-subtle: #231d65;
+  --bg-card-success: #14224a;
+  --bg-card-error: #2a1040;
 }
 
 @theme inline {

@@ -211,12 +211,12 @@ function AskQueriesView({ queries }: { queries: AskQuery[] }) {
               ? "var(--color-green)"
               : "var(--color-coral)";
         const bgTint = isError
-          ? "rgba(244,64,78,0.04)"
+          ? "var(--bg-card-error)"
           : isCorrect
-            ? "rgba(97,189,115,0.04)"
+            ? "var(--bg-card-success)"
             : q.score === 0
-              ? "rgba(244,64,78,0.03)"
-              : "transparent";
+              ? "var(--bg-card-error)"
+              : "var(--bg-card)";
 
         const statusLabel = isError ? "Error" : isCorrect ? "Correct" : q.score === 0 ? "Incorrect" : undefined;
         const statusBg = isError
@@ -323,7 +323,7 @@ function SearchQueriesView({ queries }: { queries: SearchQuery[] }) {
             return (
               <tr
                 key={q.query_id}
-                style={!hasOverlap ? { background: "rgba(244,64,78,0.04)" } : {}}
+                style={!hasOverlap ? { background: "var(--bg-card-error)" } : {}}
               >
                 <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem" }}>{q.query_id}</td>
                 <td className="max-w-xs truncate">{q.question}</td>
