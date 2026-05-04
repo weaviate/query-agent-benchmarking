@@ -160,8 +160,6 @@ class LongMemEvalJudge:
             model,
             cache=cache,
             api_key=api_key or os.environ.get("OPENAI_API_KEY"),
-            temperature=1,
-            max_tokens=10,
         )
 
         self.judge = dspy.Predict(LongMemEvalJudgment)
