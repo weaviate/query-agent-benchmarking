@@ -114,6 +114,10 @@ code, pre, .font-mono {
   border-color: var(--color-green);
 }
 
+.dark .brand-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
 .brand-badge {
   display: inline-flex;
   align-items: center;

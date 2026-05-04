@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import "./globals.css";
+import ThemeToggle from "./components/ThemeToggle";
 
 const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-display-loaded",
@@ -21,13 +22,28 @@ export const metadata: Metadata = {
   description: "Dashboard for Weaviate Query Agent benchmark results",
 };
 
+// Inline script to apply dark class before first paint, preventing FOUC
+const themeInitScript = `
+(function() {
+  try {
+    var t = localStorage.getItem('theme');
+    if (t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    }
+  } catch(e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className={`${plusJakarta.variable} ${inter.variable} antialiased`}>
         <header className="brand-header px-6 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center gap-3 group">
@@ -65,6 +81,7 @@ export default function RootLayout({
             >
               Experiments
             </a>
+            <ThemeToggle />
           </nav>
         </header>
         <main className="px-6 py-8 max-w-7xl mx-auto hex-pattern min-h-[calc(100vh-64px)]">
