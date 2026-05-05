@@ -18,7 +18,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "query-agent-evals",
+  title: "query-agent-benchmarking",
   description: "Dashboard for Weaviate Query Agent benchmark results",
 };
 
@@ -57,13 +57,13 @@ export default function RootLayout({
               className="text-lg font-bold tracking-tight leading-none"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              query-agent-evals
+              query-agent-benchmarking
             </span>
             <span
               className="hidden sm:inline text-xs leading-none opacity-50"
               style={{ fontFamily: "var(--font-mono)" }}
             >
-              v0.1
+              v0.7
             </span>
           </a>
           <nav className="flex items-center gap-4">
