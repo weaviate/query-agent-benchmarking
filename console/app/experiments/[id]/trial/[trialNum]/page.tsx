@@ -26,13 +26,34 @@ function CopyButton({ text }: { text: string }) {
 }
 
 function formatAskQueryForCopy(q: AskQuery): string {
-  return `Question: ${q.question}
+  let text = `${q.query_id}
+${q.question_type ?? ""}
+${q.time_taken.toFixed(2)}s
+${q.tenant_id ? `tenant: ${q.tenant_id}` : ""}
+${q.score !== undefined ? (q.score === 1 ? "Correct" : "Incorrect") + ": " + q.score : ""}
+Question
+${q.question}
 
-Ground Truth: ${q.ground_truth_answer}
+Ground Truth
+${q.ground_truth_answer}
 
-System Answer: ${q.system_answer}
+System Answer
+${q.system_answer}`;
 
-Judge Reasoning: ${q.judge_reasoning ?? "N/A"}`;
+  if (q.retrieved_context) {
+    const ctx = q.retrieved_context as Record<string, unknown>;
+    const memories = Array.isArray(ctx.memories) ? ctx.memories as { memory: string; time_added?: string }[] : null;
+    if (memories) {
+      text += `\n\nRetrieved Context\n${memories.length}`;
+      memories.forEach((m, i) => {
+        text += `\n\nMemory ${i + 1}\n${m.time_added ?? ""}\n${m.memory}`;
+      });
+    } else {
+      text += `\n\nRetrieved Context\n${JSON.stringify(ctx, null, 2)}`;
+    }
+  }
+
+  return text;
 }
 
 export default function TrialQueriesPage({
