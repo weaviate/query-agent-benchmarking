@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import type { TrialResultFile, SearchQuery, AskQuery } from "@/lib/results";
 
 function CopyButton({ text }: { text: string }) {
@@ -43,6 +43,7 @@ export default function TrialQueriesPage({
   const [params, setParams] = useState<{ id: string; trialNum: string } | null>(null);
   const [data, setData] = useState<TrialResultFile | null>(null);
   const [filter, setFilter] = useState<"all" | "correct" | "incorrect" | "errors">("all");
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"id" | "time">("id");
   const [loading, setLoading] = useState(true);
 
@@ -72,6 +73,16 @@ export default function TrialQueriesPage({
   const mode = data.metadata.mode;
   const isAsk = mode === "ask";
 
+  // Collect unique question types for the type filter
+  const questionTypes = useMemo(() => {
+    if (!isAsk) return [];
+    const types = new Set<string>();
+    for (const q of data.queries as AskQuery[]) {
+      if (q.question_type) types.add(q.question_type);
+    }
+    return [...types].sort();
+  }, [data.queries, isAsk]);
+
   let filteredQueries: SearchQuery[] | AskQuery[];
   if (isAsk) {
     let askQueries = data.queries as AskQuery[];
@@ -82,6 +93,9 @@ export default function TrialQueriesPage({
         if (filter === "errors") return q.is_error;
         return true;
       });
+    }
+    if (typeFilter) {
+      askQueries = askQueries.filter((q) => q.question_type === typeFilter);
     }
     if (sortBy === "time") {
       askQueries = [...askQueries].sort((a, b) => b.time_taken - a.time_taken);
@@ -167,6 +181,28 @@ export default function TrialQueriesPage({
             ))}
           </div>
         )}
+        {isAsk && questionTypes.length > 0 && (
+          <div className="flex gap-1 items-center">
+            <span className="eyebrow mr-2">Type</span>
+            <button
+              onClick={() => setTypeFilter(null)}
+              className="brand-btn-secondary"
+              style={!typeFilter ? { background: "var(--color-green)", color: "var(--color-navy)", borderColor: "var(--color-green)" } : {}}
+            >
+              all
+            </button>
+            {questionTypes.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(t === typeFilter ? null : t)}
+                className="brand-btn-secondary"
+                style={typeFilter === t ? { background: "var(--color-green)", color: "var(--color-navy)", borderColor: "var(--color-green)" } : {}}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex gap-1 items-center">
           <span className="eyebrow mr-2">Sort</span>
           {(["id", "time"] as const).map((s) => (
@@ -196,6 +232,69 @@ export default function TrialQueriesPage({
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
+
+function RetrievedContextPanel({ context }: { context: Record<string, unknown> }) {
+  // Support the Engram format: { memories: [{memory, time_added}], n_memories_retrieved }
+  // and fall back to raw JSON for any other agent format.
+  const memories = Array.isArray(context.memories) ? context.memories as { memory: string; time_added?: string }[] : null;
+
+  return (
+    <details className="mt-3">
+      <summary
+        className="text-xs cursor-pointer inline-flex items-center gap-1.5"
+        style={{ color: "var(--color-teal)", fontFamily: "var(--font-mono)" }}
+      >
+        <svg width="14" height="14" viewBox="0 0 32 32" fill="none" className="shrink-0">
+          <path d="M16 2L28 9V23L16 30L4 23V9L16 2Z" stroke="currentColor" strokeWidth="1.5" fill="none" />
+        </svg>
+        Retrieved Context
+        {typeof context.n_memories_retrieved === "number" && (
+          <span className="brand-badge ml-1" style={{ background: "rgba(122,199,192,0.15)", color: "var(--color-teal)" }}>
+            {context.n_memories_retrieved}
+          </span>
+        )}
+      </summary>
+      <div className="mt-2 space-y-2">
+        {memories ? (
+          memories.map((m, i) => (
+            <div
+              key={i}
+              className="rounded-md p-3 text-sm"
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-primary)",
+              }}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="eyebrow">Memory {i + 1}</span>
+                {m.time_added && (
+                  <span className="text-xs" style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                    {m.time_added}
+                  </span>
+                )}
+              </div>
+              <p style={{ whiteSpace: "pre-wrap" }}>{m.memory}</p>
+            </div>
+          ))
+        ) : (
+          <pre
+            className="rounded-md p-3 text-xs overflow-x-auto"
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--border-subtle)",
+              fontFamily: "var(--font-mono)",
+              color: "var(--text-secondary)",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {JSON.stringify(context, null, 2)}
+          </pre>
+        )}
+      </div>
+    </details>
+  );
+}
 
 function AskQueriesView({ queries }: { queries: AskQuery[] }) {
   return (
@@ -237,9 +336,19 @@ function AskQueriesView({ queries }: { queries: AskQuery[] }) {
             style={{ border: `1px solid ${borderColor}`, background: bgTint }}
           >
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs" style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
-                {q.query_id}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs" style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                  {q.query_id}
+                </span>
+                {q.question_type && (
+                  <span
+                    className="brand-badge"
+                    style={{ background: "rgba(122,199,192,0.12)", color: "var(--color-teal)", fontSize: "0.6875rem" }}
+                  >
+                    {q.question_type}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-3">
                 <CopyButton text={formatAskQueryForCopy(q)} />
                 <span className="text-xs" style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
@@ -248,12 +357,16 @@ function AskQueriesView({ queries }: { queries: AskQuery[] }) {
                 {q.tenant_id && (
                   <span className="text-xs" style={{ color: "var(--text-muted)" }}>tenant: {q.tenant_id}</span>
                 )}
-                {statusLabel && (
+                {q.score !== undefined && (
                   <span
                     className="brand-badge"
-                    style={{ background: statusBg, color: statusFg, fontWeight: 600 }}
+                    style={{
+                      background: statusBg,
+                      color: statusFg,
+                      fontWeight: 600,
+                    }}
                   >
-                    {statusLabel}
+                    {statusLabel ?? "Score"}: {q.score}
                   </span>
                 )}
               </div>
@@ -292,6 +405,9 @@ function AskQueriesView({ queries }: { queries: AskQuery[] }) {
                   {q.judge_reasoning}
                 </p>
               </details>
+            )}
+            {q.retrieved_context && (
+              <RetrievedContextPanel context={q.retrieved_context} />
             )}
           </div>
         );

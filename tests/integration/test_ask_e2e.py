@@ -112,10 +112,13 @@ class TestAskPipelineE2E:
         error_result = results[1]
         assert error_result.system_answer.startswith("[ERROR]")
 
-        # Metrics calculator skips error results
+        # Metrics calculator marks error results with None, evaluates the rest
         calculator = ExactMatchAskCalculator()
         metrics = calculator.compute(results)
-        assert len(metrics["exact_match_accuracy_scores"]) == 2  # Only 2 evaluated
+        assert len(metrics["exact_match_accuracy_scores"]) == 3  # All 3 entries, error is None
+        assert metrics["exact_match_accuracy_scores"][1] is None  # Error query gets None
+        valid_scores = [s for s in metrics["exact_match_accuracy_scores"] if s is not None]
+        assert len(valid_scores) == 2  # Only 2 actually evaluated
 
     def test_full_pipeline_aggregation(self, sample_ask_queries):
         """Multi-trial aggregation produces correct structure."""

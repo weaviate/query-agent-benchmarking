@@ -43,6 +43,7 @@ class LMJudgeAskCalculator:
         for i, result in enumerate(tqdm(results, desc="Running LLM judge")):
             if result.system_answer.startswith("[ERROR]"):
                 print(f"\n\033[91mSkipping evaluation for query {i} due to error.\033[0m")
+                alignment_scores.append(None)
                 if self.use_reasoning:
                     judge_reasonings.append(None)
                 continue
@@ -71,6 +72,7 @@ class LMJudgeAskCalculator:
                 print(f"Running alignment score: {current_avg:.2%}")
                 print(f"Running avg query time: {np.mean(query_times):.2f}s")
 
+        valid_scores = [s for s in alignment_scores if s is not None]
         results_dict = {
             "avg_query_time": np.mean(query_times) if query_times else 0,
             "query_times": query_times,
@@ -78,7 +80,7 @@ class LMJudgeAskCalculator:
             "total_input_tokens": total_input_tokens,
             "total_output_tokens": total_output_tokens,
             "metric": "llm_judge",
-            "avg_alignment_score": np.mean(alignment_scores) if alignment_scores else 0,
+            "avg_alignment_score": float(np.mean(valid_scores)) if valid_scores else 0,
             "alignment_score_scores": alignment_scores,
             "judge_model": self.model,
             "ensemble_k": self.ensemble_k,
@@ -87,7 +89,7 @@ class LMJudgeAskCalculator:
         if self.use_reasoning:
             results_dict["judge_reasonings"] = judge_reasonings
 
-        self._print_summary(alignment_scores, results_dict, misaligned_indices,
+        self._print_summary(valid_scores, results_dict, misaligned_indices,
                             total_input_tokens, total_output_tokens)
         return results_dict
 
@@ -115,6 +117,7 @@ class ExactMatchAskCalculator:
 
         for i, result in enumerate(tqdm(results, desc="Running exact match")):
             if result.system_answer.startswith("[ERROR]"):
+                alignment_scores.append(None)
                 continue
 
             aligned = calculate_exact_match(
@@ -126,6 +129,7 @@ class ExactMatchAskCalculator:
             if not aligned:
                 misaligned_indices.append(i)
 
+        valid_scores = [s for s in alignment_scores if s is not None]
         results_dict = {
             "avg_query_time": np.mean(query_times) if query_times else 0,
             "query_times": query_times,
@@ -133,14 +137,14 @@ class ExactMatchAskCalculator:
             "total_input_tokens": 0,
             "total_output_tokens": 0,
             "metric": "exact_match",
-            "avg_exact_match_accuracy": np.mean(alignment_scores) if alignment_scores else 0,
+            "avg_exact_match_accuracy": float(np.mean(valid_scores)) if valid_scores else 0,
             "exact_match_accuracy_scores": alignment_scores,
         }
 
         print("\n\033[92m===== Ask Benchmark Results =====\033[0m")
-        print(f"Number of queries evaluated: {len(alignment_scores)}")
-        if alignment_scores:
-            print(f"Average Exact Match Accuracy: {np.mean(alignment_scores):.2%}")
+        print(f"Number of queries evaluated: {len(valid_scores)}")
+        if valid_scores:
+            print(f"Average Exact Match Accuracy: {np.mean(valid_scores):.2%}")
         print(f"Misaligned queries: {len(misaligned_indices)}")
         print(f"Average Query Time: {results_dict['avg_query_time']:.2f} seconds")
 
@@ -163,6 +167,7 @@ class OfficeQAAskCalculator:
 
         for i, result in enumerate(tqdm(results, desc="Running OfficeQA fuzzy match")):
             if result.system_answer.startswith("[ERROR]"):
+                alignment_scores.append(None)
                 continue
 
             predicted = extract_final_answer(result.system_answer)
@@ -177,6 +182,7 @@ class OfficeQAAskCalculator:
             if not aligned:
                 misaligned_indices.append(i)
 
+        valid_scores = [s for s in alignment_scores if s is not None]
         results_dict = {
             "avg_query_time": np.mean(query_times) if query_times else 0,
             "query_times": query_times,
@@ -184,14 +190,14 @@ class OfficeQAAskCalculator:
             "total_input_tokens": 0,
             "total_output_tokens": 0,
             "metric": "officeqa_fuzzy_match",
-            "avg_officeqa_accuracy": np.mean(alignment_scores) if alignment_scores else 0,
+            "avg_officeqa_accuracy": float(np.mean(valid_scores)) if valid_scores else 0,
             "officeqa_accuracy_scores": alignment_scores,
         }
 
         print("\n\033[92m===== Ask Benchmark Results =====\033[0m")
-        print(f"Number of queries evaluated: {len(alignment_scores)}")
-        if alignment_scores:
-            print(f"Average OfficeQA Accuracy: {np.mean(alignment_scores):.2%}")
+        print(f"Number of queries evaluated: {len(valid_scores)}")
+        if valid_scores:
+            print(f"Average OfficeQA Accuracy: {np.mean(valid_scores):.2%}")
         print(f"Misaligned queries: {len(misaligned_indices)}")
         print(f"Average Query Time: {results_dict['avg_query_time']:.2f} seconds")
 
@@ -224,6 +230,7 @@ class LongMemEvalAskCalculator:
         for i, result in enumerate(tqdm(results, desc="Running LongMemEval judge")):
             if result.system_answer.startswith("[ERROR]"):
                 print(f"\n\033[91mSkipping evaluation for query {i} due to error.\033[0m")
+                alignment_scores.append(None)
                 continue
 
             qtype = result.query.question_type or "multi-session"
@@ -247,7 +254,8 @@ class LongMemEvalAskCalculator:
                 misaligned_indices.append(i)
 
             if (i + 1) % 5 == 0:
-                current_avg = np.mean(alignment_scores) if alignment_scores else 0
+                valid_so_far = [s for s in alignment_scores if s is not None]
+                current_avg = np.mean(valid_so_far) if valid_so_far else 0
                 print(f"\n\033[93m--- Evaluation Progress ({i + 1}/{len(results)}) ---\033[0m")
                 print(f"Running accuracy: {current_avg:.2%}")
                 print(f"Running avg query time: {np.mean(query_times):.2f}s")
@@ -257,6 +265,7 @@ class LongMemEvalAskCalculator:
             t: float(np.mean(scores)) for t, scores in sorted(type_scores.items())
         }
 
+        valid_scores = [s for s in alignment_scores if s is not None]
         results_dict = {
             "avg_query_time": float(np.mean(query_times)) if query_times else 0,
             "query_times": query_times,
@@ -264,7 +273,7 @@ class LongMemEvalAskCalculator:
             "total_input_tokens": total_input_tokens,
             "total_output_tokens": total_output_tokens,
             "metric": "longmemeval_judge",
-            "avg_alignment_score": float(np.mean(alignment_scores)) if alignment_scores else 0,
+            "avg_alignment_score": float(np.mean(valid_scores)) if valid_scores else 0,
             "alignment_score_scores": alignment_scores,
             "judge_model": self.model,
             "ensemble_k": 1,
@@ -272,7 +281,7 @@ class LongMemEvalAskCalculator:
             "type_counts": {t: len(scores) for t, scores in sorted(type_scores.items())},
         }
 
-        self._print_summary(alignment_scores, results_dict, misaligned_indices,
+        self._print_summary(valid_scores, results_dict, misaligned_indices,
                             total_input_tokens, total_output_tokens, type_accuracy)
         return results_dict
 

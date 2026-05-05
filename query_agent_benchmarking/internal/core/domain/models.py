@@ -5,7 +5,7 @@ These Pydantic models define the core data contracts used throughout the system.
 This module has no external infrastructure dependencies.
 """
 
-from typing import Optional
+from typing import Any, Optional
 from pydantic import BaseModel
 
 
@@ -71,6 +71,7 @@ class AskResult(BaseModel):
     time_taken: float
     input_tokens: Optional[int] = None
     output_tokens: Optional[int] = None
+    retrieved_context: Optional[Any] = None  # Raw context from the agent (e.g. memories)
 
 
 # ============================================================================

@@ -37,6 +37,8 @@ export interface AskQuery {
   oracle_context_id?: string;
   tenant_id?: string;
   judge_reasoning?: string;
+  question_type?: string;
+  retrieved_context?: Record<string, unknown>;
 }
 
 export interface TrialResultFile {

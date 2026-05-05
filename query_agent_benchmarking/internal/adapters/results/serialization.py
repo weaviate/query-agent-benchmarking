@@ -132,12 +132,20 @@ def save_ask_trial_results(
             query_data["oracle_context_id"] = result.query.oracle_context_id
         if result.query.tenant_id:
             query_data["tenant_id"] = result.query.tenant_id
-        if alignment_scores and idx < len(alignment_scores):
+        if result.query.question_type:
+            query_data["question_type"] = result.query.question_type
+        if alignment_scores and idx < len(alignment_scores) and alignment_scores[idx] is not None:
             query_data["score"] = alignment_scores[idx]
             if not is_error and alignment_scores[idx] == 0:
                 misaligned_query_ids.append(query_id)
         if judge_reasonings and idx < len(judge_reasonings) and judge_reasonings[idx]:
             query_data["judge_reasoning"] = judge_reasonings[idx]
+        if result.retrieved_context is not None:
+            try:
+                json.dumps(result.retrieved_context)  # verify serializable
+                query_data["retrieved_context"] = result.retrieved_context
+            except (TypeError, ValueError):
+                pass  # skip non-serializable context
         if is_error:
             failed_query_ids.append(query_id)
 
