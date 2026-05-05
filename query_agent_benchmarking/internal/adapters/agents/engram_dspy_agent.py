@@ -34,7 +34,12 @@ class AnswerUserQueryWithMemory(dspy.Signature):
     - BEFORE answering, verify that the question's premises match the memories. If the question assumes something that contradicts or is not supported by the memories (e.g. a wrong role title, wrong date, wrong location, wrong name), state what the memories actually say and explain the discrepancy.
     - If the question is open-ended or asks for suggestions, answer using ALL relevant information from the memories. Incorporate every relevant detail the memories contain, even if the full picture is incomplete.
     - If the memories contain NO relevant information at all, say so directly.
-    - Do NOT fabricate details. Do NOT repackage memory content into advice beyond what is stored."""
+    - Do NOT fabricate details. Do NOT repackage memory content into advice beyond what is stored.
+
+    Temporal reasoning:
+    - When a question asks about different points in time, look for memories that describe transitions or changes in state.
+    - If a memory describes both a past and current state, treat them as distinct facts at different points in time — do not collapse them.
+    - The timestamps on the memories reflect storage time, NOT when the events originally occurred. Reason about temporal order from the content of the memories, not from the timestamps."""
     
     user_question: str = dspy.InputField()
     retrieved_memories: list[MemoryWithTimestamp] = dspy.InputField()
