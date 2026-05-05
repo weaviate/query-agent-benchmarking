@@ -18,8 +18,10 @@ export async function GET(
   const skipKeys = new Set([
     "timestamp", "config", "query_times", "misaligned_indices",
     "metric", "total_input_tokens", "total_output_tokens",
+    "num_trials", "trials", "type_accuracy",
   ]);
 
+  const numTrials = experiment.num_trials;
   const metricEntries: { key: string; value: string }[] = [];
   if (agg) {
     const mean = agg["mean"] as Record<string, unknown> | undefined;
@@ -32,23 +34,43 @@ export async function GET(
           metricEntries.push({
             key,
             value:
-              typeof stdVal === "number"
+              numTrials > 1 && typeof stdVal === "number"
                 ? `${(val * 100).toFixed(2)}% (+/- ${(stdVal * 100).toFixed(2)}%)`
                 : `${(val * 100).toFixed(2)}%`,
           });
         }
       }
     } else {
+      // Flat format: keys like avg_alignment_score_mean, avg_alignment_score_std, etc.
+      const meanEntries: Record<string, number> = {};
+      const stdEntries: Record<string, number> = {};
+
       for (const [key, val] of Object.entries(agg)) {
         if (skipKeys.has(key)) continue;
-        if (["mean", "std", "min", "max"].includes(key)) continue;
-        if (typeof val === "number") {
-          const isTime = key.includes("time");
-          metricEntries.push({
-            key,
-            value: isTime ? `${val.toFixed(2)}s` : `${(val * 100).toFixed(2)}%`,
-          });
+        if (typeof val !== "number") continue;
+        if (key.endsWith("_std") || key.endsWith("_min") || key.endsWith("_max")) {
+          if (key.endsWith("_std")) stdEntries[key.replace(/_std$/, "")] = val;
+          continue;
         }
+        if (key.endsWith("_mean")) {
+          meanEntries[key.replace(/_mean$/, "")] = val;
+        }
+      }
+
+      for (const [baseKey, val] of Object.entries(meanEntries)) {
+        const isTime = baseKey.includes("time");
+        const stdVal = stdEntries[baseKey];
+        let value: string;
+        if (isTime) {
+          value = numTrials > 1 && stdVal !== undefined
+            ? `${val.toFixed(2)}s (+/- ${stdVal.toFixed(2)}s)`
+            : `${val.toFixed(2)}s`;
+        } else {
+          value = numTrials > 1 && stdVal !== undefined
+            ? `${(val * 100).toFixed(2)}% (+/- ${(stdVal * 100).toFixed(2)}%)`
+            : `${(val * 100).toFixed(2)}%`;
+        }
+        metricEntries.push({ key: baseKey, value });
       }
     }
   }
