@@ -1,6 +1,6 @@
 # Query Agent Benchmarking Console
 
-A Next.js dashboard for running and visualizing Weaviate Query Agent benchmarks. Supports populating databases (Weaviate and Engram), running search/ask benchmarks, and comparing results.
+A dashboard for running and visualizing Weaviate Query Agent benchmarks. Supports populating databases (Weaviate and Engram), running search/ask benchmarks, and comparing results.
 
 ## Getting Started
 
