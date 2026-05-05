@@ -57,6 +57,16 @@ export default function TrialQueriesPage({
       .catch(() => setLoading(false));
   }, [params]);
 
+  // Collect unique question types for the type filter (must be before early returns)
+  const questionTypes = useMemo(() => {
+    if (!data || data.metadata.mode !== "ask") return [];
+    const types = new Set<string>();
+    for (const q of data.queries as AskQuery[]) {
+      if (q.question_type) types.add(q.question_type);
+    }
+    return [...types].sort();
+  }, [data]);
+
   if (loading || !params) {
     return (
       <div className="py-20 text-center" style={{ color: "var(--text-muted)" }}>
@@ -72,16 +82,6 @@ export default function TrialQueriesPage({
 
   const mode = data.metadata.mode;
   const isAsk = mode === "ask";
-
-  // Collect unique question types for the type filter
-  const questionTypes = useMemo(() => {
-    if (!isAsk) return [];
-    const types = new Set<string>();
-    for (const q of data.queries as AskQuery[]) {
-      if (q.question_type) types.add(q.question_type);
-    }
-    return [...types].sort();
-  }, [data.queries, isAsk]);
 
   let filteredQueries: SearchQuery[] | AskQuery[];
   if (isAsk) {
@@ -165,9 +165,12 @@ export default function TrialQueriesPage({
       </div>
 
       {/* ── Filters ──────────────────────────────────────────────────────── */}
-      <div className="flex gap-4 mb-6 items-center flex-wrap">
+      <div className="space-y-3 mb-6">
         {isAsk && (
-          <div className="flex gap-1 items-center">
+          <div
+            className="flex gap-1.5 items-center flex-wrap rounded-lg px-4 py-3"
+            style={{ background: "var(--bg-card)", border: "1px solid var(--border-default)" }}
+          >
             <span className="eyebrow mr-2">Filter</span>
             {(["all", "correct", "incorrect", "errors"] as const).map((f) => (
               <button
@@ -182,7 +185,10 @@ export default function TrialQueriesPage({
           </div>
         )}
         {isAsk && questionTypes.length > 0 && (
-          <div className="flex gap-1 items-center">
+          <div
+            className="flex gap-1.5 items-center flex-wrap rounded-lg px-4 py-3"
+            style={{ background: "var(--bg-card)", border: "1px solid var(--border-default)" }}
+          >
             <span className="eyebrow mr-2">Type</span>
             <button
               onClick={() => setTypeFilter(null)}
@@ -203,7 +209,10 @@ export default function TrialQueriesPage({
             ))}
           </div>
         )}
-        <div className="flex gap-1 items-center">
+        <div
+          className="flex gap-1.5 items-center flex-wrap rounded-lg px-4 py-3"
+          style={{ background: "var(--bg-card)", border: "1px solid var(--border-default)" }}
+        >
           <span className="eyebrow mr-2">Sort</span>
           {(["id", "time"] as const).map((s) => (
             <button
@@ -215,10 +224,10 @@ export default function TrialQueriesPage({
               {s === "id" ? "Query ID" : "Time (desc)"}
             </button>
           ))}
+          <span className="ml-auto text-xs" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+            {filteredQueries.length} of {data.queries.length}
+          </span>
         </div>
-        <span className="ml-auto text-xs" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-          {filteredQueries.length} of {data.queries.length}
-        </span>
       </div>
 
       {/* ── Query data ───────────────────────────────────────────────────── */}

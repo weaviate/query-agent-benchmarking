@@ -18,7 +18,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Weaviate Benchmark Console",
+  title: "query-agent-evals",
   description: "Dashboard for Weaviate Query Agent benchmark results",
 };
 
@@ -47,31 +47,24 @@ export default function RootLayout({
       <body className={`${plusJakarta.variable} ${inter.variable} antialiased`}>
         <header className="brand-header px-6 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center gap-3 group">
-            {/* Hexagonal W mark */}
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="shrink-0">
-              <path
-                d="M16 1.07L29.86 9.07V24.93L16 30.93L2.14 24.93V9.07L16 1.07Z"
-                fill="none"
-                stroke="#61BD73"
-                strokeWidth="1.5"
-              />
-              <path
-                d="M8 12L11.5 22L16 14L20.5 22L24 12"
-                stroke="#61BD73"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-            </svg>
-            <div>
-              <span className="text-lg font-bold tracking-tight" style={{ fontFamily: "var(--font-display)" }}>
-                Benchmark Console
-              </span>
-              <span className="hidden sm:inline text-xs ml-2 opacity-50" style={{ fontFamily: "var(--font-mono)" }}>
-                v0.1
-              </span>
-            </div>
+            <img
+              src="/weaviate-logo-cropped.png"
+              alt="Weaviate"
+              className="shrink-0 block"
+              style={{ height: 32, width: "auto", marginTop: 4 }}
+            />
+            <span
+              className="text-lg font-bold tracking-tight leading-none"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              query-agent-evals
+            </span>
+            <span
+              className="hidden sm:inline text-xs leading-none opacity-50"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              v0.1
+            </span>
           </a>
           <nav className="flex items-center gap-4">
             <a
