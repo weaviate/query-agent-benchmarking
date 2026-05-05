@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Query Agent Benchmarking Console
+
+A Next.js dashboard for running and visualizing Weaviate Query Agent benchmarks. Supports populating databases (Weaviate and Engram), running search/ask benchmarks, and comparing results.
 
 ## Getting Started
 
-First, run the development server:
+1. Start the Python backend server:
+
+```bash
+uv run uvicorn query_agent_benchmarking.cmd.server:app --reload
+```
+
+2. Start the console dev server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The backend runs on `http://localhost:8000` by default. The console proxies API requests to it via the `BACKEND_URL` environment variable (defaults to `http://localhost:8000`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Pages
 
-## Learn More
+### Home (`/`)
 
-To learn more about Next.js, take a look at the following resources:
+Central hub with navigation to the three main workflows: Populate, Benchmark, and Results.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Populate Database (`/populate`)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Load datasets into Weaviate or Engram.
 
-## Deploy on Vercel
+- **Weaviate target**: Configure collection tag, embedding models, MUVERA+HNSW parameters, and recreate options.
+- **Engram target**: Ingest LongMemEval conversation sessions into Engram's memory system. After ingestion completes, the page displays a manifest summary showing per-tenant stats (sessions, memories created/updated/deleted) and an expandable table of individual run records mapping each `run_id` back to its source `tenant_id`, `session_id`, and `session_date`.
+- **LongMemEval subset**: For LongMemEval datasets, optionally filter tenants by sorted index range `[start, end)`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Manifests are persisted as JSON files in `results/engram-ingest-*.json` for later reference.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Engram Run History (`/populate/engram-runs`)
+
+Browse past Engram ingestion runs. Each card shows the dataset, timestamp, session/tenant counts, and total memories created. Click a card to view the full detail page with per-tenant stats and a scrollable, filterable table of all run records.
+
+### Run Benchmark (`/benchmark`)
+
+Execute search or ask benchmarks with configurable parameters (dataset, agent, trials, concurrency, etc.).
+
+### Results (`/results`)
+
+Browse benchmark results grouped by dataset or in a table view. Supports:
+
+- Inline label editing for experiments
+- Multi-select comparison across experiments
+- Per-trial drill-down with query-level detail
+- Experiment deletion
+
+## Data Storage
+
+All result and manifest files are stored in `console/results/`:
+
+- `*-results.json` — aggregated benchmark metrics
+- `*-trial-N.json` — per-trial query results
+- `*-trial-N-metrics.json` — per-trial performance metrics
+- `engram-ingest-*.json` — Engram ingestion run manifests
+- `_labels.json` — user-assigned experiment labels
+
+## API Routes
+
+| Route | Method | Description |
+|---|---|---|
+| `/api/backend/[...path]` | GET/POST | Proxy to Python backend (10-min timeout) |
+| `/api/experiments` | GET | List all benchmark experiments |
+| `/api/experiments/[id]` | GET/PATCH/DELETE | Single experiment CRUD |
+| `/api/engram-runs` | GET | List Engram ingestion manifests |
+| `/api/engram-runs/[id]` | GET | Single Engram manifest detail |
+| `/api/compare` | GET | Compare experiments |
+| `/api/trial` | GET | Trial data |

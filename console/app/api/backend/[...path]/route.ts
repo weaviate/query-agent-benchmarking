@@ -30,6 +30,30 @@ export async function POST(
   const target = `${BACKEND_URL}/${path.join("/")}`;
   const body = await request.json();
 
+  // For the streaming populate endpoint, pass through as a stream
+  if (path.join("/") === "populate-db-stream") {
+    const resp = await fetch(target, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(600_000),
+    });
+
+    if (!resp.ok || !resp.body) {
+      const data = await resp.json().catch(() => ({ status: "error" }));
+      return NextResponse.json(data, { status: resp.status });
+    }
+
+    // Stream the response through to the client
+    return new Response(resp.body, {
+      headers: {
+        "Content-Type": "text/plain",
+        "Cache-Control": "no-cache",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
+
   const resp = await fetch(target, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

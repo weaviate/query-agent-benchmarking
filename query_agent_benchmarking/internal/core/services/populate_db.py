@@ -10,6 +10,8 @@ from pathlib import Path
 from query_agent_benchmarking.internal.adapters.database.database_config import validate_database_dataset
 from query_agent_benchmarking.internal.adapters.database.database_registry import resolve_spec
 from query_agent_benchmarking.internal.adapters.database.engram_loader import engram_ingest_all_tenants
+from query_agent_benchmarking.internal.adapters.results.engram_manifest import save_engram_manifest
+from query_agent_benchmarking.internal.adapters.results.engram_memory_index import build_and_save_memory_index
 from query_agent_benchmarking.internal.adapters.database.database_loader import (
     _drop_and_create_collection,
     _batch_insert,
@@ -48,14 +50,19 @@ def populate_db(recreate: bool = True, tag: str = "Default") -> None:
     database_target = config.get("database_target", "weaviate")
 
     if database_target == "engram":
-        _run_engram_loader(config, dataset_name)
+        manifest = _run_engram_loader(config, dataset_name)
+        print(f"\nEngram manifest saved with {len(manifest.get('runs', []))} run records")
         return
 
     _run_weaviate_loader(config, dataset_name, recreate=recreate, tag=tag)
 
 
-def _run_engram_loader(config: dict, dataset_name: str) -> None:
-    """Ingest LongMemEval sessions into Engram."""
+def _run_engram_loader(config: dict, dataset_name: str) -> dict:
+    """Ingest LongMemEval sessions into Engram and persist a run manifest.
+
+    Returns:
+        The manifest dict mapping run IDs to session provenance.
+    """
     subset_cfg = config.get("longmemeval_subset")
     users_to_test = subset_cfg.get("users_to_test") if subset_cfg else None
 
@@ -64,7 +71,10 @@ def _run_engram_loader(config: dict, dataset_name: str) -> None:
         users_to_test=users_to_test,
     )
 
-    engram_ingest_all_tenants(docs_by_tenant, poll=True)
+    result = engram_ingest_all_tenants(docs_by_tenant, poll=True)
+    manifest = save_engram_manifest(result, dataset_name)
+    build_and_save_memory_index(result, dataset_name, manifest["timestamp"])
+    return manifest
 
 
 def _run_weaviate_loader(
