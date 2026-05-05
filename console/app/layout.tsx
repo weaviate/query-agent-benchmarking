@@ -68,11 +68,25 @@ export default function RootLayout({
           </a>
           <nav className="flex items-center gap-4">
             <a
-              href="/"
+              href="/results"
               className="text-sm opacity-70 hover:opacity-100 transition-opacity"
               style={{ fontFamily: "var(--font-body)" }}
             >
-              Experiments
+              Results
+            </a>
+            <a
+              href="/populate"
+              className="text-sm opacity-70 hover:opacity-100 transition-opacity"
+              style={{ fontFamily: "var(--font-body)" }}
+            >
+              Populate
+            </a>
+            <a
+              href="/benchmark"
+              className="text-sm opacity-70 hover:opacity-100 transition-opacity"
+              style={{ fontFamily: "var(--font-body)" }}
+            >
+              Benchmark
             </a>
             <ThemeToggle />
           </nav>
