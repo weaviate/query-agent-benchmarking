@@ -3,3 +3,5 @@
 .env
 .ipynb_checkpoints
 *.pyc
+/results/
+/console/results/

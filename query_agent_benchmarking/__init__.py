@@ -1,3 +1,8 @@
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module=r"dspy\..*")
+
+import dspy  # noqa: F401 — force import while filter is active
+
 from dotenv import load_dotenv
 
 from .experimental.add_hard_negatives import add_hard_negatives

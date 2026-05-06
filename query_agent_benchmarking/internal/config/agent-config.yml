@@ -29,7 +29,7 @@ engram:
   engram_base_url: https://dev-engram.labs.weaviate.io
   # engram_api_key: loaded from ENGRAM_API_KEY env var by default
   dspy_lm_model: "openai/gpt-5.4"
-  retrieval_limit: 10
+  retrieval_limit: 20
   retrieval_type: hybrid
   engram_group: default
   user_id_prefix: "longmemeval-"

@@ -166,6 +166,7 @@ def run_ask_queries(
                 query=query,
                 system_answer=response.final_answer,
                 time_taken=query_time_taken,
+                retrieved_context=response.raw_response,
             ))
         except Exception as e:
             query_time_taken = time.time() - query_start_time
@@ -217,6 +218,7 @@ async def run_ask_queries_async(
                     query=query,
                     system_answer=response.final_answer,
                     time_taken=query_time_taken,
+                    retrieved_context=response.raw_response,
                 )
             except Exception as e:
                 query_time_taken = time.time() - query_start_time

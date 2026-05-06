@@ -1,26 +1,232 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700&family=Inter:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Weaviate Brand Design System
+   Source of truth: docs/brand.md
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ── Main palette ────────────────────────────────────────────────────── */
+  --color-green: #61BD73;
+  --color-navy: #130C49;
+  --color-off-white: #ECF4F8;
+
+  /* ── Secondary palette ───────────────────────────────────────────────── */
+  --color-teal: #7AC7C0;
+  --color-mint: #BCF0A7;
+  --color-sky: #7AD6EB;
+  --color-lavender: #A590DD;
+  --color-paper: #F7F9FD;
+  --color-navy-deep: #262262;
+  --color-periwinkle: #B9C8DE;
+
+  /* ── Accents ─────────────────────────────────────────────────────────── */
+  --color-coral: #F4404E;
+  --color-yellow: #F9F15D;
+
+  /* ── Gradients ───────────────────────────────────────────────────────── */
+  --gradient-green-blue: linear-gradient(135deg, #3AB54A, #0069B4);
+  --gradient-green-yellow: linear-gradient(135deg, #06CD00, #FFF000);
+  --gradient-teal-green: linear-gradient(135deg, #55CDE0, #06CD00);
+  --gradient-navy: linear-gradient(135deg, #0C1428, #1B1464);
+
+  /* ── Typography ──────────────────────────────────────────────────────── */
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "Menlo", "Consolas", monospace;
+
+  /* ── Semantic tokens (light) ─────────────────────────────────────────── */
+  --bg-primary: var(--color-off-white);
+  --bg-surface: var(--color-paper);
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --text-primary: var(--color-navy);
+  --text-secondary: #4a5568;
+  --text-muted: #8896ab;
+  --border-default: #dce4ed;
+  --border-subtle: #e8eef4;
+  --bg-card-success: #f2faf4;
+  --bg-card-error: #fef5f5;
+}
+
+.dark {
+  --bg-primary: var(--color-navy);
+  --bg-surface: var(--color-navy-deep);
+  --bg-card: #1a1557;
+  --bg-elevated: #211b6b;
+  --text-primary: var(--color-off-white);
+  --text-secondary: var(--color-periwinkle);
+  --text-muted: #7b89a8;
+  --border-default: #2d2775;
+  --border-subtle: #231d65;
+  --bg-card-success: #14224a;
+  --bg-card-error: #2a1040;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ── Base styles ─────────────────────────────────────────────────────────── */
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+}
+
+h1, h2 {
+  font-weight: 700;
+}
+
+h3, h4 {
+  font-weight: 500;
+}
+
+code, pre, .font-mono {
+  font-family: var(--font-mono) !important;
+}
+
+/* ── Brand component classes ─────────────────────────────────────────────── */
+
+.brand-header {
+  background: var(--gradient-navy);
+  color: #ffffff;
+}
+
+.brand-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.brand-card:hover {
+  box-shadow: 0 4px 16px rgba(19, 12, 73, 0.08);
+  border-color: var(--color-green);
+}
+
+.dark .brand-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.brand-btn-primary {
+  background: var(--color-green);
+  color: var(--color-navy);
+  font-family: var(--font-display);
+  font-weight: 700;
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  transition: background 0.15s ease, transform 0.1s ease;
+  cursor: pointer;
+}
+
+.brand-btn-primary:hover {
+  background: #4fac62;
+  transform: translateY(-1px);
+}
+
+.brand-btn-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  font-family: var(--font-body);
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.brand-btn-secondary:hover {
+  background: var(--bg-surface);
+  border-color: var(--color-green);
+}
+
+.brand-table th {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 12px 16px;
+  border-bottom: 2px solid var(--border-default);
+}
+
+.brand-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.875rem;
+}
+
+.brand-table tbody tr {
+  transition: background 0.1s ease;
+}
+
+.brand-table tbody tr:hover {
+  background: var(--bg-surface);
+}
+
+/* ── Eyebrow / overline label ────────────────────────────────────────────── */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ── Hexagon background texture (subtle) ─────────────────────────────────── */
+.hex-pattern {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%2361BD73' fill-opacity='0.04'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ── Score color utilities ───────────────────────────────────────────────── */
+.score-excellent { color: var(--color-green); }
+.score-good { color: var(--color-teal); }
+.score-fair { color: var(--color-yellow); }
+.score-poor { color: var(--color-coral); }
+
+/* ── Scrollbar styling ───────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-periwinkle);
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-navy-deep);
 }
