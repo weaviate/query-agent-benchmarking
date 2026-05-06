@@ -42,6 +42,12 @@ filterwarnings = [
     "ignore:The 'prefix' argument:DeprecationWarning",
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# These files intentionally call warnings.filterwarnings() before imports
+# so that the deprecation filter is active when dspy is first loaded.
+"query_agent_benchmarking/__init__.py" = ["E402"]
+"tests/conftest.py" = ["E402"]
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.3",
