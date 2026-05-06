@@ -110,8 +110,12 @@ def load_ask_dataset(
             "longmemeval-s": "weaviate/longmemeval-s-cleaned",
             "longmemeval-m": "weaviate/longmemeval-m-cleaned",
         }[dataset_name]
-        users_to_test = (longmemeval_subset or {}).get("users_to_test")
-        return huggingface_loader.load_ask_longmemeval(hf_path, users_to_test=users_to_test)
+        subset = longmemeval_subset or {}
+        users_to_test = subset.get("users_to_test")
+        tenant_ids = subset.get("tenant_ids")
+        return huggingface_loader.load_ask_longmemeval(
+            hf_path, users_to_test=users_to_test, tenant_ids=tenant_ids,
+        )
 
     raise ValueError(
         f"Unknown ask dataset: {dataset_name}. "

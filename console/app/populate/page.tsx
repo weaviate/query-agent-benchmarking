@@ -74,6 +74,7 @@ interface FormState {
   showSubset: boolean;
   subsetStart: number;
   subsetEnd: number;
+  tenantId: string;
 }
 
 interface ActiveJob {
@@ -224,6 +225,7 @@ export default function PopulatePage() {
   const [showSubset, setShowSubset] = useState(false);
   const [subsetStart, setSubsetStart] = useState(0);
   const [subsetEnd, setSubsetEnd] = useState(5);
+  const [tenantId, setTenantId] = useState("");
 
   // Status
   const [status, setStatus] = useState<"idle" | "running" | "success" | "error">("idle");
@@ -253,13 +255,13 @@ export default function PopulatePage() {
       datasetName, databaseTarget, tag, recreate,
       textEmbeddingModel, imageEmbeddingModel,
       useMuvera, ksim, dprojections, repetitions, ef,
-      showSubset, subsetStart, subsetEnd,
+      showSubset, subsetStart, subsetEnd, tenantId,
     });
   }, [
     initialized, datasetName, databaseTarget, tag, recreate,
     textEmbeddingModel, imageEmbeddingModel,
     useMuvera, ksim, dprojections, repetitions, ef,
-    showSubset, subsetStart, subsetEnd,
+    showSubset, subsetStart, subsetEnd, tenantId,
   ]);
 
   // -------------------------------------------------------------------------
@@ -352,6 +354,7 @@ export default function PopulatePage() {
     if (s.showSubset !== undefined) setShowSubset(s.showSubset);
     if (s.subsetStart !== undefined) setSubsetStart(s.subsetStart);
     if (s.subsetEnd !== undefined) setSubsetEnd(s.subsetEnd);
+    if (s.tenantId !== undefined) setTenantId(s.tenantId);
 
     setInitialized(true);
 
@@ -457,8 +460,13 @@ export default function PopulatePage() {
     }
 
     if (datasetName.startsWith("longmemeval") && showSubset) {
-      body.longmemeval_subset_start = subsetStart;
-      body.longmemeval_subset_end = subsetEnd;
+      const trimmedTenant = tenantId.trim();
+      if (trimmedTenant) {
+        body.longmemeval_tenant_ids = trimmedTenant.split(/[,\s]+/).filter(Boolean);
+      } else {
+        body.longmemeval_subset_start = subsetStart;
+        body.longmemeval_subset_end = subsetEnd;
+      }
     }
 
     try {
@@ -1044,18 +1052,41 @@ export default function PopulatePage() {
             <summary className="text-xs cursor-pointer" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
               LongMemEval Subset Selection
             </summary>
-            <div className="mt-4">
-              <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
-                Filter tenants by sorted index range. Only sessions for tenants within [start, end) are loaded.
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="eyebrow mb-2 block">Start Index</label>
-                  <input type="number" min={0} value={subsetStart} onChange={(e) => setSubsetStart(Number(e.target.value))} disabled={status === "running"} className="w-full rounded-md px-3 py-2 text-sm" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }} />
-                </div>
-                <div>
-                  <label className="eyebrow mb-2 block">End Index</label>
-                  <input type="number" min={0} value={subsetEnd} onChange={(e) => setSubsetEnd(Number(e.target.value))} disabled={status === "running"} className="w-full rounded-md px-3 py-2 text-sm" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }} />
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="eyebrow mb-2 block">Tenant ID</label>
+                <input
+                  type="text"
+                  value={tenantId}
+                  onChange={(e) => setTenantId(e.target.value)}
+                  disabled={status === "running"}
+                  placeholder="e.g. user_123 or user_1, user_2"
+                  className="w-full rounded-md px-3 py-2 text-sm"
+                  style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}
+                />
+                <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                  Load a specific tenant by ID. Comma or space-separated for multiple. Overrides index range if set.
+                </p>
+              </div>
+              <div
+                className="rounded-md p-3"
+                style={{
+                  background: tenantId.trim() ? "var(--bg-surface)" : "transparent",
+                  opacity: tenantId.trim() ? 0.5 : 1,
+                }}
+              >
+                <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+                  Or filter tenants by sorted index range [start, end).
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="eyebrow mb-2 block">Start Index</label>
+                    <input type="number" min={0} value={subsetStart} onChange={(e) => setSubsetStart(Number(e.target.value))} disabled={status === "running" || !!tenantId.trim()} className="w-full rounded-md px-3 py-2 text-sm" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }} />
+                  </div>
+                  <div>
+                    <label className="eyebrow mb-2 block">End Index</label>
+                    <input type="number" min={0} value={subsetEnd} onChange={(e) => setSubsetEnd(Number(e.target.value))} disabled={status === "running" || !!tenantId.trim()} className="w-full rounded-md px-3 py-2 text-sm" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }} />
+                  </div>
                 </div>
               </div>
             </div>

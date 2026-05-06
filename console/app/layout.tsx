@@ -44,7 +44,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className={`${plusJakarta.variable} ${inter.variable} antialiased`}>
+      <body className={`${plusJakarta.variable} ${inter.variable} antialiased hex-pattern`}>
         <header className="brand-header px-6 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center gap-3 group">
             <img
@@ -91,7 +91,7 @@ export default function RootLayout({
             <ThemeToggle />
           </nav>
         </header>
-        <main className="px-6 py-8 max-w-7xl mx-auto hex-pattern min-h-[calc(100vh-64px)]">
+        <main className="px-6 py-8 max-w-7xl mx-auto min-h-[calc(100vh-64px)]">
           {children}
         </main>
       </body>

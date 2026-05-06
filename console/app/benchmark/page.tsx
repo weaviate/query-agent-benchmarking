@@ -37,6 +37,7 @@ export default function BenchmarkPage() {
   const [askMaxConcurrent, setAskMaxConcurrent] = useState(5);
   const [askSubsetStart, setAskSubsetStart] = useState(0);
   const [askSubsetEnd, setAskSubsetEnd] = useState(20);
+  const [askTenantId, setAskTenantId] = useState("");
 
   useEffect(() => {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
@@ -80,8 +81,13 @@ export default function BenchmarkPage() {
           max_concurrent: askMaxConcurrent,
         };
         if (askDataset.startsWith("longmemeval")) {
-          body.longmemeval_subset_start = askSubsetStart;
-          body.longmemeval_subset_end = askSubsetEnd;
+          const trimmedTenant = askTenantId.trim();
+          if (trimmedTenant) {
+            body.longmemeval_tenant_ids = trimmedTenant.split(/[,\s]+/).filter(Boolean);
+          } else {
+            body.longmemeval_subset_start = askSubsetStart;
+            body.longmemeval_subset_end = askSubsetEnd;
+          }
         }
       }
 
@@ -350,18 +356,39 @@ export default function BenchmarkPage() {
                 className="rounded-md p-4 space-y-3"
                 style={{ background: "var(--bg-surface)", border: "1px solid var(--border-subtle)" }}
               >
-                <label className="eyebrow block">LongMemEval Subset (users_to_test)</label>
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  Tenant index range [start, end) — must match what was ingested.
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="eyebrow mb-1 block">Start</label>
-                    <input type="number" min={0} value={askSubsetStart} onChange={(e) => setAskSubsetStart(Number(e.target.value))} disabled={status === "running"} className="w-full rounded-md px-3 py-2 text-sm" style={{ background: "var(--bg-card)", border: "1px solid var(--border-default)", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }} />
-                  </div>
-                  <div>
-                    <label className="eyebrow mb-1 block">End</label>
-                    <input type="number" min={0} value={askSubsetEnd} onChange={(e) => setAskSubsetEnd(Number(e.target.value))} disabled={status === "running"} className="w-full rounded-md px-3 py-2 text-sm" style={{ background: "var(--bg-card)", border: "1px solid var(--border-default)", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }} />
+                <label className="eyebrow block">LongMemEval Subset</label>
+                <div>
+                  <label className="eyebrow mb-1 block">Tenant ID</label>
+                  <input
+                    type="text"
+                    value={askTenantId}
+                    onChange={(e) => setAskTenantId(e.target.value)}
+                    disabled={status === "running"}
+                    placeholder="e.g. user_123 or user_1, user_2"
+                    className="w-full rounded-md px-3 py-2 text-sm"
+                    style={{ background: "var(--bg-card)", border: "1px solid var(--border-default)", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }}
+                  />
+                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                    Run benchmark for a specific tenant. Comma or space-separated for multiple. Overrides index range if set.
+                  </p>
+                </div>
+                <div
+                  style={{
+                    opacity: askTenantId.trim() ? 0.5 : 1,
+                  }}
+                >
+                  <p className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>
+                    Or use tenant index range [start, end) — must match what was ingested.
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="eyebrow mb-1 block">Start</label>
+                      <input type="number" min={0} value={askSubsetStart} onChange={(e) => setAskSubsetStart(Number(e.target.value))} disabled={status === "running" || !!askTenantId.trim()} className="w-full rounded-md px-3 py-2 text-sm" style={{ background: "var(--bg-card)", border: "1px solid var(--border-default)", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }} />
+                    </div>
+                    <div>
+                      <label className="eyebrow mb-1 block">End</label>
+                      <input type="number" min={0} value={askSubsetEnd} onChange={(e) => setAskSubsetEnd(Number(e.target.value))} disabled={status === "running" || !!askTenantId.trim()} className="w-full rounded-md px-3 py-2 text-sm" style={{ background: "var(--bg-card)", border: "1px solid var(--border-default)", color: "var(--text-primary)", fontFamily: "var(--font-mono)" }} />
+                    </div>
                   </div>
                 </div>
               </div>

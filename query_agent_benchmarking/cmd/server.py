@@ -76,6 +76,7 @@ class RunAskBenchmarkRequest(BaseModel):
     embedding_model: Optional[str] = None
     longmemeval_subset_start: Optional[int] = None
     longmemeval_subset_end: Optional[int] = None
+    longmemeval_tenant_ids: Optional[list[str]] = None
 
 
 class CompareEmbeddingsRequest(BaseModel):
@@ -101,6 +102,7 @@ class PopulateDatabaseRequest(BaseModel):
     ef: Optional[int] = None
     longmemeval_subset_start: Optional[int] = None
     longmemeval_subset_end: Optional[int] = None
+    longmemeval_tenant_ids: Optional[list[str]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -130,9 +132,12 @@ def run_ask(req: RunAskBenchmarkRequest) -> dict[str, Any]:
     try:
         kwargs = req.model_dump(exclude_none=True)
         # Convert flat subset fields to the nested dict expected by run_ask_eval
+        tenant_ids = kwargs.pop("longmemeval_tenant_ids", None)
         start = kwargs.pop("longmemeval_subset_start", None)
         end = kwargs.pop("longmemeval_subset_end", None)
-        if start is not None and end is not None:
+        if tenant_ids:
+            kwargs["longmemeval_subset"] = {"tenant_ids": tenant_ids}
+        elif start is not None and end is not None:
             kwargs["longmemeval_subset"] = {"users_to_test": [start, end]}
         result = query_agent_benchmarking.run_ask_eval(**kwargs)
         return {"status": "ok", "result": result}
@@ -182,7 +187,11 @@ def _build_populate_config(req: PopulateDatabaseRequest) -> dict:
         config["repetitions"] = req.repetitions
     if req.ef is not None:
         config["ef"] = req.ef
-    if req.longmemeval_subset_start is not None and req.longmemeval_subset_end is not None:
+    if req.longmemeval_tenant_ids:
+        config["longmemeval_subset"] = {
+            "tenant_ids": req.longmemeval_tenant_ids,
+        }
+    elif req.longmemeval_subset_start is not None and req.longmemeval_subset_end is not None:
         config["longmemeval_subset"] = {
             "users_to_test": [req.longmemeval_subset_start, req.longmemeval_subset_end]
         }
@@ -258,8 +267,9 @@ def populate_db_stream(req: PopulateDatabaseRequest):
 
             subset_cfg = config.get("longmemeval_subset")
             users_to_test = subset_cfg.get("users_to_test") if subset_cfg else None
+            tenant_ids = subset_cfg.get("tenant_ids") if subset_cfg else None
             docs_by_tenant = load_longmemeval_docs_by_tenant(
-                dataset_name, users_to_test=users_to_test,
+                dataset_name, users_to_test=users_to_test, tenant_ids=tenant_ids,
             )
 
             total_sessions = sum(len(s) for s in docs_by_tenant.values())

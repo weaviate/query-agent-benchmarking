@@ -300,8 +300,22 @@ def load_ask_multihoprag() -> list[InMemoryAskQuery]:
 def _resolve_longmemeval_tenant_subset(
     all_tenant_ids: list[str],
     users_to_test: Optional[list[int]] = None,
+    tenant_ids: Optional[list[str]] = None,
 ) -> set[str]:
-    """Resolve tenant IDs from a [lower, upper) range over sorted tenants."""
+    """Resolve tenant IDs from a [lower, upper) range or explicit list.
+
+    If *tenant_ids* is provided, those IDs are used directly (validated
+    against the full list).  Otherwise falls back to the index-range
+    *users_to_test* behaviour.
+    """
+    if tenant_ids is not None:
+        valid = set(all_tenant_ids)
+        selected = [t for t in tenant_ids if t in valid]
+        skipped = len(tenant_ids) - len(selected)
+        if skipped:
+            print(f"  LongMemEval subset: {skipped} requested tenant IDs not found in dataset")
+        print(f"  LongMemEval subset: {len(selected)} tenants selected by ID")
+        return set(selected)
     if users_to_test is None:
         return set(all_tenant_ids)
     lower, upper = users_to_test
@@ -335,13 +349,14 @@ def _load_longmemeval_question_types() -> dict[str, str]:
 def load_ask_longmemeval(
     hf_path: str,
     users_to_test: Optional[list[int]] = None,
+    tenant_ids: Optional[list[str]] = None,
     load_question_types: bool = True,
 ) -> list[InMemoryAskQuery]:
     print(f"Loading LongMemEval ask queries from {hf_path}...")
     raw_queries = load_dataset(hf_path, "queries")["train"]
 
     all_tenant_ids = sorted({str(item["tenant_id"]) for item in raw_queries})
-    keep_tenants = _resolve_longmemeval_tenant_subset(all_tenant_ids, users_to_test)
+    keep_tenants = _resolve_longmemeval_tenant_subset(all_tenant_ids, users_to_test, tenant_ids=tenant_ids)
 
     qtype_map: dict[str, str] = {}
     if load_question_types:
@@ -371,12 +386,14 @@ def load_ask_longmemeval(
 def load_longmemeval_docs_by_tenant(
     dataset_name: str,
     users_to_test: Optional[list[int]] = None,
+    tenant_ids: Optional[list[str]] = None,
 ) -> dict[str, list[dict]]:
     """Load LongMemEval session documents grouped by tenant_id.
 
     Args:
         dataset_name: "longmemeval-s" or "longmemeval-m".
         users_to_test: Optional [lower, upper) range over sorted tenant indices.
+        tenant_ids: Optional explicit list of tenant IDs to load.
 
     Returns:
         Dict mapping tenant_id -> list of session dicts.
@@ -390,7 +407,7 @@ def load_longmemeval_docs_by_tenant(
     raw_docs = load_dataset(hf_path, "docs")["train"]
 
     all_tenant_ids = sorted({str(item["tenant_id"]) for item in raw_docs})
-    keep_tenants = _resolve_longmemeval_tenant_subset(all_tenant_ids, users_to_test)
+    keep_tenants = _resolve_longmemeval_tenant_subset(all_tenant_ids, users_to_test, tenant_ids=tenant_ids)
 
     docs_by_tenant: dict[str, list[dict]] = {}
     for item in raw_docs:

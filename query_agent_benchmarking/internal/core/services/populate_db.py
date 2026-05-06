@@ -65,10 +65,12 @@ def _run_engram_loader(config: dict, dataset_name: str) -> dict:
     """
     subset_cfg = config.get("longmemeval_subset")
     users_to_test = subset_cfg.get("users_to_test") if subset_cfg else None
+    tenant_ids = subset_cfg.get("tenant_ids") if subset_cfg else None
 
     docs_by_tenant = load_longmemeval_docs_by_tenant(
         dataset_name,
         users_to_test=users_to_test,
+        tenant_ids=tenant_ids,
     )
 
     result = engram_ingest_all_tenants(docs_by_tenant, poll=True)
