@@ -73,7 +73,8 @@ def _run_engram_loader(config: dict, dataset_name: str) -> dict:
         tenant_ids=tenant_ids,
     )
 
-    result = engram_ingest_all_tenants(docs_by_tenant, poll=True)
+    ingestion_mode = config.get("engram_ingestion_mode", "conversation")
+    result = engram_ingest_all_tenants(docs_by_tenant, poll=True, ingestion_mode=ingestion_mode)
     manifest = save_engram_manifest(result, dataset_name)
     if config.get("build_memory_index", True):
         build_and_save_memory_index(result, dataset_name, manifest["timestamp"])

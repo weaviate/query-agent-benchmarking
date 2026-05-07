@@ -104,9 +104,16 @@ def _submit_all(
     user_id_prefix: str,
     ingest_delay: float,
     verbose: bool,
+    ingestion_mode: str = "conversation",
     on_progress: Optional[Callable[[dict], None]] = None,
 ) -> list[RunRecord]:
-    """Submit every session across all tenants. Returns run records for polling."""
+    """Submit every session across all tenants. Returns run records for polling.
+
+    Args:
+        ingestion_mode: ``"conversation"`` submits the full parsed conversation
+            per session. ``"user_messages"`` submits each user message
+            individually as a single-message conversation (no assistant context).
+    """
     records: list[RunRecord] = []
     total = sum(len(sessions) for sessions in docs_by_tenant.values())
     submitted = 0
@@ -124,49 +131,103 @@ def _submit_all(
                     sid = session.get("session_id", "?")
                     print(f"  Skipped session {sid} for tenant {tenant_id}: no valid messages after parsing")
                 continue
-            t_submit = time.time()
-            try:
-                run = client.memories.add(
-                    conversation,
-                    user_id=user_id,
-                    group=group,
-                    conversation_id=session.get("session_id"),
-                )
-            except Exception as e:
-                skipped += 1
-                if verbose:
-                    sid = session.get("session_id", "?")
-                    print(f"  Skipped session {sid} for tenant {tenant_id}: {e}")
-                continue
-            records.append(RunRecord(
-                run_id=run.run_id,
-                tenant_id=tenant_id,
-                submitted_at=t_submit,
-                session_id=session.get("session_id", ""),
-                session_date=session.get("session_date", ""),
-            ))
-            submitted += 1
 
-            if on_progress:
-                on_progress({
-                    "phase": "submit",
-                    "submitted": submitted,
-                    "skipped": skipped,
-                    "total": total,
-                    "tenant_id": tenant_id,
-                    "session_id": session.get("session_id", ""),
-                })
+            if ingestion_mode == "user_messages":
+                # Submit each user message as its own single-message conversation
+                user_messages = [m for m in conversation.messages if m.role == "user"]
+                if not user_messages:
+                    skipped += 1
+                    if verbose:
+                        sid = session.get("session_id", "?")
+                        print(f"  Skipped session {sid} for tenant {tenant_id}: no user messages")
+                    continue
+                for msg_idx, msg in enumerate(user_messages):
+                    single = ConversationInput(messages=[msg])
+                    t_submit = time.time()
+                    try:
+                        run = client.memories.add(
+                            single,
+                            user_id=user_id,
+                            group=group,
+                            conversation_id=session.get("session_id"),
+                        )
+                    except Exception as e:
+                        skipped += 1
+                        if verbose:
+                            sid = session.get("session_id", "?")
+                            print(f"  Skipped session {sid} msg {msg_idx} for tenant {tenant_id}: {e}")
+                        continue
+                    records.append(RunRecord(
+                        run_id=run.run_id,
+                        tenant_id=tenant_id,
+                        submitted_at=t_submit,
+                        session_id=session.get("session_id", ""),
+                        session_date=session.get("session_date", ""),
+                    ))
+                    submitted += 1
 
-            if verbose and submitted % 50 == 0:
-                print(f"  Submitted {submitted}/{total}")
+                    if on_progress:
+                        on_progress({
+                            "phase": "submit",
+                            "submitted": submitted,
+                            "skipped": skipped,
+                            "total": total,
+                            "tenant_id": tenant_id,
+                            "session_id": session.get("session_id", ""),
+                            "msg_index": msg_idx,
+                        })
 
-            if ingest_delay > 0:
-                time.sleep(ingest_delay)
+                    if verbose and submitted % 50 == 0:
+                        print(f"  Submitted {submitted} user messages")
+
+                    if ingest_delay > 0:
+                        time.sleep(ingest_delay)
+            else:
+                # Default: submit the full conversation
+                t_submit = time.time()
+                try:
+                    run = client.memories.add(
+                        conversation,
+                        user_id=user_id,
+                        group=group,
+                        conversation_id=session.get("session_id"),
+                    )
+                except Exception as e:
+                    skipped += 1
+                    if verbose:
+                        sid = session.get("session_id", "?")
+                        print(f"  Skipped session {sid} for tenant {tenant_id}: {e}")
+                    continue
+                records.append(RunRecord(
+                    run_id=run.run_id,
+                    tenant_id=tenant_id,
+                    submitted_at=t_submit,
+                    session_id=session.get("session_id", ""),
+                    session_date=session.get("session_date", ""),
+                ))
+                submitted += 1
+
+                if on_progress:
+                    on_progress({
+                        "phase": "submit",
+                        "submitted": submitted,
+                        "skipped": skipped,
+                        "total": total,
+                        "tenant_id": tenant_id,
+                        "session_id": session.get("session_id", ""),
+                    })
+
+                if verbose and submitted % 50 == 0:
+                    print(f"  Submitted {submitted}/{total}")
+
+                if ingest_delay > 0:
+                    time.sleep(ingest_delay)
 
     if verbose:
-        print(f"  All {submitted} sessions submitted across {len(docs_by_tenant)} tenants")
+        mode_label = "user messages" if ingestion_mode == "user_messages" else "sessions"
+        print(f"  All {submitted} {mode_label} submitted across {len(docs_by_tenant)} tenants")
         if skipped:
-            print(f"  Skipped {skipped} sessions due to errors")
+            print(f"  Skipped {skipped} due to errors")
 
     return records
 
@@ -296,6 +357,7 @@ def engram_ingest_all_tenants(
     poll: bool = False,
     poll_interval: float = 2.0,
     verbose: bool = True,
+    ingestion_mode: str = "conversation",
     on_progress: Optional[Callable[[dict], None]] = None,
 ) -> IngestionResult:
     """
@@ -316,6 +378,9 @@ def engram_ingest_all_tenants(
         poll: Whether to poll runs to completion and collect stats.
         poll_interval: Seconds between run-status polls (only used when poll=True).
         verbose: Print progress updates.
+        ingestion_mode: ``"conversation"`` (default) submits the full parsed
+            conversation per session. ``"user_messages"`` submits each user
+            message individually as a single-message conversation.
 
     Returns:
         An ``IngestionResult`` with run records and submission timing.
@@ -331,8 +396,9 @@ def engram_ingest_all_tenants(
     # Phase 1: submit everything
     if verbose:
         total = sum(len(s) for s in docs_by_tenant.values())
-        print(f"Submitting {total} sessions across {len(docs_by_tenant)} tenants...")
-    records = _submit_all(client, docs_by_tenant, group, user_id_prefix, ingest_delay, verbose, on_progress)
+        mode_label = f" (mode: {ingestion_mode})" if ingestion_mode != "conversation" else ""
+        print(f"Submitting {total} sessions across {len(docs_by_tenant)} tenants{mode_label}...")
+    records = _submit_all(client, docs_by_tenant, group, user_id_prefix, ingest_delay, verbose, ingestion_mode, on_progress)
 
     submit_elapsed = time.time() - t0
     tenant_session_counts = {}

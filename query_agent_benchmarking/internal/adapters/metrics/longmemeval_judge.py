@@ -49,7 +49,11 @@ _KNOWLEDGE_UPDATE_TEMPLATE = (
     "Please answer yes if the response contains the correct answer. Otherwise, answer no. "
     "If the response contains some previous information along with an updated answer, "
     "the response should be considered as correct as long as the updated answer is the "
-    "required answer."
+    "required answer. "
+    "The response does not need to match the correct answer word-for-word. If the response "
+    "captures the same core fact or meaning as the correct answer (e.g., 'in a shoe rack' "
+    "vs. 'in a shoe rack in my closet'), it should be considered correct. Only answer no if "
+    "the response gives a fundamentally different answer or misses the key updated fact."
     "\n\nQuestion: {question}\n\nCorrect Answer: {answer}\n\nModel Response: {response}"
     "\n\nIs the model response correct? Answer yes or no only."
 )

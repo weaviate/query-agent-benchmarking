@@ -283,8 +283,9 @@ def populate_db_stream(req: PopulateDatabaseRequest):
             _jobs[job_id]["progress"] = loaded_event
             progress_queue.put(loaded_event)
 
+            ingestion_mode = config.get("engram_ingestion_mode", "conversation")
             result = engram_ingest_all_tenants(
-                docs_by_tenant, poll=True, on_progress=on_progress,
+                docs_by_tenant, poll=True, ingestion_mode=ingestion_mode, on_progress=on_progress,
             )
 
             manifest = save_engram_manifest(result, dataset_name)
