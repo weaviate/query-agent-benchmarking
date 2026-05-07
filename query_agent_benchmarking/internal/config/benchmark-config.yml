@@ -35,7 +35,7 @@ sleep_between_requests: 0
 use_subset: False
 num_samples: 100
 
-num_trials: 3
+num_trials: 1
 batch_size: 5
 
 # =============================================================================
