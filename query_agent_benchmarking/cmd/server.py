@@ -103,6 +103,7 @@ class PopulateDatabaseRequest(BaseModel):
     longmemeval_subset_start: Optional[int] = None
     longmemeval_subset_end: Optional[int] = None
     longmemeval_tenant_ids: Optional[list[str]] = None
+    build_memory_index: Optional[bool] = None
 
 
 # ---------------------------------------------------------------------------
@@ -187,6 +188,8 @@ def _build_populate_config(req: PopulateDatabaseRequest) -> dict:
         config["repetitions"] = req.repetitions
     if req.ef is not None:
         config["ef"] = req.ef
+    if req.build_memory_index is not None:
+        config["build_memory_index"] = req.build_memory_index
     if req.longmemeval_tenant_ids:
         config["longmemeval_subset"] = {
             "tenant_ids": req.longmemeval_tenant_ids,
@@ -280,20 +283,22 @@ def populate_db_stream(req: PopulateDatabaseRequest):
             _jobs[job_id]["progress"] = loaded_event
             progress_queue.put(loaded_event)
 
+            ingestion_mode = config.get("engram_ingestion_mode", "conversation")
             result = engram_ingest_all_tenants(
-                docs_by_tenant, poll=True, on_progress=on_progress,
+                docs_by_tenant, poll=True, ingestion_mode=ingestion_mode, on_progress=on_progress,
             )
 
             manifest = save_engram_manifest(result, dataset_name)
 
             # Build memory content→session index in background
-            from query_agent_benchmarking.internal.adapters.results.engram_memory_index import build_and_save_memory_index
-            try:
-                progress_queue.put({"event": "loading", "message": "Building memory index..."})
-                build_and_save_memory_index(result, dataset_name, manifest["timestamp"])
-            except Exception as idx_err:
-                # Non-fatal — index is a convenience, don't fail the whole job
-                print(f"Warning: memory index build failed: {idx_err}")
+            if config.get("build_memory_index", True):
+                from query_agent_benchmarking.internal.adapters.results.engram_memory_index import build_and_save_memory_index
+                try:
+                    progress_queue.put({"event": "loading", "message": "Building memory index..."})
+                    build_and_save_memory_index(result, dataset_name, manifest["timestamp"])
+                except Exception as idx_err:
+                    # Non-fatal — index is a convenience, don't fail the whole job
+                    print(f"Warning: memory index build failed: {idx_err}")
 
             _jobs[job_id]["status"] = "complete"
             _jobs[job_id]["manifest"] = manifest

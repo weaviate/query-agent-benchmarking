@@ -30,7 +30,7 @@ function formatAskQueryForCopy(q: AskQuery): string {
 ${q.question_type ?? ""}
 ${q.time_taken.toFixed(2)}s
 ${q.tenant_id ? `tenant: ${q.tenant_id}` : ""}
-${q.score !== undefined ? (q.score === 1 ? "Correct" : "Incorrect") + ": " + q.score : ""}
+${q.score !== undefined ? (q.score === 1 ? "Correct" : "Incorrect") : ""}
 Question
 ${q.question}
 
@@ -530,7 +530,7 @@ function AskQueriesView({ queries }: { queries: AskQuery[] }) {
                       fontWeight: 600,
                     }}
                   >
-                    {statusLabel ?? "Score"}: {q.score}
+                    {statusLabel ?? `Score: ${q.score}`}
                   </span>
                 )}
               </div>
