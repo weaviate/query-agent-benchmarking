@@ -3,5 +3,6 @@
 .env
 .ipynb_checkpoints
 *.pyc
+*.egg-info/
 /results/
 /console/results/
