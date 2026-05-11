@@ -11,7 +11,6 @@ from query_agent_benchmarking.internal.adapters.database.database_config import 
 from query_agent_benchmarking.internal.adapters.database.database_registry import resolve_spec
 from query_agent_benchmarking.internal.adapters.database.engram_loader import engram_ingest_all_tenants
 from query_agent_benchmarking.internal.adapters.results.engram_manifest import save_engram_manifest
-from query_agent_benchmarking.internal.adapters.results.engram_memory_index import build_and_save_memory_index
 from query_agent_benchmarking.internal.adapters.database.database_loader import (
     _drop_and_create_collection,
     _batch_insert,
@@ -76,8 +75,6 @@ def _run_engram_loader(config: dict, dataset_name: str) -> dict:
     ingestion_mode = config.get("engram_ingestion_mode", "conversation")
     result = engram_ingest_all_tenants(docs_by_tenant, poll=True, ingestion_mode=ingestion_mode)
     manifest = save_engram_manifest(result, dataset_name)
-    if config.get("build_memory_index", True):
-        build_and_save_memory_index(result, dataset_name, manifest["timestamp"])
     return manifest
 
 

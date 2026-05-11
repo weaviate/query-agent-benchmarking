@@ -103,7 +103,6 @@ class PopulateDatabaseRequest(BaseModel):
     longmemeval_subset_start: Optional[int] = None
     longmemeval_subset_end: Optional[int] = None
     longmemeval_tenant_ids: Optional[list[str]] = None
-    build_memory_index: Optional[bool] = None
 
 
 # ---------------------------------------------------------------------------
@@ -188,8 +187,6 @@ def _build_populate_config(req: PopulateDatabaseRequest) -> dict:
         config["repetitions"] = req.repetitions
     if req.ef is not None:
         config["ef"] = req.ef
-    if req.build_memory_index is not None:
-        config["build_memory_index"] = req.build_memory_index
     if req.longmemeval_tenant_ids:
         config["longmemeval_subset"] = {
             "tenant_ids": req.longmemeval_tenant_ids,
@@ -289,16 +286,6 @@ def populate_db_stream(req: PopulateDatabaseRequest):
             )
 
             manifest = save_engram_manifest(result, dataset_name)
-
-            # Build memory content→session index in background
-            if config.get("build_memory_index", True):
-                from query_agent_benchmarking.internal.adapters.results.engram_memory_index import build_and_save_memory_index
-                try:
-                    progress_queue.put({"event": "loading", "message": "Building memory index..."})
-                    build_and_save_memory_index(result, dataset_name, manifest["timestamp"])
-                except Exception as idx_err:
-                    # Non-fatal — index is a convenience, don't fail the whole job
-                    print(f"Warning: memory index build failed: {idx_err}")
 
             _jobs[job_id]["status"] = "complete"
             _jobs[job_id]["manifest"] = manifest
@@ -426,69 +413,3 @@ def engram_run_detail(
         return {"status": "error", "error": "Failed to fetch run detail."}
 
 
-@app.get("/memory-source-lookup")
-def memory_source_lookup(
-    content: str = Query(..., description="The memory content string to look up"),
-) -> dict[str, Any]:
-    """Look up which session produced a given memory by its content hash.
-
-    Searches all saved memory index files for a matching content hash.
-    Returns the source session info (tenant_id, session_id, operation history).
-    """
-    import hashlib
-    from pathlib import Path
-
-    content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
-
-    results_dir = (
-        Path(__file__).resolve().parent.parent.parent.parent / "console" / "results"
-    )
-    if not results_dir.exists():
-        return {"status": "not_found", "content_hash": content_hash}
-
-    # Search all memory index files (newest first)
-    index_files = sorted(
-        [f for f in results_dir.iterdir() if f.name.startswith("engram-memory-index-") and f.name.endswith(".json")],
-        key=lambda f: f.stat().st_mtime,
-        reverse=True,
-    )
-
-    for index_file in index_files:
-        try:
-            with open(index_file) as f:
-                index_doc = json.load(f)
-            entry = index_doc.get("index", {}).get(content_hash)
-            if entry:
-                # Find the manifest that contains this run_id
-                manifest_id = None
-                run_id = entry["operations"][0]["run_id"] if entry.get("operations") else None
-                if run_id:
-                    manifest_files = sorted(
-                        [f for f in results_dir.iterdir() if f.name.startswith("engram-ingest-") and f.name.endswith(".json")],
-                        key=lambda f: f.stat().st_mtime,
-                        reverse=True,
-                    )
-                    for mf in manifest_files:
-                        try:
-                            with open(mf) as mfh:
-                                manifest_doc = json.load(mfh)
-                            if any(r.get("run_id") == run_id for r in manifest_doc.get("runs", [])):
-                                manifest_id = mf.name.replace(".json", "")
-                                break
-                        except Exception:
-                            continue
-
-                return {
-                    "status": "found",
-                    "content_hash": content_hash,
-                    "memory_id": entry["memory_id"],
-                    "content": entry["content"],
-                    "operations": entry["operations"],
-                    "index_file": index_file.name,
-                    "dataset": index_doc.get("dataset"),
-                    "manifest_id": manifest_id,
-                }
-        except Exception:
-            continue
-
-    return {"status": "not_found", "content_hash": content_hash}
