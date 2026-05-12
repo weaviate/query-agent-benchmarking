@@ -149,7 +149,7 @@ def _submit_all(
                             single,
                             user_id=user_id,
                             group=group,
-                            conversation_id=session.get("session_id"),
+                            properties={"conversation_id": session.get("session_id")},
                         )
                     except Exception as e:
                         skipped += 1
@@ -190,7 +190,7 @@ def _submit_all(
                         conversation,
                         user_id=user_id,
                         group=group,
-                        conversation_id=session.get("session_id"),
+                        properties={"conversation_id": session.get("session_id")},
                     )
                 except Exception as e:
                     skipped += 1

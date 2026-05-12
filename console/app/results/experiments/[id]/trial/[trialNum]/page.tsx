@@ -309,88 +309,6 @@ export default function TrialQueriesPage({
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
-interface MemorySourceResult {
-  status: "found" | "not_found";
-  memory_id?: string;
-  operations?: { run_id: string; session_id: string; tenant_id: string; operation: string }[];
-  manifest_id?: string;
-  dataset?: string;
-}
-
-function MemorySourceLink({ content }: { content: string }) {
-  const [source, setSource] = useState<MemorySourceResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [looked, setLooked] = useState(false);
-
-  const handleLookup = useCallback(async () => {
-    setLoading(true);
-    try {
-      const resp = await fetch(`/api/backend/memory-source-lookup?content=${encodeURIComponent(content)}`);
-      const data = await resp.json();
-      setSource(data);
-    } catch {
-      setSource({ status: "not_found" });
-    } finally {
-      setLoading(false);
-      setLooked(true);
-    }
-  }, [content]);
-
-  if (!looked) {
-    return (
-      <button
-        onClick={handleLookup}
-        disabled={loading}
-        className="text-xs mt-1.5 inline-flex items-center gap-1 transition-colors"
-        style={{ color: "var(--color-teal)", fontFamily: "var(--font-mono)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-      >
-        {loading ? (
-          <>
-            <span className="inline-block w-3 h-3 border border-t-transparent rounded-full animate-spin" style={{ borderColor: "var(--color-teal)", borderTopColor: "transparent" }} />
-            looking up...
-          </>
-        ) : (
-          <>&#8599; trace source</>
-        )}
-      </button>
-    );
-  }
-
-  if (source?.status === "found" && source.operations && source.operations.length > 0) {
-    const op = source.operations[source.operations.length - 1]; // last operation = most recent modifier
-    const url = source.manifest_id
-      ? `/populate/engram-runs/${encodeURIComponent(source.manifest_id)}?expand=${encodeURIComponent(op.run_id)}`
-      : null;
-
-    return (
-      <div className="mt-1.5 text-xs" style={{ fontFamily: "var(--font-mono)" }}>
-        <span style={{ color: "var(--text-muted)" }}>source: </span>
-        <span style={{ color: "var(--color-teal)" }}>{op.session_id}</span>
-        <span style={{ color: "var(--text-muted)" }}> ({op.operation})</span>
-        <span style={{ color: "var(--text-muted)" }}> tenant: {op.tenant_id}</span>
-        {source.operations.length > 1 && (
-          <span style={{ color: "var(--text-muted)" }}> [{source.operations.length} ops total]</span>
-        )}
-        {url && (
-          <a
-            href={url}
-            className="ml-2 transition-colors"
-            style={{ color: "var(--color-green)", textDecoration: "underline" }}
-          >
-            view run
-          </a>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <span className="mt-1.5 text-xs block" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-      source: not found in memory index
-    </span>
-  );
-}
-
 function RetrievedContextPanel({ context }: { context: Record<string, unknown> }) {
   // Support the Engram format: { memories: [{memory, time_added}], n_memories_retrieved }
   // and fall back to raw JSON for any other agent format.
@@ -433,7 +351,6 @@ function RetrievedContextPanel({ context }: { context: Record<string, unknown> }
                 )}
               </div>
               <p style={{ whiteSpace: "pre-wrap" }}>{m.memory}</p>
-              <MemorySourceLink content={m.memory} />
             </div>
           ))
         ) : (

@@ -3,5 +3,7 @@
 .env
 .ipynb_checkpoints
 *.pyc
+*.egg-info/
+uv.lock
 /results/
 /console/results/
