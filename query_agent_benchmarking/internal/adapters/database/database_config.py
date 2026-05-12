@@ -32,6 +32,7 @@ supported_database_datasets = (
     "officeqa",
     "vidore_v3_hr",
     "wixqa",
+    "browsecomp-plus",
 )
 
 

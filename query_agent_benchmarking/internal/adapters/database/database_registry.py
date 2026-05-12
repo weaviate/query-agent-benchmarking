@@ -105,6 +105,13 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_multi2vec(image_field="image", embedding_model="cohere/embed-v4.0")
         .build()),
 
+    (DatasetSpecBuilder("browsecomp-plus")
+        .with_static_name("BrowseCompPlus")
+        .with_text_property("content", source_field="text")
+        .with_dataset_id(source_field="docid")
+        .with_text2vec()
+        .build()),
+
 ]
 
 

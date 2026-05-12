@@ -74,6 +74,8 @@ def _dispatch_search_loader(dataset_name: str):
         return local_file_loader.load_officeqa()
     if dataset_name == "reasonir-biology-subset":
         return huggingface_loader.load_reasonir_biology_subset()
+    if dataset_name == "browsecomp-plus":
+        return huggingface_loader.load_browsecomp_plus()
 
     return None
 
@@ -117,7 +119,10 @@ def load_ask_dataset(
             hf_path, users_to_test=users_to_test, tenant_ids=tenant_ids,
         )
 
+    if dataset_name == "browsecomp-plus":
+        return huggingface_loader.load_ask_browsecomp_plus()
+
     raise ValueError(
         f"Unknown ask dataset: {dataset_name}. "
-        f"Supported ask datasets: irpapers, multihoprag, officeqa, longmemeval-s, longmemeval-m"
+        f"Supported ask datasets: irpapers, multihoprag, officeqa, longmemeval-s, longmemeval-m, browsecomp-plus"
     )
