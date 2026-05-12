@@ -31,6 +31,7 @@ supported_search_datasets = (
     "reasonir-biology-subset",
     "vidore_v3_hr",
     "wixqa",
+    "browsecomp-plus",
 )
 
 supported_ask_datasets = (
@@ -39,6 +40,7 @@ supported_ask_datasets = (
     "longmemeval-m",  # Uses Engram memory (multi-tenant)
     "multihoprag",  # Uses MultiHopRAG_Default collection
     "officeqa",  # Uses OfficeQA_Default collection (local PDFs)
+    "browsecomp-plus",  # Uses BrowseCompPlus_Default collection
 )
 
 supported_embedding_models = (
