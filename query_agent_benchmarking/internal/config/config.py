@@ -31,7 +31,7 @@ supported_search_datasets = (
     "reasonir-biology-subset",
     "vidore_v3_hr",
     "wixqa",
-    "browsecomp-plus",
+    "browsecomp-plus", # TODO: Take this out of here for now.
 )
 
 supported_ask_datasets = (
