@@ -51,35 +51,32 @@ def calculate_precision_at_k(
     """Calculate precision@k for retrieved documents.
 
     Precision@k is the proportion of the top-k retrieved documents that are
-    relevant. For filtered retrieval (where fewer than k documents may be
-    returned) the denominator is the number of documents actually retrieved
-    in the top-k, so returning extra irrelevant documents is penalized while
-    returning fewer relevant-only documents is not.
+    relevant, using the standard IR convention with a constant denominator of
+    ``k`` (never ``min(k, retrieved)`` and never the retrieved count). This
+    keeps the metric comparable across queries with different retrieved counts
+    and yields a well-defined ``0/k = 0`` for zero-retrieval queries.
 
     Args:
         target_ids: List of target document IDs (ground truth).
         retrieved_ids: List of retrieved document IDs.
-        k: The number of top results to consider.
+        k: The number of top results to consider (the denominator).
 
     Returns:
-        float: Precision@k score (0.0 to 1.0) - proportion of the retrieved
-               top-k documents that are relevant.
+        float: Precision@k score (0.0 to 1.0) - number of relevant documents
+               in the top-k retrieved divided by k.
     """
     target_id_set = {str(id) for id in target_ids}
     retrieved_ids = [str(id) for id in retrieved_ids] if retrieved_ids else []
 
     retrieved_ids_at_k = retrieved_ids[:k]
 
-    if not retrieved_ids_at_k:
-        return 0.0
-
     found_count = sum(1 for retrieved_id in retrieved_ids_at_k if retrieved_id in target_id_set)
-    precision = found_count / len(retrieved_ids_at_k)
+    precision = found_count / k
 
     if verbose:
         print(f"\033[96mTarget IDs: {target_id_set}\033[0m")
         print(f"\033[92mRetrieved IDs @{k}: {retrieved_ids_at_k}\033[0m")
-        print(f"\033[96mPrecision@{k}: {found_count}/{len(retrieved_ids_at_k)} = {precision:.2f}\033[0m")
+        print(f"\033[96mPrecision@{k}: {found_count}/{k} = {precision:.2f}\033[0m")
 
     return precision
 

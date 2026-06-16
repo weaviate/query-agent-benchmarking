@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import type { TrialResultFile, SearchQuery, AskQuery } from "@/lib/results";
 
 interface TrialSummary {
   trialNumber: number;
@@ -26,13 +27,250 @@ const POLL_INTERVAL_MS = 5_000;
 const KEY_SCORE_KEYS = [
   "avg_alignment_score",
   "avg_exact_match_accuracy",
-  "avg_recall@5",
-  "avg_nDCG@10",
+  "avg_recall_at_5",
+  "avg_nDCG_at_10",
 ];
 
 function parseMetricValue(value: string): number | null {
   const num = parseFloat(value);
   return isNaN(num) ? null : num;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Markdown report export — single experiment
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Escape pipe characters so values can't break markdown table rows. */
+function escPipe(s: string): string {
+  return s.replace(/\|/g, "\\|");
+}
+
+/** Collapse whitespace and truncate for compact display in a table cell. */
+function truncateCell(s: string, max = 100): string {
+  const clean = escPipe(s.replace(/\s+/g, " ").trim());
+  return clean.length > max ? `${clean.slice(0, max)}…` : clean;
+}
+
+/** Count how many retrieved IDs are relevant (present in the ground truth). */
+function relevantHits(q: SearchQuery): number {
+  const gt = new Set(q.ground_truth_ids);
+  return q.retrieved_ids.filter((id) => gt.has(id)).length;
+}
+
+/** A representative trial whose per-query results are embedded in the report. */
+interface ReportTrial {
+  trialNumber: number;
+  data: TrialResultFile;
+}
+
+/**
+ * Append a per-query results section for one trial: a compact overview table
+ * followed by full details for every query. Mirrors the comparison report's
+ * per-query layout. No-op if the trial has no queries.
+ */
+function appendPerQueryResults(
+  L: (s?: string) => void,
+  trial: ReportTrial,
+  totalTrials: number,
+): void {
+  const mode = trial.data.metadata.mode;
+  const queries = trial.data.queries;
+  if (queries.length === 0) return;
+
+  L(`## Per-Query Results`);
+  L();
+  L(`_All ${queries.length} queries from Trial ${trial.trialNumber} (mode: ${mode})._`);
+  if (totalTrials > 1) {
+    L();
+    L(
+      `_This experiment ran ${totalTrials} trials; the queries below are from a single representative trial. ` +
+        `Per-trial aggregate scores are in the Trials table above._`,
+    );
+  }
+  L();
+
+  if (mode === "ask") {
+    const asks = queries as AskQuery[];
+    const askStatus = (q: AskQuery): string =>
+      q.is_error ? "error" : q.score === 1 ? "✓ correct" : q.score === 0 ? "✗ wrong" : "? unscored";
+
+    L(`### Results Overview`);
+    L();
+    L(`| # | Status | Time | Question |`);
+    L(`| ---: | :--- | ---: | :--- |`);
+    asks.forEach((q, i) => {
+      const status = q.is_error ? "error" : q.score === 1 ? "✓" : q.score === 0 ? "✗" : "?";
+      L(`| ${i + 1} | ${status} | ${q.time_taken.toFixed(2)}s | ${truncateCell(q.question)} |`);
+    });
+    L();
+    L(`_Status: ✓ correct · ✗ wrong · ? unscored · error._`);
+    L();
+
+    L(`### Query Details`);
+    L();
+    asks.forEach((q, i) => {
+      L(`#### ${i + 1}. [${askStatus(q)}] \`${escPipe(q.query_id)}\``);
+      L();
+      const meta: string[] = [];
+      if (q.question_type) meta.push(`type: ${q.question_type}`);
+      if (q.tenant_id) meta.push(`tenant: ${q.tenant_id}`);
+      meta.push(`${q.time_taken.toFixed(2)}s`);
+      L(`_${meta.join(" · ")}_`);
+      L();
+      L(`- **Question:** ${q.question}`);
+      L(`- **Ground truth:** ${q.ground_truth_answer || "_(empty)_"}`);
+      L(`- **System answer:** ${q.system_answer || "_(empty)_"}`);
+      if (q.judge_reasoning) L(`- **Judge:** ${q.judge_reasoning}`);
+      L();
+    });
+  } else {
+    const searches = queries as SearchQuery[];
+
+    L(`### Results Overview`);
+    L();
+    L(`| # | Hits | Retrieved | Time | Question |`);
+    L(`| ---: | ---: | ---: | ---: | :--- |`);
+    searches.forEach((q, i) => {
+      const hits = relevantHits(q);
+      L(
+        `| ${i + 1} | ${hits}/${q.num_ground_truth} | ${q.num_retrieved} | ${q.time_taken.toFixed(2)}s | ${truncateCell(q.question)} |`,
+      );
+    });
+    L();
+    L(`_Hits = relevant documents retrieved of total ground-truth relevant._`);
+    L();
+
+    L(`### Query Details`);
+    L();
+    searches.forEach((q, i) => {
+      const hits = relevantHits(q);
+      const status = hits > 0 ? "✓ hit" : "✗ miss";
+      L(`#### ${i + 1}. [${status}] \`${escPipe(q.query_id)}\``);
+      L();
+      L(`- **Question:** ${q.question}`);
+      L(`- **Ground truth IDs (${q.num_ground_truth}):** ${q.ground_truth_ids.join(", ") || "—"}`);
+      L(
+        `- **Retrieved (${q.num_retrieved}) · ${hits} relevant · ${q.time_taken.toFixed(2)}s:**`,
+      );
+      const gt = new Set(q.ground_truth_ids);
+      const shown = q.retrieved_ids.slice(0, 20).map((id) => (gt.has(id) ? `**${id}**` : id));
+      const more = q.retrieved_ids.length > 20 ? ` … +${q.retrieved_ids.length - 20} more` : "";
+      L(`  - Retrieved: ${shown.join(", ") || "—"}${more}`);
+      const plan = q.searches ?? [];
+      if (plan.length > 0) {
+        const planStr = plan
+          .map((s) => {
+            const qq = s.query ? `"${s.query}"` : s.uuid_value ? `uuid:${s.uuid_value}` : "—";
+            const filt = s.filters ? " +filter" : "";
+            const sort = s.sort_property ? ` +sort(${s.sort_property.property_name})` : "";
+            return `${s.collection}:${qq}${filt}${sort}`;
+          })
+          .join("; ");
+        L(`  - Search plan (${plan.length}): ${planStr}`);
+      }
+      L();
+    });
+  }
+}
+
+/**
+ * Build a detailed markdown report for a single experiment. When a representative
+ * trial is provided, its per-query results are embedded.
+ */
+function buildExperimentReport(
+  exp: ExperimentDetail,
+  trial: ReportTrial | null,
+  generatedAt: string,
+): string {
+  const lines: string[] = [];
+  const L = (s = "") => lines.push(s);
+
+  L(`# Experiment Report: ${exp.dataset}`);
+  L();
+  L(`_Generated ${generatedAt}_`);
+  L();
+
+  // ── Overview ───────────────────────────────────────────────────────────────
+  L(`## Overview`);
+  L();
+  L(`- **Dataset:** ${exp.dataset}`);
+  L(`- **Agent:** \`${exp.agent_name}\``);
+  L(`- **Mode:** ${exp.mode}`);
+  L(`- **Trials:** ${exp.num_trials}`);
+  L(`- **Timestamp:** ${exp.timestamp ? new Date(exp.timestamp).toLocaleString() : "—"}`);
+  L(`- **ID:** \`${decodeURIComponent(exp.id)}\``);
+  L();
+
+  // ── Aggregated metrics ───────────────────────────────────────────────────────
+  L(`## Aggregated Metrics`);
+  L();
+  if (exp.metricEntries.length === 0) {
+    L(`_No aggregated metrics available._`);
+    L();
+  } else {
+    L(`| Metric | Value |`);
+    L(`| :--- | ---: |`);
+    for (const { key, value } of exp.metricEntries) {
+      L(`| ${escPipe(key.replace(/_/g, " "))} | ${escPipe(value)} |`);
+    }
+    L();
+  }
+
+  // ── Per-trial summary ─────────────────────────────────────────────────────────
+  L(`## Trials`);
+  L();
+  if (exp.trials.length === 0) {
+    L(`_No trial data available._`);
+    L();
+  } else {
+    L(`| Trial | Queries | Avg Query Time | Key Score |`);
+    L(`| :--- | ---: | ---: | ---: |`);
+    for (const trial of exp.trials) {
+      const totalQueries = trial.totalQueries ?? "—";
+      const avgTime = trial.avgQueryTime != null ? `${trial.avgQueryTime.toFixed(2)}s` : "—";
+
+      let keyScore = "—";
+      if (trial.metrics) {
+        for (const k of KEY_SCORE_KEYS) {
+          if (typeof trial.metrics[k] === "number") {
+            keyScore = `${((trial.metrics[k] as number) * 100).toFixed(1)}%`;
+            break;
+          }
+        }
+      }
+      L(`| Trial ${trial.trialNumber} | ${totalQueries} | ${avgTime} | ${keyScore} |`);
+    }
+    L();
+  }
+
+  // ── Per-query results (representative trial) ───────────────────────────────
+  if (trial) {
+    appendPerQueryResults(L, trial, exp.num_trials);
+  }
+
+  L(`---`);
+  L(`_Report generated by the Query Agent Benchmarking console._`);
+  L();
+
+  return lines.join("\n");
+}
+
+/** Trigger a client-side download of a markdown file. */
+function downloadMarkdown(content: string, filename: string): void {
+  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/** Slugify a string for use in a filename. */
+function slugify(s: string): string {
+  return s.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase() || "experiment";
 }
 
 export default function ExperimentDetailPage({
@@ -43,6 +281,38 @@ export default function ExperimentDetailPage({
   const [id, setId] = useState<string | null>(null);
   const [experiment, setExperiment] = useState<ExperimentDetail | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!experiment || exporting) return;
+    setExporting(true);
+    try {
+      // Fetch the first trial with results so the report can embed per-query
+      // detail. Best-effort — if it fails we still export the metrics + summary.
+      let trial: ReportTrial | null = null;
+      const firstWithResults = experiment.trials.find((t) => t.hasResults);
+      if (firstWithResults) {
+        try {
+          const r = await fetch(
+            `/api/trial?id=${experiment.id}&trial=${firstWithResults.trialNumber}`,
+          );
+          if (r.ok) {
+            const data = (await r.json()) as TrialResultFile;
+            trial = { trialNumber: firstWithResults.trialNumber, data };
+          }
+        } catch {
+          // per-query detail is best-effort
+        }
+      }
+
+      const now = new Date();
+      const md = buildExperimentReport(experiment, trial, now.toLocaleString());
+      const stamp = now.toISOString().slice(0, 10);
+      downloadMarkdown(md, `experiment-${slugify(experiment.dataset)}-${stamp}.md`);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     paramsPromise.then((p) => setId(p.id));
@@ -113,11 +383,22 @@ export default function ExperimentDetailPage({
               <span>{experiment.num_trials} trial{experiment.num_trials !== 1 ? "s" : ""}</span>
             </div>
           </div>
-          {experiment.timestamp && (
-            <span className="text-xs opacity-50" style={{ fontFamily: "var(--font-mono)" }}>
-              {new Date(experiment.timestamp).toLocaleString()}
-            </span>
-          )}
+          <div className="flex flex-col items-end gap-3">
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="brand-btn-primary"
+              style={{ padding: "8px 18px", opacity: exporting ? 0.6 : 1 }}
+              title="Download a detailed markdown report for this experiment"
+            >
+              {exporting ? "Exporting…" : "↓ Export Report"}
+            </button>
+            {experiment.timestamp && (
+              <span className="text-xs opacity-50" style={{ fontFamily: "var(--font-mono)" }}>
+                {new Date(experiment.timestamp).toLocaleString()}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

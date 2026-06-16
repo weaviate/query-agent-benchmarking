@@ -72,10 +72,10 @@ class IRMetricsCalculator:
         for i, (result, ground_truth) in enumerate(
             tqdm(zip(results, ground_truths), desc="Analyzing search results")
         ):
-            if result.retrieved_ids == []:
-                print(f"\n\033[91mSkipping analysis for query {i} due to error.\033[0m")
-                continue
-
+            # A zero-retrieval query is a real, meaningful outcome (precision
+            # mode may legitimately return nothing). It must be scored, not
+            # skipped: every metric falls out to 0 naturally from the arithmetic
+            # below, and the query stays in the aggregate denominator.
             retrieved_ids = [res.object_id for res in result.retrieved_ids]
 
             for spec in self.metric_specs:
