@@ -4,12 +4,27 @@ These adapters enable BYOS (bring-your-own-system) evaluation by sending
 HTTP POST requests to a user-provided endpoint.
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 import httpx
 
-from query_agent_benchmarking.internal.core.domain.models import ObjectID
+from query_agent_benchmarking.internal.core.domain.models import (
+    AgentSearch,
+    ObjectID,
+    SearchAgentResponse,
+)
 from query_agent_benchmarking.internal.core.ports.ask_agent import AskResponse
+
+
+def _parse_searches(raw: Any) -> Optional[list[AgentSearch]]:
+    """Parse an optional external ``searches`` payload into ``AgentSearch``.
+
+    Returns ``None`` when the service does not report a search plan, so the
+    distinction between "not reported" and "empty plan" is preserved.
+    """
+    if raw is None:
+        return None
+    return [AgentSearch.model_validate(s) for s in raw]
 
 
 class ExternalSearchService:
@@ -17,6 +32,10 @@ class ExternalSearchService:
 
     Expected request:  ``{"query": "..."}``
     Expected response: ``{"results": ["id1", "id2", ...]}``
+
+    The service may optionally include a ``"searches"`` key describing the
+    structured search plan it executed; when absent, the search plan is reported
+    as ``None`` (not yet implemented), which serializes and visualizes cleanly.
     """
 
     def __init__(self, host: str):
@@ -24,19 +43,26 @@ class ExternalSearchService:
             raise ValueError("host is required for ExternalSearchService")
         self.host = host
 
-    def run(self, query: str, tenant: Optional[str] = None) -> list[ObjectID]:
+    def _build_response(self, data: dict[str, Any]) -> SearchAgentResponse:
+        retrieved_ids = [ObjectID(object_id=str(doc_id)) for doc_id in data.get("results", [])]
+        return SearchAgentResponse(
+            retrieved_ids=retrieved_ids,
+            searches=_parse_searches(data.get("searches")),
+        )
+
+    def run(self, query: str, tenant: Optional[str] = None) -> SearchAgentResponse:
         with httpx.Client(timeout=300.0) as client:
             response = client.post(self.host, json={"query": query})
             response.raise_for_status()
             data = response.json()
-        return [ObjectID(object_id=str(doc_id)) for doc_id in data.get("results", [])]
+        return self._build_response(data)
 
-    async def run_async(self, query: str, tenant: Optional[str] = None) -> list[ObjectID]:
+    async def run_async(self, query: str, tenant: Optional[str] = None) -> SearchAgentResponse:
         async with httpx.AsyncClient(timeout=300.0) as client:
             response = await client.post(self.host, json={"query": query})
             response.raise_for_status()
             data = response.json()
-        return [ObjectID(object_id=str(doc_id)) for doc_id in data.get("results", [])]
+        return self._build_response(data)
 
     async def initialize_async(self) -> None:
         pass

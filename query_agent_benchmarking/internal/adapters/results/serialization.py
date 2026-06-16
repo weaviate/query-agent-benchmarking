@@ -74,21 +74,38 @@ def save_trial_results(
             "mode": "search",
         },
         "queries": [
-            {
-                "query_id": f"q{idx}",
-                "question": result.query.question,
-                "ground_truth_ids": result.query_ground_truth_id,
-                "retrieved_ids": [obj.object_id for obj in result.retrieved_ids],
-                "num_retrieved": len(result.retrieved_ids),
-                "num_ground_truth": len(result.query_ground_truth_id),
-                "time_taken": result.time_taken,
-            }
+            _search_query_to_dict(idx, result)
             for idx, result in enumerate(results)
         ]
     }
 
     with open(trial_output_path, "w") as f:
         json.dump(trial_data, f, indent=2)
+
+
+def _search_query_to_dict(idx: int, result: QueryResult) -> dict[str, Any]:
+    """Serialize a single search QueryResult to a JSON-ready dict.
+
+    The agent's search plan (``searches``/``num_searches``) is only included
+    when the agent reported one. Agents that don't expose a plan (direct
+    hybrid/vector/BM25 or external services that haven't implemented it) leave
+    ``result.searches`` as ``None``, and these keys are omitted entirely.
+    """
+    query_dict: dict[str, Any] = {
+        "query_id": f"q{idx}",
+        "question": result.query.question,
+        "ground_truth_ids": result.query_ground_truth_id,
+        "retrieved_ids": [obj.object_id for obj in result.retrieved_ids],
+        "num_retrieved": len(result.retrieved_ids),
+        "num_ground_truth": len(result.query_ground_truth_id),
+        "time_taken": result.time_taken,
+    }
+    if result.searches is not None:
+        # The agent's search plan: how it decomposed this query into structured
+        # sub-searches (query text, filters, sort, uuid).
+        query_dict["num_searches"] = len(result.searches)
+        query_dict["searches"] = [s.model_dump(mode="json") for s in result.searches]
+    return query_dict
 
 
 def save_ask_trial_results(

@@ -7,14 +7,17 @@ logic. Depends only on port interfaces, not on concrete implementations.
 
 import asyncio
 import time
-from typing import Any
+from typing import Any, Optional
 
 from tqdm import tqdm
 
 from query_agent_benchmarking.internal.core.domain.models import (
+    AgentSearch,
     InMemoryQuery,
     InMemoryAskQuery,
+    ObjectID,
     QueryResult,
+    SearchAgentResponse,
     AskResult,
 )
 
@@ -22,6 +25,20 @@ from query_agent_benchmarking.internal.core.domain.models import (
 # ============================================================================
 # Search Mode Query Execution
 # ============================================================================
+
+def _unpack_search_response(
+    response: object,
+) -> tuple[list[ObjectID], Optional[list[AgentSearch]]]:
+    """Normalize a search agent's return value into (retrieved_ids, searches).
+
+    Agents may return either a plain ``list[ObjectID]`` (legacy / BYOS /
+    direct-search adapters) or a ``SearchAgentResponse`` that also carries the
+    structured searches the agent performed. ``searches`` is ``None`` when the
+    agent does not report a search plan.
+    """
+    if isinstance(response, SearchAgentResponse):
+        return response.retrieved_ids, response.searches
+    return response, None  # type: ignore[return-value]
 
 def run_search_queries(
     queries: list[InMemoryQuery],
@@ -34,13 +51,15 @@ def run_search_queries(
         query_start_time = time.time()
         stringified_ids = [str(dataset_id) for dataset_id in query.dataset_ids]
         response = query_agent.run(query.question, tenant=query.tenant_id)
+        retrieved_ids, searches = _unpack_search_response(response)
         query_time_taken = time.time() - query_start_time
 
         results.append(QueryResult(
             query=query,
             query_ground_truth_id=stringified_ids,
-            retrieved_ids=response,
+            retrieved_ids=retrieved_ids,
             time_taken=query_time_taken,
+            searches=searches,
         ))
 
         if i % 10 == 0:
@@ -79,13 +98,15 @@ async def run_search_queries_async(
 
                 print(f"Running search query {index}: {query.question}")
                 response = await query_agent.run_async(query.question, tenant=query.tenant_id)
+                retrieved_ids, searches = _unpack_search_response(response)
                 query_time_taken = time.time() - query_start_time
 
                 return QueryResult(
                     query=query,
                     query_ground_truth_id=stringified_ids,
-                    retrieved_ids=response,
+                    retrieved_ids=retrieved_ids,
                     time_taken=query_time_taken,
+                    searches=searches,
                 )
             except Exception as e:
                 query_time_taken = time.time() - query_start_time

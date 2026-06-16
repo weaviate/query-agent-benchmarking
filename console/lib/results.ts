@@ -16,6 +16,49 @@ export interface TrialMetadata {
   mode: "search" | "ask";
 }
 
+/**
+ * A leaf property filter, mirroring the Query Agent's normalized filter shape.
+ * e.g. { filter_type: "integer", property_name: "price", operator: "<", value: 30000 }
+ * Date filters carry a structured `value` object instead of a scalar.
+ */
+export interface PropertyFilterLeaf {
+  filter_type?: string | null;
+  property_name?: string;
+  operator?: string;
+  value?: unknown;
+  is_null?: boolean;
+  // geo filters
+  latitude?: number;
+  longitude?: number;
+  max_distance_meters?: number;
+}
+
+/** A boolean group combining nested filters with AND / OR. */
+export interface FilterGroup {
+  combine: "AND" | "OR";
+  filters: FilterNode[];
+}
+
+export type FilterNode = PropertyFilterLeaf | FilterGroup;
+
+export interface QuerySort {
+  property_name: string;
+  order: "ascending" | "descending";
+  tie_break?: QuerySort | null;
+}
+
+/**
+ * One structured sub-search the agent issued for a single benchmark query —
+ * its search plan. Mirrors the backend `AgentSearch` model.
+ */
+export interface AgentSearch {
+  collection: string;
+  query?: string | null;
+  filters?: FilterNode | null;
+  sort_property?: QuerySort | null;
+  uuid_value?: string | null;
+}
+
 export interface SearchQuery {
   query_id: string;
   question: string;
@@ -24,6 +67,9 @@ export interface SearchQuery {
   num_retrieved: number;
   num_ground_truth: number;
   time_taken: number;
+  /** The agent's search plan. Absent/empty for direct or BYOS retrievers. */
+  num_searches?: number;
+  searches?: AgentSearch[];
 }
 
 export interface AskQuery {
@@ -240,6 +286,239 @@ export function loadAllExperiments(): Experiment[] {
 export function loadExperiment(id: string): Experiment | null {
   const experiments = loadAllExperiments();
   return experiments.find((e) => e.id === id) || null;
+}
+
+// ============================================================================
+// Per-query comparison across K experiments
+// ============================================================================
+
+export type ComparisonOutcome = "all_correct" | "all_wrong" | "mixed";
+
+/** One experiment's prediction for a single aligned query. */
+export interface ComparisonCell {
+  present: boolean;
+  /** Unified success signal — search: retrieved a relevant doc; ask: judged correct. */
+  correct: boolean | null;
+  time_taken?: number;
+  // search-mode fields
+  retrieved_ids?: string[];
+  num_retrieved?: number;
+  overlap?: number;
+  searches?: AgentSearch[] | null;
+  // ask-mode fields
+  system_answer?: string;
+  score?: number;
+  is_error?: boolean;
+  judge_reasoning?: string;
+}
+
+/** One query aligned across all compared experiments (joined by question text). */
+export interface QueryComparisonRow {
+  question: string;
+  ground_truth_ids?: string[];
+  ground_truth_answer?: string;
+  question_type?: string;
+  tenant_id?: string;
+  /** Indexed by experiment order; `null` when the query is absent from that experiment. */
+  cells: (ComparisonCell | null)[];
+  presentCount: number;
+  correctCount: number;
+  /** Classification over present cells (only meaningful when presentCount >= 2). */
+  outcome: ComparisonOutcome;
+}
+
+export interface QueryComparisonExperiment {
+  id: string;
+  label: string;
+  agent_name: string;
+  dataset: string;
+  mode: "search" | "ask" | "unknown";
+  trialNumber: number | null;
+}
+
+export interface QueryComparison {
+  mode: "search" | "ask" | "mixed" | "unknown";
+  experiments: QueryComparisonExperiment[];
+  rows: QueryComparisonRow[];
+  /** Total distinct questions across the union of experiments. */
+  totalQuestions: number;
+  /** Questions present in every compared experiment. */
+  sharedByAll: number;
+  /** Summary counts over comparable rows (present in >= 2 experiments). */
+  counts: { comparable: number; allCorrect: number; allWrong: number; mixed: number };
+  warning?: string;
+}
+
+function firstTrialWithResults(
+  exp: Experiment
+): { trialNumber: number; results: TrialResultFile } | null {
+  const trial = exp.trials.find((t) => t.results != null);
+  return trial && trial.results ? { trialNumber: trial.trialNumber, results: trial.results } : null;
+}
+
+function buildSearchCell(q: SearchQuery): ComparisonCell {
+  const gt = new Set(q.ground_truth_ids ?? []);
+  const overlap = (q.retrieved_ids ?? []).filter((id) => gt.has(id)).length;
+  return {
+    present: true,
+    correct: overlap > 0,
+    time_taken: q.time_taken,
+    retrieved_ids: q.retrieved_ids,
+    num_retrieved: q.num_retrieved,
+    overlap,
+    searches: q.searches ?? null,
+  };
+}
+
+function buildAskCell(q: AskQuery): ComparisonCell {
+  const correct = q.is_error ? false : q.score === undefined ? null : q.score === 1;
+  return {
+    present: true,
+    correct,
+    time_taken: q.time_taken,
+    system_answer: q.system_answer,
+    score: q.score,
+    is_error: q.is_error,
+    judge_reasoning: q.judge_reasoning,
+  };
+}
+
+/**
+ * Build a per-query comparison across K experiments.
+ *
+ * Queries are aligned by **question text** (robust to per-run query-id
+ * reordering from subsetting/shuffling). Uses the first trial with results for
+ * each experiment. Requires all experiments to share a single mode (search or
+ * ask); otherwise returns a warning and no rows.
+ */
+export function buildQueryComparison(ids: string[]): QueryComparison | null {
+  const all = loadAllExperiments();
+  const matched = ids
+    .map((id) => all.find((e) => e.id === id))
+    .filter((e): e is Experiment => Boolean(e));
+
+  if (matched.length < 2) return null;
+
+  const labels = loadLabels();
+  const trials = matched.map(firstTrialWithResults);
+
+  const experiments: QueryComparisonExperiment[] = matched.map((exp, i) => ({
+    id: exp.id,
+    label: labels[exp.id] ?? "",
+    agent_name: exp.agent_name,
+    dataset: exp.dataset,
+    mode: exp.mode,
+    trialNumber: trials[i]?.trialNumber ?? null,
+  }));
+
+  // Determine a single shared mode for the comparison.
+  const modes = new Set(matched.map((e) => e.mode));
+  let mode: QueryComparison["mode"];
+  let warning: string | undefined;
+  if (modes.size > 1) {
+    mode = "mixed";
+    warning = "Selected experiments use different modes; per-query comparison requires a single mode.";
+  } else {
+    mode = [...modes][0] as QueryComparison["mode"];
+  }
+
+  const K = matched.length;
+  const emptyResult = (w?: string): QueryComparison => ({
+    mode,
+    experiments,
+    rows: [],
+    totalQuestions: 0,
+    sharedByAll: 0,
+    counts: { comparable: 0, allCorrect: 0, allWrong: 0, mixed: 0 },
+    warning: w ?? warning,
+  });
+
+  if (mode === "mixed" || mode === "unknown") return emptyResult();
+
+  // Align by question text, preserving first-seen order.
+  const rowMap = new Map<string, QueryComparisonRow>();
+
+  const ensureRow = (question: string): QueryComparisonRow => {
+    let row = rowMap.get(question);
+    if (!row) {
+      row = {
+        question,
+        cells: new Array(K).fill(null),
+        presentCount: 0,
+        correctCount: 0,
+        outcome: "all_wrong",
+      };
+      rowMap.set(question, row);
+    }
+    return row;
+  };
+
+  trials.forEach((trial, expIdx) => {
+    if (!trial) return;
+    const queries = trial.results.queries ?? [];
+    for (const q of queries) {
+      const question = q.question?.trim();
+      if (!question) continue;
+      const row = ensureRow(question);
+      if (mode === "search") {
+        const sq = q as SearchQuery;
+        row.cells[expIdx] = buildSearchCell(sq);
+        if (!row.ground_truth_ids) row.ground_truth_ids = sq.ground_truth_ids;
+      } else {
+        const aq = q as AskQuery;
+        row.cells[expIdx] = buildAskCell(aq);
+        if (!row.ground_truth_answer) row.ground_truth_answer = aq.ground_truth_answer;
+        if (!row.question_type && aq.question_type) row.question_type = aq.question_type;
+        if (!row.tenant_id && aq.tenant_id) row.tenant_id = aq.tenant_id;
+      }
+    }
+  });
+
+  // Finalize per-row aggregates.
+  const rows = [...rowMap.values()];
+  let sharedByAll = 0;
+  const counts = { comparable: 0, allCorrect: 0, allWrong: 0, mixed: 0 };
+
+  for (const row of rows) {
+    const present = row.cells.filter((c): c is ComparisonCell => c != null);
+    row.presentCount = present.length;
+    // Treat unknown (null) correctness as not-correct for counting.
+    row.correctCount = present.filter((c) => c.correct === true).length;
+    row.outcome =
+      row.correctCount === row.presentCount
+        ? "all_correct"
+        : row.correctCount === 0
+          ? "all_wrong"
+          : "mixed";
+
+    if (row.presentCount === K) sharedByAll++;
+    if (row.presentCount >= 2) {
+      counts.comparable++;
+      if (row.outcome === "all_correct") counts.allCorrect++;
+      else if (row.outcome === "all_wrong") counts.allWrong++;
+      else counts.mixed++;
+    }
+  }
+
+  // Surface disagreements first, then all-wrong, then all-correct; stable within.
+  const outcomeRank: Record<ComparisonOutcome, number> = { mixed: 0, all_wrong: 1, all_correct: 2 };
+  rows.sort((a, b) => {
+    // Comparable rows (>=2 present) before partial ones.
+    const aCmp = a.presentCount >= 2 ? 0 : 1;
+    const bCmp = b.presentCount >= 2 ? 0 : 1;
+    if (aCmp !== bCmp) return aCmp - bCmp;
+    return outcomeRank[a.outcome] - outcomeRank[b.outcome];
+  });
+
+  return {
+    mode,
+    experiments,
+    rows,
+    totalQuestions: rows.length,
+    sharedByAll,
+    counts,
+    warning,
+  };
 }
 
 /** Return all JSON filenames on disk that belong to the given experiment id. */

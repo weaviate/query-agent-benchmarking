@@ -8,6 +8,7 @@ from query_agent_benchmarking.internal.adapters.results.json_file_repository imp
     JsonFileResultRepository,
 )
 from query_agent_benchmarking.internal.core.domain.models import (
+    AgentSearch,
     InMemoryQuery,
     QueryResult,
     ObjectID,
@@ -54,6 +55,50 @@ class TestJsonFileResultRepository:
         assert data["metadata"]["mode"] == "search"
         assert len(data["queries"]) == 1
         assert data["queries"][0]["question"] == "Q1"
+        # Agents that don't report a search plan (searches=None) omit the keys
+        # entirely, so the serialized shape is unchanged from before the feature.
+        assert "num_searches" not in data["queries"][0]
+        assert "searches" not in data["queries"][0]
+
+    def test_save_trial_results_with_search_plan(self, repo_with_tmp_dir, sample_config):
+        repo, tmp_path = repo_with_tmp_dir
+        query = InMemoryQuery(question="red cars under 30k", dataset_ids=["d1"])
+        results = [
+            QueryResult(
+                query=query,
+                query_ground_truth_id=["d1"],
+                retrieved_ids=[ObjectID(object_id="d1")],
+                time_taken=0.5,
+                searches=[
+                    AgentSearch(
+                        collection="FilteredCars",
+                        query="red cars",
+                        filters={
+                            "combine": "AND",
+                            "filters": [
+                                {
+                                    "filter_type": "integer",
+                                    "property_name": "price",
+                                    "operator": "<",
+                                    "value": 30000,
+                                }
+                            ],
+                        },
+                    )
+                ],
+            )
+        ]
+
+        repo.save_trial_results(results, sample_config, trial_number=1)
+
+        files = list(tmp_path.glob("*.json"))
+        data = json.loads(files[0].read_text())
+        q = data["queries"][0]
+        assert q["num_searches"] == 1
+        assert q["searches"][0]["collection"] == "FilteredCars"
+        assert q["searches"][0]["query"] == "red cars"
+        assert q["searches"][0]["filters"]["combine"] == "AND"
+        assert q["searches"][0]["filters"]["filters"][0]["property_name"] == "price"
 
     def test_save_trial_metrics(self, repo_with_tmp_dir, sample_config):
         repo, tmp_path = repo_with_tmp_dir

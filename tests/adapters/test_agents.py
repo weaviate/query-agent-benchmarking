@@ -117,11 +117,14 @@ class TestExternalSearchService:
             mock_client.post.return_value = mock_response
             mock_client_cls.return_value = mock_client
 
-            results = svc.run("test query")
+            response = svc.run("test query")
 
+        results = response.retrieved_ids
         assert len(results) == 3
         assert all(isinstance(r, ObjectID) for r in results)
         assert results[0].object_id == "doc1"
+        # No search plan reported by the external service.
+        assert response.searches is None
         mock_client.post.assert_called_once_with(
             "http://localhost:8080/search", json={"query": "test query"}
         )
@@ -140,9 +143,10 @@ class TestExternalSearchService:
             mock_client.post.return_value = mock_response
             mock_client_cls.return_value = mock_client
 
-            results = svc.run("test query")
+            response = svc.run("test query")
 
-        assert results == []
+        assert response.retrieved_ids == []
+        assert response.searches is None
 
     @pytest.mark.asyncio
     async def test_run_async(self):
@@ -159,10 +163,12 @@ class TestExternalSearchService:
             mock_client.post = AsyncMock(return_value=mock_response)
             mock_client_cls.return_value = mock_client
 
-            results = await svc.run_async("async query")
+            response = await svc.run_async("async query")
 
+        results = response.retrieved_ids
         assert len(results) == 2
         assert results[0].object_id == "a"
+        assert response.searches is None
 
     def test_conforms_to_search_agent_protocol(self):
         svc = ExternalSearchService(host="http://example.com")

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { Fragment, useEffect, useState, useCallback, useMemo } from "react";
 import type { TrialResultFile, SearchQuery, AskQuery } from "@/lib/results";
+import { SearchPlan } from "@/app/components/SearchPlan";
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -498,15 +499,30 @@ function AskQueriesView({ queries }: { queries: AskQuery[] }) {
 }
 
 function SearchQueriesView({ queries }: { queries: SearchQuery[] }) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const toggle = useCallback((id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const anyPlans = queries.some((q) => (q.num_searches ?? q.searches?.length ?? 0) > 0);
+
   return (
     <div className="brand-card overflow-x-auto">
       <table className="w-full text-sm text-left brand-table">
         <thead>
           <tr>
+            <th style={{ width: "1%" }}></th>
             <th>ID</th>
             <th>Question</th>
             <th>Ground Truth</th>
             <th>Retrieved</th>
+            {anyPlans && <th>Plan</th>}
             <th>Time</th>
           </tr>
         </thead>
@@ -516,29 +532,80 @@ function SearchQueriesView({ queries }: { queries: SearchQuery[] }) {
               q.ground_truth_ids.includes(id)
             ).length;
             const hasOverlap = overlap > 0;
+            const searches = q.searches ?? [];
+            const numSearches = q.num_searches ?? searches.length;
+            const canExpand = numSearches > 0;
+            const isOpen = expanded.has(q.query_id);
+            const colSpan = anyPlans ? 7 : 6;
 
             return (
-              <tr
-                key={q.query_id}
-                style={!hasOverlap ? { background: "var(--bg-card-error)" } : {}}
-              >
-                <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem" }}>{q.query_id}</td>
-                <td className="max-w-xs truncate">{q.question}</td>
-                <td className="text-xs">{q.num_ground_truth} IDs</td>
-                <td className="text-xs">
-                  <span>{q.num_retrieved} IDs</span>
-                  <span
-                    className="ml-1 brand-badge"
-                    style={{
-                      background: hasOverlap ? "rgba(97,189,115,0.15)" : "rgba(244,64,78,0.12)",
-                      color: hasOverlap ? "var(--color-green)" : "var(--color-coral)",
-                    }}
-                  >
-                    {overlap} match
-                  </span>
-                </td>
-                <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem" }}>{q.time_taken.toFixed(2)}s</td>
-              </tr>
+              <Fragment key={q.query_id}>
+                <tr
+                  style={{
+                    ...(!hasOverlap ? { background: "var(--bg-card-error)" } : {}),
+                    cursor: canExpand ? "pointer" : "default",
+                  }}
+                  onClick={canExpand ? () => toggle(q.query_id) : undefined}
+                >
+                  <td style={{ textAlign: "center", color: "var(--text-muted)" }}>
+                    {canExpand && (
+                      <span
+                        style={{
+                          display: "inline-block",
+                          transition: "transform 0.15s",
+                          transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+                          fontFamily: "var(--font-mono)",
+                        }}
+                      >
+                        ▶
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem" }}>{q.query_id}</td>
+                  <td className="max-w-xs truncate">{q.question}</td>
+                  <td className="text-xs">{q.num_ground_truth} IDs</td>
+                  <td className="text-xs">
+                    <span>{q.num_retrieved} IDs</span>
+                    <span
+                      className="ml-1 brand-badge"
+                      style={{
+                        background: hasOverlap ? "rgba(97,189,115,0.15)" : "rgba(244,64,78,0.12)",
+                        color: hasOverlap ? "var(--color-green)" : "var(--color-coral)",
+                      }}
+                    >
+                      {overlap} match
+                    </span>
+                  </td>
+                  {anyPlans && (
+                    <td className="text-xs">
+                      {numSearches > 0 ? (
+                        <span
+                          className="brand-badge"
+                          style={{ background: "rgba(165,144,221,0.15)", color: "var(--color-lavender)" }}
+                        >
+                          {numSearches} {numSearches === 1 ? "search" : "searches"}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--text-muted)" }}>—</span>
+                      )}
+                    </td>
+                  )}
+                  <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem" }}>{q.time_taken.toFixed(2)}s</td>
+                </tr>
+                {isOpen && (
+                  <tr>
+                    <td colSpan={colSpan} style={{ padding: 0 }}>
+                      <div
+                        className="px-4 py-3"
+                        style={{ background: "var(--bg-card)", borderTop: "1px solid var(--border-subtle)" }}
+                      >
+                        <div className="eyebrow mb-2">Agent Search Plan</div>
+                        <SearchPlan searches={searches} />
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             );
           })}
         </tbody>
