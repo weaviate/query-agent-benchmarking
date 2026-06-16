@@ -1034,10 +1034,11 @@ function PerQueryBody({
               {experiments.map((exp, i) => {
                 const c = EXP_COLORS[i % EXP_COLORS.length];
                 return (
-                  <th key={exp.id} className="text-center">
-                    <span className="brand-badge" style={{ background: c.bg, color: c.fg, fontWeight: 700 }}>
+                  <th key={exp.id} className="text-center whitespace-nowrap">
+                    <span className="brand-badge mr-1" style={{ background: c.bg, color: c.fg, fontWeight: 700 }}>
                       {i + 1}
                     </span>
+                    {exp.label || exp.agent_name}
                   </th>
                 );
               })}
@@ -1045,7 +1046,7 @@ function PerQueryBody({
           </thead>
           <tbody>
             {filteredRows.map((row, ri) => (
-              <ComparisonRowView key={ri} row={row} mode={mode} expCount={experiments.length} />
+              <ComparisonRowView key={ri} row={row} mode={mode} experiments={experiments} />
             ))}
           </tbody>
         </table>
@@ -1057,15 +1058,15 @@ function PerQueryBody({
 function ComparisonRowView({
   row,
   mode,
-  expCount,
+  experiments,
 }: {
   row: QueryComparisonRow;
   mode: QueryComparison["mode"];
-  expCount: number;
+  experiments: QueryComparison["experiments"];
 }) {
   const [open, setOpen] = useState(false);
   const meta = OUTCOME_META[row.outcome];
-  const colSpan = 2 + expCount;
+  const colSpan = 2 + experiments.length;
 
   return (
     <Fragment>
@@ -1113,7 +1114,7 @@ function ComparisonRowView({
               className="px-4 py-4"
               style={{ background: "var(--bg-card)", borderTop: "1px solid var(--border-subtle)" }}
             >
-              <RowDetail row={row} mode={mode} />
+              <RowDetail row={row} mode={mode} experiments={experiments} />
             </div>
           </td>
         </tr>
@@ -1148,7 +1149,15 @@ function CellBadge({ cell, mode }: { cell: ComparisonCell | null; mode: QueryCom
 }
 
 /** Expanded full-width detail comparing each experiment's prediction. */
-function RowDetail({ row, mode }: { row: QueryComparison["rows"][number]; mode: QueryComparison["mode"] }) {
+function RowDetail({
+  row,
+  mode,
+  experiments,
+}: {
+  row: QueryComparison["rows"][number];
+  mode: QueryComparison["mode"];
+  experiments: QueryComparison["experiments"];
+}) {
   return (
     <div className="space-y-4">
       {/* Ground truth */}
@@ -1183,6 +1192,9 @@ function RowDetail({ row, mode }: { row: QueryComparison["rows"][number]; mode: 
               <div className="flex items-center gap-2 mb-2">
                 <span className="brand-badge" style={{ background: c.bg, color: c.fg, fontWeight: 700 }}>
                   {i + 1}
+                </span>
+                <span className="text-xs font-semibold" style={{ fontFamily: "var(--font-display)" }}>
+                  {experiments[i]?.label || experiments[i]?.agent_name}
                 </span>
                 {cell ? (
                   <CellBadge cell={cell} mode={mode} />
