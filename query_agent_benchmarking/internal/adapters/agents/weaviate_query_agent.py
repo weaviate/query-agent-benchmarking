@@ -5,7 +5,7 @@ search-only and ask modes.
 """
 
 import os
-from typing import Any, Optional, Sequence
+from typing import Any, Literal, Optional, Sequence
 
 import weaviate
 from weaviate.auth import Auth
@@ -18,6 +18,24 @@ from query_agent_benchmarking.internal.adapters.agents.collection_resolver impor
 from query_agent_benchmarking.internal.adapters.clients.provider_headers import (
     resolve_headers_for_models,
 )
+
+Filtering = Literal["recall", "precision"]
+
+
+def _validate_filtering(filtering: Optional[str]) -> Filtering:
+    """Normalize and validate the search filtering strategy.
+
+    "recall" (default) generates multiple Weaviate queries spanning different
+    filters/interpretations; "precision" generates a single query targeting the
+    most likely interpretation. Defaults to "recall" when unset.
+    """
+    if filtering is None:
+        return "recall"
+    if filtering not in ("recall", "precision"):
+        raise ValueError(
+            f"filtering must be 'recall' or 'precision'; got {filtering!r}."
+        )
+    return filtering
 
 
 class WeaviateQueryAgentSearch:
@@ -32,11 +50,13 @@ class WeaviateQueryAgentSearch:
         text_embedding_model: Optional[str] = None,
         image_embedding_model: Optional[str] = None,
         embedding_providers: Optional[Sequence[str]] = None,
+        filtering: Optional[str] = None,
     ):
         info = resolve_collection_info(dataset_name, docs_collection)
         self.collection = info["collection"]
         self.id_property = info["id_property"]
         self.agents_host = agents_host or "https://api.agents.weaviate.io"
+        self.filtering: Filtering = _validate_filtering(filtering)
         self.headers = resolve_headers_for_models(
             embedding_model=embedding_model,
             text_embedding_model=text_embedding_model,
@@ -83,14 +103,14 @@ class WeaviateQueryAgentSearch:
     def run(self, query: str, tenant: Optional[str] = None) -> list[ObjectID]:
         if self._agent is None:
             self.initialize_sync()
-        response = self._agent.search(query, limit=20)
+        response = self._agent.search(query, limit=20, filtering=self.filtering)
         return [
             ObjectID(object_id=obj.properties[self.id_property])
             for obj in response.search_results.objects
         ]
 
     async def run_async(self, query: str, tenant: Optional[str] = None) -> list[ObjectID]:
-        response = await self._agent.search(query, limit=20)
+        response = await self._agent.search(query, limit=20, filtering=self.filtering)
         return [
             ObjectID(object_id=obj.properties[self.id_property])
             for obj in response.search_results.objects

@@ -33,6 +33,7 @@ def create_search_agent(
     image_embedding_model: Optional[str] = None,
     embedding_providers: Optional[Sequence[str]] = None,
     external_service_host: Optional[str] = None,
+    filtering: Optional[str] = None,
 ):
     """Create a SearchAgent adapter based on agent_name.
 
@@ -49,6 +50,10 @@ def create_search_agent(
         image_embedding_model: Image embedding model.
         embedding_providers: Explicit provider list for header injection.
         external_service_host: Host URL for external service mode.
+        filtering: Query Agent search filtering strategy, "recall" (default,
+            generate multiple Weaviate queries) or "precision" (generate a
+            single query for the most likely interpretation). Only applies to
+            "query-agent-search-mode".
 
     Returns:
         An object implementing the SearchAgent protocol.
@@ -67,6 +72,7 @@ def create_search_agent(
             dataset_name=dataset_name,
             docs_collection=docs_collection,
             agents_host=agents_host,
+            filtering=filtering,
             **_embedding_kwargs,
         )
 
