@@ -109,7 +109,7 @@ class TestRegistryCompleteness:
             assert len(profile.metrics) > 0, f"Empty metrics for {profile.dataset_pattern}"
 
     def test_all_metric_names_are_known(self):
-        known_names = {"recall", "success", "nDCG", "coverage", "alpha_ndcg"}
+        known_names = {"recall", "precision", "success", "nDCG", "coverage", "alpha_ndcg"}
         for profile in DATASET_METRICS_REGISTRY:
             for spec in profile.metrics:
                 assert spec.name in known_names, f"Unknown metric {spec.name} in {profile.dataset_pattern}"

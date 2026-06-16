@@ -174,3 +174,62 @@ class TestSearchPipelineE2E:
         enron_metrics = enron_calc.compute(results, sample_queries)
         assert "avg_nDCG_at_10" not in enron_metrics
         assert "avg_recall_at_1" in enron_metrics
+
+
+class TestZeroAndUnderRetrievalScoring:
+    """Regression tests: zero-retrieval queries are scored (not skipped) and
+    precision@k uses a constant-k denominator (filtered-cars precision mode).
+    """
+
+    @staticmethod
+    def _query(ground_truth_ids):
+        return InMemoryQuery(question="q", dataset_ids=ground_truth_ids)
+
+    @staticmethod
+    def _result(query, retrieved_ids):
+        return QueryResult(
+            query=query,
+            query_ground_truth_id=query.dataset_ids,
+            retrieved_ids=[ObjectID(object_id=i) for i in retrieved_ids],
+            time_taken=0.1,
+        )
+
+    def test_zero_retrieval_is_scored_and_counted(self):
+        """A zero-retrieval query scores 0 at every metric and stays in the
+        aggregate denominator -- it pulls the averages below 1.0."""
+        # Two queries: one perfect, one retrieving nothing.
+        queries = [self._query(["doc1"]), self._query(["doc2"])]
+        results = [
+            self._result(queries[0], ["doc1"]),       # perfect
+            self._result(queries[1], []),             # zero retrieval
+        ]
+
+        calculator = IRMetricsCalculator(dataset_name="filtered-cars")
+        metrics = calculator.compute(results, queries)
+
+        # Per-query scores: 2 entries (denominator = query count = 2),
+        # the zero-retrieval query contributes 0.
+        for key in ("precision_at_1", "precision_at_5", "precision_at_20",
+                    "recall_at_1", "recall_at_5", "recall_at_20"):
+            scores = metrics[f"{key}_scores"]
+            assert len(scores) == 2, key
+            assert scores[1] == 0.0, key
+
+        # Aggregates are the simple mean over both queries -> 0.5, never 1.0.
+        assert metrics["avg_precision_at_1"] == pytest.approx(0.5)
+        assert metrics["avg_recall_at_1"] == pytest.approx(0.5)
+
+    def test_precision_uses_constant_k_denominator(self):
+        """A query retrieving 6 relevant docs scores precision@20 = 6/20 = 0.30,
+        not 1.0; recall@5 cannot reach 1.0 when 6 ground-truth docs exist."""
+        ground_truth = [f"doc{i}" for i in range(6)]
+        query = self._query(ground_truth)
+        result = self._result(query, ground_truth)  # 6 retrieved, all relevant
+
+        calculator = IRMetricsCalculator(dataset_name="filtered-cars")
+        metrics = calculator.compute([result], [query])
+
+        assert metrics["precision_at_20_scores"][0] == pytest.approx(0.30)
+        assert metrics["precision_at_5_scores"][0] == pytest.approx(1.0)  # 5/5
+        # Top 5 cannot hold all 6 relevant docs.
+        assert metrics["recall_at_5_scores"][0] < 1.0

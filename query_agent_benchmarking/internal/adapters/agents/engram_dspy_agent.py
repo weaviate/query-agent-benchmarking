@@ -13,7 +13,20 @@ from dataclasses import dataclass, field
 import dspy
 from pydantic import BaseModel
 
-from engram import EngramClient, RetrievalConfig
+from engram import (
+    EngramClient,
+    BM25Retrieval,
+    FetchRetrieval,
+    HybridRetrieval,
+    VectorRetrieval,
+)
+
+_RETRIEVAL_CLASSES = {
+    "hybrid": HybridRetrieval,
+    "bm25": BM25Retrieval,
+    "vector": VectorRetrieval,
+    "fetch": FetchRetrieval,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -148,14 +161,19 @@ class EngramDSPyAgent:
 
         user_id = f"{self.user_id_prefix}{tenant_id}"
 
+        try:
+            retrieval_cls = _RETRIEVAL_CLASSES[self.retrieval_type]
+        except KeyError:
+            raise ValueError(
+                f"Unsupported retrieval_type '{self.retrieval_type}'. "
+                f"Supported: {sorted(_RETRIEVAL_CLASSES)}"
+            )
+
         memories = self.engram_client.memories.search(
             query=query,
             user_id=user_id,
             group=self.engram_group,
-            retrieval_config=RetrievalConfig(
-                retrieval_type=self.retrieval_type,
-                limit=self.retrieval_limit,
-            ),
+            retrieval_config=retrieval_cls(limit=self.retrieval_limit),
         )
 
         retrieved = [

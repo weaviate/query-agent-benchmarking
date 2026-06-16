@@ -230,6 +230,10 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
         agent_cfg = _load_agent_config(agent_name)
         resolved_agents_host = agent_cfg.get("agents_host", agents_host)
         resolved_external_service_host = agent_cfg.get("external_service_host", config.get("external_service_host"))
+        # Query Agent search filtering strategy ("recall" | "precision").
+        # Eval-level config takes precedence, then the agent default, then "recall".
+        resolved_filtering = config.get("filtering") or agent_cfg.get("filtering") or "recall"
+        config["filtering"] = resolved_filtering
 
         query_agent = create_search_agent(
             agent_name,
@@ -241,6 +245,7 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
             image_embedding_model=image_embedding_model,
             embedding_providers=embedding_providers,
             external_service_host=resolved_external_service_host,
+            filtering=resolved_filtering,
         )
 
     num_trials = config.get("num_trials", 1)
@@ -321,6 +326,7 @@ def run_search_eval(
     embedding_providers: Optional[Union[str, list[str]]] = None,
     search_target: Optional[str] = None,
     search_target_vector: Optional[str] = None,
+    filtering: Optional[str] = None,
     **kwargs
 ) -> dict[str, Any]:
     """
@@ -356,6 +362,10 @@ def run_search_eval(
         search_target: Canonical named vector(s), e.g. "text_content_weaviate",
             "image_content_weaviate", or "text_content_weaviate+image_content_weaviate".
         search_target_vector: Legacy vector-name key. Prefer search_target.
+        filtering: Query Agent search filtering strategy: "recall" (default —
+            generate multiple Weaviate queries spanning different filters and
+            interpretations) or "precision" (generate a single query targeting the
+            most likely interpretation). Only applies to "query-agent-search-mode".
         **kwargs: Additional config overrides.
 
     Returns:
@@ -388,6 +398,7 @@ def run_search_eval(
         "embedding_providers": embedding_providers,
         "search_target": search_target,
         "search_target_vector": search_target_vector,
+        "filtering": filtering,
         **kwargs
     }
 
@@ -418,6 +429,7 @@ def compare_search_agents(
     embedding_providers: Optional[Union[str, list[str]]] = None,
     search_target: Optional[str] = None,
     search_target_vector: Optional[str] = None,
+    filtering: Optional[str] = None,
     **kwargs
 ) -> dict[str, dict[str, Any]]:
     """Run search benchmark for multiple query agents and compare results."""
@@ -452,6 +464,7 @@ def compare_search_agents(
         "embedding_providers": embedding_providers,
         "search_target": search_target,
         "search_target_vector": search_target_vector,
+        "filtering": filtering,
         **kwargs
     }
 
@@ -494,6 +507,7 @@ def run_search_evals(
     embedding_providers: Optional[Union[str, list[str]]] = None,
     search_target: Optional[str] = None,
     search_target_vector: Optional[str] = None,
+    filtering: Optional[str] = None,
     **kwargs
 ) -> dict[str, dict[str, Any]]:
     """
@@ -523,6 +537,8 @@ def run_search_evals(
         embedding_providers: Provider list for header injection.
         search_target: Canonical named vector(s).
         search_target_vector: Legacy vector-name key.
+        filtering: Query Agent search filtering strategy, "recall" (default) or
+            "precision". Only applies to "query-agent-search-mode".
         **kwargs: Additional config overrides.
 
     Returns:
@@ -560,6 +576,7 @@ def run_search_evals(
         "embedding_providers": embedding_providers,
         "search_target": search_target,
         "search_target_vector": search_target_vector,
+        "filtering": filtering,
         **kwargs
     }
 

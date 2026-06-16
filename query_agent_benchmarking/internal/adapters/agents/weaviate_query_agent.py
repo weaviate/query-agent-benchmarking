@@ -5,19 +5,76 @@ search-only and ask modes.
 """
 
 import os
-from typing import Any, Optional, Sequence
+from typing import Any, Literal, Optional, Sequence
 
 import weaviate
 from weaviate.auth import Auth
 from weaviate.config import AdditionalConfig, Timeout
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 
-from query_agent_benchmarking.internal.core.domain.models import ObjectID
+from query_agent_benchmarking.internal.core.domain.models import (
+    AgentSearch,
+    ObjectID,
+    SearchAgentResponse,
+)
 from query_agent_benchmarking.internal.core.ports.ask_agent import AskResponse
 from query_agent_benchmarking.internal.adapters.agents.collection_resolver import resolve_collection_info
 from query_agent_benchmarking.internal.adapters.clients.provider_headers import (
     resolve_headers_for_models,
 )
+
+Filtering = Literal["recall", "precision"]
+
+
+def _validate_filtering(filtering: Optional[str]) -> Filtering:
+    """Normalize and validate the search filtering strategy.
+
+    "recall" (default) generates multiple Weaviate queries spanning different
+    filters/interpretations; "precision" generates a single query targeting the
+    most likely interpretation. Defaults to "recall" when unset.
+    """
+    if filtering is None:
+        return "recall"
+    if filtering not in ("recall", "precision"):
+        raise ValueError(
+            f"filtering must be 'recall' or 'precision'; got {filtering!r}."
+        )
+    return filtering
+
+
+def _dump_optional(value: Any) -> Optional[Any]:
+    """Dump a (possibly None) pydantic model to a JSON-serializable value.
+
+    The SDK's filter/sort structures are nested pydantic models; we store them
+    as plain JSON so the domain stays SDK-agnostic and they persist cleanly.
+    """
+    if value is None:
+        return None
+    if hasattr(value, "model_dump"):
+        return value.model_dump(mode="json")
+    return value
+
+
+def _extract_searches(response: Any) -> list[AgentSearch]:
+    """Convert a SearchModeResponse's ``searches`` into domain ``AgentSearch``.
+
+    Defensive: the SDK field is optional and may be ``None``; older/other
+    response shapes simply yield an empty list.
+    """
+    raw_searches = getattr(response, "searches", None) or []
+    searches: list[AgentSearch] = []
+    for s in raw_searches:
+        uuid_value = getattr(s, "uuid_value", None)
+        searches.append(
+            AgentSearch(
+                collection=getattr(s, "collection", ""),
+                query=getattr(s, "query", None),
+                filters=_dump_optional(getattr(s, "filters", None)),
+                sort_property=_dump_optional(getattr(s, "sort_property", None)),
+                uuid_value=str(uuid_value) if uuid_value is not None else None,
+            )
+        )
+    return searches
 
 
 class WeaviateQueryAgentSearch:
@@ -32,11 +89,13 @@ class WeaviateQueryAgentSearch:
         text_embedding_model: Optional[str] = None,
         image_embedding_model: Optional[str] = None,
         embedding_providers: Optional[Sequence[str]] = None,
+        filtering: Optional[str] = None,
     ):
         info = resolve_collection_info(dataset_name, docs_collection)
         self.collection = info["collection"]
         self.id_property = info["id_property"]
         self.agents_host = agents_host or "https://api.agents.weaviate.io"
+        self.filtering: Filtering = _validate_filtering(filtering)
         self.headers = resolve_headers_for_models(
             embedding_model=embedding_model,
             text_embedding_model=text_embedding_model,
@@ -80,21 +139,31 @@ class WeaviateQueryAgentSearch:
             agents_host=self.agents_host,
         )
 
-    def run(self, query: str, tenant: Optional[str] = None) -> list[ObjectID]:
+    def _build_response(self, response: Any) -> SearchAgentResponse:
+        """Map a Weaviate ``SearchModeResponse`` to the domain response.
+
+        Captures both the ranked document IDs and the structured ``searches``
+        the QueryAgent issued (query text, filters, sort, uuid lookups) so the
+        agent's search plan can be persisted and visualized per query.
+        """
+        retrieved_ids = [
+            ObjectID(object_id=obj.properties[self.id_property])
+            for obj in response.search_results.objects
+        ]
+        return SearchAgentResponse(
+            retrieved_ids=retrieved_ids,
+            searches=_extract_searches(response),
+        )
+
+    def run(self, query: str, tenant: Optional[str] = None) -> SearchAgentResponse:
         if self._agent is None:
             self.initialize_sync()
-        response = self._agent.search(query, limit=20)
-        return [
-            ObjectID(object_id=obj.properties[self.id_property])
-            for obj in response.search_results.objects
-        ]
+        response = self._agent.search(query, limit=20, filtering=self.filtering)
+        return self._build_response(response)
 
-    async def run_async(self, query: str, tenant: Optional[str] = None) -> list[ObjectID]:
-        response = await self._agent.search(query, limit=20)
-        return [
-            ObjectID(object_id=obj.properties[self.id_property])
-            for obj in response.search_results.objects
-        ]
+    async def run_async(self, query: str, tenant: Optional[str] = None) -> SearchAgentResponse:
+        response = await self._agent.search(query, limit=20, filtering=self.filtering)
+        return self._build_response(response)
 
     async def close_async(self):
         if self._client:

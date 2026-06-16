@@ -52,15 +52,61 @@ class InMemoryAskQuery(BaseModel):
 # Result Models
 # ============================================================================
 
+class AgentSearch(BaseModel):
+    """A single sub-query a search agent issued under the hood.
+
+    Infrastructure-agnostic mirror of the Weaviate SDK's
+    ``QueryResultWithCollectionNormalized``. It records *how* an agent
+    decomposed one natural-language query into a structured search against a
+    collection: an optional semantic query string, an optional (recursive)
+    filter tree, an optional sort, and an optional direct UUID lookup.
+
+    ``filters`` and ``sort_property`` are stored as JSON-serializable values
+    (the SDK models dumped with ``mode="json"``) so the domain layer stays free
+    of SDK types and the structures persist/serialize cleanly. ``filters`` is
+    either a leaf filter (``{"filter_type", "property_name", "operator",
+    "value", ...}``) or a boolean group (``{"combine": "AND"|"OR", "filters":
+    [...]}``).
+    """
+    collection: str
+    query: Optional[str] = None
+    filters: Optional[Any] = None
+    sort_property: Optional[Any] = None
+    uuid_value: Optional[str] = None
+
+
 class QueryResult(BaseModel):
-    """Result from a search query - kept for backwards compatibility."""
+    """Result from a search query - kept for backwards compatibility.
+
+    ``searches`` is optional: ``None`` means the agent does not report a search
+    plan (e.g. direct hybrid/vector/BM25 or an external service that hasn't
+    implemented it), which is distinct from an empty list (a plan with zero
+    sub-searches).
+    """
     query: InMemoryQuery
     query_ground_truth_id: list[str]
     retrieved_ids: list[ObjectID]
     time_taken: float
+    searches: Optional[list[AgentSearch]] = None
 
 
 SearchResult = QueryResult
+
+
+class SearchAgentResponse(BaseModel):
+    """Optional richer return type for ``SearchAgent.run`` / ``run_async``.
+
+    Agents may return a plain ``list[ObjectID]`` (the legacy contract, still
+    fully supported for BYOS and direct-search adapters) or this object to
+    additionally expose the structured ``searches`` the agent performed. The
+    query-execution layer normalizes both shapes, so returning this is purely
+    additive.
+
+    ``searches`` is optional: leave it ``None`` to signal that this agent does
+    not (yet) report a search plan, while still using the richer response type.
+    """
+    retrieved_ids: list[ObjectID]
+    searches: Optional[list[AgentSearch]] = None
 
 
 class AskResult(BaseModel):

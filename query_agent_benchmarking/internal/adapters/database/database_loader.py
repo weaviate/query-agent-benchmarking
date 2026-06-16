@@ -126,6 +126,30 @@ def database_loader(recreate: bool = True, tag: str = "Default") -> None:
     populate_db(recreate=recreate, tag=tag)
 
 
+# Private helper: force an explicit vector index type onto named-vector configs.
+def _ensure_explicit_vector_index(vector_config: Any) -> Any:
+    """Attach a default HNSW index config to any vector lacking one.
+
+    The new named-vector ``Configure.Vectors.*`` API omits ``vectorIndexType``
+    from the create payload when the server reports >= 1.37.5, trusting the
+    server to fill in the HNSW default. Some servers (incl. certain Weaviate
+    Cloud builds) report >= 1.37.5 but do *not* apply that default; they read
+    the missing field as the ``"none"`` sentinel and reject the create with a
+    422 ("cannot create a new class with vectorIndexType 'none'"). Setting an
+    explicit ``vector_index_config`` makes the client always emit
+    ``vectorIndexType: "hnsw"``, sidestepping the handshake gap.
+
+    Only vectors that don't already declare an index config are touched, so
+    multivector image configs (which carry their own multivector-enabled HNSW
+    config) are left untouched.
+    """
+    configs = vector_config if isinstance(vector_config, list) else [vector_config]
+    for cfg in configs:
+        if getattr(cfg, "vectorIndexConfig", "unset") is None:
+            cfg.vectorIndexConfig = wvcc.Configure.VectorIndex.hnsw()
+    return vector_config
+
+
 # Private helper: low-level create/delete wrapper used internally to keep public loaders concise.
 def _drop_and_create_collection(
     client: weaviate.WeaviateClient,
@@ -141,7 +165,7 @@ def _drop_and_create_collection(
     if not client.collections.exists(name):
         create_kwargs: dict[str, Any] = {
             "name": name,
-            "vector_config": vector_config,
+            "vector_config": _ensure_explicit_vector_index(vector_config),
             "properties": list(properties),
         }
         if multi_tenancy_config is not None:

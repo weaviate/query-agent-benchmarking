@@ -37,6 +37,7 @@ SEARCH_DATASETS = [
     "enron",
     "wixqa",
     "irpapers",
+    "filtered-cars",
     "multihoprag",
     "longmemeval-s",
     # officeqa and vidore_v3_hr are excluded:

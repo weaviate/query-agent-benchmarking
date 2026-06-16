@@ -4,6 +4,7 @@ import pytest
 
 from query_agent_benchmarking.internal.adapters.metrics.ir_metrics import (
     calculate_recall_at_k,
+    calculate_precision_at_k,
     calculate_success_at_k,
     calculate_nDCG_at_k,
     calculate_coverage,
@@ -63,6 +64,48 @@ class TestRecallAtK:
         target_ids = [1, 2, 3]
         retrieved_ids = ["1", "2", "4"]
         assert calculate_recall_at_k(target_ids, retrieved_ids, k=3) == pytest.approx(2 / 3)
+
+
+# ============================================================================
+# Precision@K Tests
+# ============================================================================
+
+class TestPrecisionAtK:
+    def test_perfect_precision(self):
+        target_ids = ["doc1", "doc2", "doc3"]
+        retrieved_ids = ["doc1", "doc2", "doc3"]
+        assert calculate_precision_at_k(target_ids, retrieved_ids, k=3) == 1.0
+
+    def test_constant_k_denominator_under_retrieval(self):
+        """precision@k uses k as the denominator, not the retrieved count.
+
+        6 retrieved, all relevant, at k=20 must be 6/20 = 0.30 -- not 1.0.
+        """
+        target_ids = [f"doc{i}" for i in range(6)]
+        retrieved_ids = [f"doc{i}" for i in range(6)]
+        assert calculate_precision_at_k(target_ids, retrieved_ids, k=20) == pytest.approx(0.30)
+
+    def test_partial_precision(self):
+        target_ids = ["doc1", "doc2"]
+        retrieved_ids = ["doc1", "doc3", "doc2", "doc4", "doc5"]
+        # 2 relevant out of k=5
+        assert calculate_precision_at_k(target_ids, retrieved_ids, k=5) == pytest.approx(0.4)
+
+    def test_empty_retrieved_scores_zero(self):
+        """Zero-retrieval is 0/k = 0 for every k; no 0/0 case."""
+        target_ids = ["doc1", "doc2"]
+        assert calculate_precision_at_k(target_ids, [], k=1) == 0.0
+        assert calculate_precision_at_k(target_ids, [], k=20) == 0.0
+
+    def test_precision_at_1(self):
+        target_ids = ["doc1"]
+        assert calculate_precision_at_k(target_ids, ["doc1"], k=1) == 1.0
+        assert calculate_precision_at_k(target_ids, ["doc2"], k=1) == 0.0
+
+    def test_string_coercion(self):
+        target_ids = [1, 2]
+        retrieved_ids = ["1", "3"]
+        assert calculate_precision_at_k(target_ids, retrieved_ids, k=2) == pytest.approx(0.5)
 
 
 # ============================================================================

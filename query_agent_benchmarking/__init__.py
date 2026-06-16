@@ -33,6 +33,8 @@ from .internal.core.domain.models import (
     # Search-specific
     InMemorySearchQuery,
     SearchResult,
+    AgentSearch,
+    SearchAgentResponse,
     # Ask-specific
     InMemoryAskQuery,
     AskResult,
@@ -111,6 +113,8 @@ __all__ = [
     "QueryResult",
     "InMemorySearchQuery",
     "SearchResult",
+    "AgentSearch",
+    "SearchAgentResponse",
     "InMemoryAskQuery",
     "AskResult",
     "AskQueriesCollection",

@@ -2,7 +2,7 @@
 # Search Mode Settings
 # =============================================================================
 search_agent_name: "external_service"
-search_dataset: bright/biology
+search_dataset: filtered-cars
 
 # See `named_vectors.md` for supported target vectors.
 search_target: "text_content_weaviate"

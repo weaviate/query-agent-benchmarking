@@ -48,7 +48,7 @@ export default function RootLayout({
         <header className="brand-header px-6 py-4 flex items-center justify-between">
           <a href="/" className="flex items-center gap-3 group">
             <img
-              src="/weaviate-logo-cropped.png"
+              src="/weaviate-logo.png"
               alt="Weaviate"
               className="shrink-0 block"
               style={{ height: 32, width: "auto", marginTop: 4 }}

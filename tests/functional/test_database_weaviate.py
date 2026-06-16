@@ -42,6 +42,7 @@ STANDARD_DATASETS = [
     "freshstack-langchain",
     "wixqa",
     "irpapers-text-only",
+    "filtered-cars",
     "multihoprag",
     "lotte/lifestyle/test/search",
 ]

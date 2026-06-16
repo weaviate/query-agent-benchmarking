@@ -32,6 +32,7 @@ DATABASE_DATASETS = [
     "wixqa",
     "irpapers",
     "irpapers-text-only",
+    "filtered-cars",
     "multihoprag",
     "longmemeval-s",
     "lotte/lifestyle/test/search",

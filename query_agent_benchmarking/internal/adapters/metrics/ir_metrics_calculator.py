@@ -13,6 +13,7 @@ from query_agent_benchmarking.internal.core.domain.models import QueryResult, In
 from query_agent_benchmarking.internal.core.domain.metrics_config import MetricSpec, resolve_metrics_profile, parse_extra_metrics
 from query_agent_benchmarking.internal.adapters.metrics.ir_metrics import (
     calculate_recall_at_k,
+    calculate_precision_at_k,
     calculate_success_at_k,
     calculate_nDCG_at_k,
     calculate_coverage,
@@ -22,6 +23,7 @@ from query_agent_benchmarking.internal.adapters.metrics.ir_metrics import (
 # Maps MetricSpec.name to the concrete metric function
 _METRIC_FUNCTIONS = {
     "recall": calculate_recall_at_k,
+    "precision": calculate_precision_at_k,
     "success": calculate_success_at_k,
     "nDCG": calculate_nDCG_at_k,
     "coverage": calculate_coverage,
@@ -70,10 +72,10 @@ class IRMetricsCalculator:
         for i, (result, ground_truth) in enumerate(
             tqdm(zip(results, ground_truths), desc="Analyzing search results")
         ):
-            if result.retrieved_ids == []:
-                print(f"\n\033[91mSkipping analysis for query {i} due to error.\033[0m")
-                continue
-
+            # A zero-retrieval query is a real, meaningful outcome (precision
+            # mode may legitimately return nothing). It must be scored, not
+            # skipped: every metric falls out to 0 naturally from the arithmetic
+            # below, and the query stays in the aggregate denominator.
             retrieved_ids = [res.object_id for res in result.retrieved_ids]
 
             for spec in self.metric_specs:
@@ -121,7 +123,7 @@ class IRMetricsCalculator:
         """Dispatch a single metric computation based on its name."""
         params = spec.params
 
-        if spec.name in ("recall", "success", "nDCG"):
+        if spec.name in ("recall", "precision", "success", "nDCG"):
             return func(
                 target_ids=ground_truth.dataset_ids,
                 retrieved_ids=retrieved_ids,

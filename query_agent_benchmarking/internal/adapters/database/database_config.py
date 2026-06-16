@@ -15,6 +15,7 @@ supported_database_datasets = (
     "bright/psychology",
     "bright/robotics",
     "enron",
+    "filtered-cars",
     "freshstack-angular",
     "freshstack-godot",
     "freshstack-langchain",
