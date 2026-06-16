@@ -62,6 +62,8 @@ def _dispatch_search_loader(dataset_name: str):
         return huggingface_loader.load_wixqa()
     if dataset_name in ("irpapers", "irpapers-text-only"):
         return huggingface_loader.load_irpapers()
+    if dataset_name == "filtered-cars":
+        return huggingface_loader.load_filtered_cars()
     if dataset_name == "multihoprag":
         return huggingface_loader.load_multihoprag()
     if dataset_name == "vidore_v3_hr":

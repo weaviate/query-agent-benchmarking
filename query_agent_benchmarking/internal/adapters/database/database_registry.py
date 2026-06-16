@@ -63,6 +63,23 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_text2vec()
         .build()),
 
+    (DatasetSpecBuilder("filtered-cars")
+        .with_static_name("FilteredCars")
+        .with_text_property("make")
+        .with_text_property("model")
+        .with_int_property("year")
+        .with_text_property("fuel_type")
+        .with_text_property("body_type")
+        .with_int_property("mileage")
+        .with_int_property("price")
+        .with_text_property("color")
+        .with_text_property("color_family")
+        .with_text_property("transmission")
+        .with_text_property("drivetrain")
+        .with_dataset_id()
+        .with_text2vec()
+        .build()),
+
     (DatasetSpecBuilder("multihoprag")
         .with_static_name("MultiHopRAG")
         .with_text_property("content", source_field="body")

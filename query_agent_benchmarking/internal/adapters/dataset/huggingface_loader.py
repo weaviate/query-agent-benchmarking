@@ -152,6 +152,52 @@ def load_irpapers():
     return docs, questions
 
 
+def load_filtered_cars():
+    """Load the FilteredCars structured-schema benchmark.
+
+    The corpus is a list of car listings with categorical and numeric
+    columns (make, model, year, fuel_type, body_type, mileage, price,
+    color, color_family, transmission, drivetrain). Queries are natural
+    language and must be translated by the Query Agent into structured
+    filters over these columns.
+
+    The dataset's HuggingFace config refers to a CSV path that does not
+    exist in the repository, so the JSON files are fetched directly via
+    hf_hub_download instead of `load_dataset`.
+    """
+    from huggingface_hub import hf_hub_download
+    import json as _json
+
+    print("Loading FilteredCars dataset...")
+
+    docs_path = hf_hub_download(
+        "weaviate/FilteredCars", "FilteredCars.json", repo_type="dataset"
+    )
+    with open(docs_path) as fh:
+        docs = _json.load(fh)
+    for doc in docs:
+        doc["dataset_id"] = str(doc["id"])
+
+    queries_path = hf_hub_download(
+        "weaviate/FilteredCars", "filtered_cars_queries.json", repo_type="dataset"
+    )
+    with open(queries_path) as fh:
+        raw_queries = _json.load(fh)
+
+    questions: list[InMemoryQuery] = []
+    for i, item in enumerate(raw_queries):
+        questions.append(
+            InMemoryQuery(
+                question=item["query"],
+                query_id=str(i),
+                dataset_ids=[str(d) for d in item["dataset_ids"]],
+            )
+        )
+
+    print(f"Loaded {len(docs)} documents and {len(questions)} queries")
+    return docs, questions
+
+
 def load_vidore():
     print("Loading ViDoRe dataset...")
     corpus = load_dataset("vidore/vidore_v3_hr", "corpus")["test"]

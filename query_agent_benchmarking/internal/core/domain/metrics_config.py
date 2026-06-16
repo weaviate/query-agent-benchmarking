@@ -82,6 +82,11 @@ DATASET_METRICS_REGISTRY: tuple[MetricsProfile, ...] = (
         MetricSpec("recall", {"k": 5}),
         MetricSpec("recall", {"k": 20}),
     ), primary_metric="recall_at_5"),
+    MetricsProfile("filtered-cars", (
+        MetricSpec("recall", {"k": 1}),
+        MetricSpec("recall", {"k": 5}),
+        MetricSpec("recall", {"k": 20}),
+    ), primary_metric="recall_at_5"),
     MetricsProfile("vidore_v3_hr", (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),
