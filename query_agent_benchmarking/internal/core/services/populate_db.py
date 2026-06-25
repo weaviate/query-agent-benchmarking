@@ -72,8 +72,20 @@ def _run_engram_loader(config: dict, dataset_name: str) -> dict:
         tenant_ids=tenant_ids,
     )
 
+    engram_base_url = config.get("engram_base_url", "https://dev-engram.labs.weaviate.io")
     ingestion_mode = config.get("engram_ingestion_mode", "conversation")
-    result = engram_ingest_all_tenants(docs_by_tenant, poll=True, ingestion_mode=ingestion_mode)
+    user_id_prefix = config.get("user_id_prefix", "longmemeval-")
+    engram_dry_run = config.get("engram_dry_run", False)
+    result = engram_ingest_all_tenants(
+        docs_by_tenant,
+        engram_base_url=engram_base_url,
+        poll=True,
+        ingestion_mode=ingestion_mode,
+        user_id_prefix=user_id_prefix,
+        dry_run=engram_dry_run,
+    )
+    if engram_dry_run:
+        return {}
     manifest = save_engram_manifest(result, dataset_name)
     return manifest
 

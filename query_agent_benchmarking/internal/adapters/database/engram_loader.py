@@ -7,10 +7,13 @@ sessions into Engram's memory system on a per-tenant basis.
 
 import os
 import time
-from typing import Optional, Callable
 from dataclasses import dataclass, field
+from types import SimpleNamespace
+from typing import Callable, Optional
 
-from engram import EngramClient, ConversationInput, MessageInput
+from engram import ConversationInput, EngramClient, MessageInput
+
+PRINT_INTERVAL = 10
 
 
 def _parse_session_text(session_text: str) -> ConversationInput:
@@ -177,7 +180,7 @@ def _submit_all(
                             "msg_index": msg_idx,
                         })
 
-                    if verbose and submitted % 50 == 0:
+                    if verbose and submitted % PRINT_INTERVAL == 0:
                         print(f"  Submitted {submitted} user messages")
 
                     if ingest_delay > 0:
@@ -217,7 +220,7 @@ def _submit_all(
                         "session_id": session.get("session_id", ""),
                     })
 
-                if verbose and submitted % 50 == 0:
+                if verbose and submitted % PRINT_INTERVAL == 0:
                     print(f"  Submitted {submitted}/{total}")
 
                 if ingest_delay > 0:
@@ -331,7 +334,7 @@ def _poll_and_collect(
                 "memories_created": total_created,
             })
 
-        if verbose and completed % 50 == 0:
+        if verbose and completed % PRINT_INTERVAL == 0:
             print(f"  Completed {completed}/{len(records)}")
 
     # Set elapsed_seconds to wall-clock time from first submission to last completion
@@ -359,6 +362,7 @@ def engram_ingest_all_tenants(
     verbose: bool = True,
     ingestion_mode: str = "conversation",
     on_progress: Optional[Callable[[dict], None]] = None,
+    dry_run: bool = False,
 ) -> IngestionResult:
     """
     Ingest sessions for all tenants into Engram.
@@ -381,15 +385,23 @@ def engram_ingest_all_tenants(
         ingestion_mode: ``"conversation"`` (default) submits the full parsed
             conversation per session. ``"user_messages"`` submits each user
             message individually as a single-message conversation.
+        dry_run: If True, count requests without submitting to Engram.
+            No API key is required. Returns an ``IngestionResult`` with
+            synthetic run records reflecting the would-be request count.
 
     Returns:
         An ``IngestionResult`` with run records and submission timing.
         If ``poll=True``, ``result.stats`` contains per-tenant stats.
     """
-    client = EngramClient(
-        api_key=engram_api_key or os.environ["ENGRAM_API_KEY"],
-        base_url=engram_base_url,
-    )
+    if dry_run:
+        client = _DryRunEngramClient()
+        ingest_delay = 0.0
+        poll = False
+    else:
+        client = EngramClient(
+            api_key=engram_api_key or os.environ["ENGRAM_API_KEY"],
+            base_url=engram_base_url,
+        )
 
     t0 = time.time()
 
@@ -404,6 +416,14 @@ def engram_ingest_all_tenants(
     tenant_session_counts = {}
     for rec in records:
         tenant_session_counts[rec.tenant_id] = tenant_session_counts.get(rec.tenant_id, 0) + 1
+
+    if dry_run and verbose:
+        print(
+            f"\n[Dry run] Would submit {len(records)} requests across {len(tenant_session_counts)} tenants"
+        )
+        for tid in sorted(tenant_session_counts):
+            print(f"  {tid}: {tenant_session_counts[tid]} requests")
+        print("[Dry run] No data was sent to Engram.")
 
     result = IngestionResult(
         run_records=records,
@@ -440,3 +460,22 @@ def engram_ingest_all_tenants(
             )
 
     return result
+
+
+class _DryRunEngramClient:
+    """No-op Engram client for dry-run counting — no HTTP calls made."""
+
+    def __init__(self):
+        self._count = 0
+        self.memories = self
+        self.runs = self
+
+    def add(self, *args, **kwargs):
+        self._count += 1
+        return SimpleNamespace(run_id=f"dry-run-{self._count}")
+
+    def get(self, *args, **kwargs):
+        return SimpleNamespace(
+            status="completed",
+            committed_operations=SimpleNamespace(created=[], updated=[], deleted=[]),
+        )
