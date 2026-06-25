@@ -100,6 +100,46 @@ class TenantIngestionStats:
     run_durations: list[float] = field(default_factory=list)
 
 
+def _get_inputs_from_conversation(
+    conversation: ConversationInput,
+    ingestion_mode: str,
+) -> list[ConversationInput]:
+    """Split a parsed conversation into the list of inputs to submit to Engram.
+
+    - ``conversation``: one input — the full conversation.
+    - ``user_messages``: one input per user message (assistant turns discarded).
+    - ``message_turn``: one input per assistant message encountered, accumulating
+      all messages since the last flush; any trailing messages after the final
+      assistant turn become one last input.
+    """
+    if ingestion_mode == "conversation":
+        return [conversation]
+
+    if ingestion_mode == "user_messages":
+        return [
+            ConversationInput(messages=[m])
+            for m in conversation.messages
+            if m.role == "user"
+        ]
+
+    if ingestion_mode == "message_turn":
+        turns: list[ConversationInput] = []
+        current: list[MessageInput] = []
+        for msg in conversation.messages:
+            current.append(msg)
+            if msg.role == "assistant":
+                turns.append(ConversationInput(messages=current))
+                current = []
+        if current:
+            turns.append(ConversationInput(messages=current))
+        return turns
+
+    raise ValueError(
+        f"Unsupported ingestion_mode '{ingestion_mode}'. "
+        f"Supported: conversation, user_messages, message_turn"
+    )
+
+
 def _submit_all(
     client: EngramClient,
     docs_by_tenant: dict[str, list[dict]],
@@ -113,9 +153,10 @@ def _submit_all(
     """Submit every session across all tenants. Returns run records for polling.
 
     Args:
-        ingestion_mode: ``"conversation"`` submits the full parsed conversation
-            per session. ``"user_messages"`` submits each user message
-            individually as a single-message conversation (no assistant context).
+        ingestion_mode: How to split each session into Engram ``add()`` calls.
+            ``"conversation"`` submits the full parsed conversation per session.
+            ``"user_messages"`` submits each user message individually.
+            ``"message_turn"`` submits each user/assistant exchange as one input.
     """
     records: list[RunRecord] = []
     total = sum(len(sessions) for sessions in docs_by_tenant.values())
@@ -135,62 +176,19 @@ def _submit_all(
                     print(f"  Skipped session {sid} for tenant {tenant_id}: no valid messages after parsing")
                 continue
 
-            if ingestion_mode == "user_messages":
-                # Submit each user message as its own single-message conversation
-                user_messages = [m for m in conversation.messages if m.role == "user"]
-                if not user_messages:
-                    skipped += 1
-                    if verbose:
-                        sid = session.get("session_id", "?")
-                        print(f"  Skipped session {sid} for tenant {tenant_id}: no user messages")
-                    continue
-                for msg_idx, msg in enumerate(user_messages):
-                    single = ConversationInput(messages=[msg])
-                    t_submit = time.time()
-                    try:
-                        run = client.memories.add(
-                            single,
-                            user_id=user_id,
-                            group=group,
-                            properties={"conversation_id": session.get("session_id")},
-                        )
-                    except Exception as e:
-                        skipped += 1
-                        if verbose:
-                            sid = session.get("session_id", "?")
-                            print(f"  Skipped session {sid} msg {msg_idx} for tenant {tenant_id}: {e}")
-                        continue
-                    records.append(RunRecord(
-                        run_id=run.run_id,
-                        tenant_id=tenant_id,
-                        submitted_at=t_submit,
-                        session_id=session.get("session_id", ""),
-                        session_date=session.get("session_date", ""),
-                    ))
-                    submitted += 1
+            inputs = _get_inputs_from_conversation(conversation, ingestion_mode)
+            if not inputs:
+                skipped += 1
+                if verbose:
+                    sid = session.get("session_id", "?")
+                    print(f"  Skipped session {sid} for tenant {tenant_id}: no inputs after splitting")
+                continue
 
-                    if on_progress:
-                        on_progress({
-                            "phase": "submit",
-                            "submitted": submitted,
-                            "skipped": skipped,
-                            "total": total,
-                            "tenant_id": tenant_id,
-                            "session_id": session.get("session_id", ""),
-                            "msg_index": msg_idx,
-                        })
-
-                    if verbose and submitted % PRINT_INTERVAL == 0:
-                        print(f"  Submitted {submitted} user messages")
-
-                    if ingest_delay > 0:
-                        time.sleep(ingest_delay)
-            else:
-                # Default: submit the full conversation
+            for input_idx, conv_input in enumerate(inputs):
                 t_submit = time.time()
                 try:
                     run = client.memories.add(
-                        conversation,
+                        conv_input,
                         user_id=user_id,
                         group=group,
                         properties={"conversation_id": session.get("session_id")},
@@ -199,7 +197,7 @@ def _submit_all(
                     skipped += 1
                     if verbose:
                         sid = session.get("session_id", "?")
-                        print(f"  Skipped session {sid} for tenant {tenant_id}: {e}")
+                        print(f"  Skipped session {sid} input {input_idx} for tenant {tenant_id}: {e}")
                     continue
                 records.append(RunRecord(
                     run_id=run.run_id,
@@ -218,19 +216,19 @@ def _submit_all(
                         "total": total,
                         "tenant_id": tenant_id,
                         "session_id": session.get("session_id", ""),
+                        "input_index": input_idx,
                     })
 
                 if verbose and submitted % PRINT_INTERVAL == 0:
-                    print(f"  Submitted {submitted}/{total}")
+                    print(f"  Submitted {submitted}")
 
                 if ingest_delay > 0:
                     time.sleep(ingest_delay)
 
     if verbose:
-        mode_label = "user messages" if ingestion_mode == "user_messages" else "sessions"
-        print(f"  All {submitted} {mode_label} submitted across {len(docs_by_tenant)} tenants")
+        print(f"  All {submitted} inputs submitted across {len(docs_by_tenant)} tenants (mode: {ingestion_mode})")
         if skipped:
-            print(f"  Skipped {skipped} due to errors")
+            print(f"  Skipped {skipped} due to errors or empty splits")
 
     return records
 
@@ -382,9 +380,12 @@ def engram_ingest_all_tenants(
         poll: Whether to poll runs to completion and collect stats.
         poll_interval: Seconds between run-status polls (only used when poll=True).
         verbose: Print progress updates.
-        ingestion_mode: ``"conversation"`` (default) submits the full parsed
-            conversation per session. ``"user_messages"`` submits each user
-            message individually as a single-message conversation.
+        ingestion_mode: How to split each session into Engram ``add()`` calls.
+            ``"conversation"`` (default) submits the full conversation per session.
+            ``"user_messages"`` submits each user message individually.
+            ``"message_turn"`` submits each user/assistant exchange as one input,
+            accumulating until each assistant message; trailing user-only messages
+            become a final input.
         dry_run: If True, count requests without submitting to Engram.
             No API key is required. Returns an ``IngestionResult`` with
             synthetic run records reflecting the would-be request count.
@@ -408,7 +409,7 @@ def engram_ingest_all_tenants(
     # Phase 1: submit everything
     if verbose:
         total = sum(len(s) for s in docs_by_tenant.values())
-        mode_label = f" (mode: {ingestion_mode})" if ingestion_mode != "conversation" else ""
+        mode_label = f" (mode: {ingestion_mode})" if ingestion_mode != "conversation" else " (mode: conversation)"
         print(f"Submitting {total} sessions across {len(docs_by_tenant)} tenants{mode_label}...")
     records = _submit_all(client, docs_by_tenant, group, user_id_prefix, ingest_delay, verbose, ingestion_mode, on_progress)
 
