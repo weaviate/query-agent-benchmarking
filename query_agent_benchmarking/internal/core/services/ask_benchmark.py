@@ -141,7 +141,6 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     config["agent_name"] = agent_name
 
     if agent_name == "engram":
-        use_async = False
         agent_cfg = _load_agent_config(agent_name)
         ask_agent = EngramDSPyAgent(
             engram_base_url=agent_cfg.get("engram_base_url", "https://dev-engram.labs.weaviate.io"),

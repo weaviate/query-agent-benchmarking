@@ -14,6 +14,7 @@ import dspy
 from pydantic import BaseModel
 
 from engram import (
+    AsyncEngramClient,
     EngramClient,
     BM25Retrieval,
     FetchRetrieval,
@@ -125,8 +126,13 @@ class EngramDSPyAgent:
         engram_group: str = "default",
         user_id_prefix: str = "longmemeval-",
     ):
+        api_key = engram_api_key or os.environ["ENGRAM_API_KEY"]
         self.engram_client = EngramClient(
-            api_key=engram_api_key or os.environ["ENGRAM_API_KEY"],
+            api_key=api_key,
+            base_url=engram_base_url,
+        )
+        self.async_engram_client = AsyncEngramClient(
+            api_key=api_key,
             base_url=engram_base_url,
         )
         self.retrieval_limit = retrieval_limit
@@ -195,3 +201,64 @@ class EngramDSPyAgent:
                 "memories": [r.model_dump() for r in retrieved],
             },
         )
+
+    async def run_async(
+        self,
+        query: str,
+        tenant_id: Optional[str] = None,
+        oracle_context_id: Optional[str] = None,
+    ) -> EngramAskResponse:
+        """
+        Retrieve memories from Engram and answer the question using DSPy, both async.
+
+        Args:
+            query: The user's question.
+            tenant_id: Tenant whose memories to search.
+            oracle_context_id: Unused, kept for interface compatibility.
+        """
+        if tenant_id is None:
+            raise ValueError("tenant_id is required for EngramDSPyAgent")
+
+        user_id = f"{self.user_id_prefix}{tenant_id}"
+
+        try:
+            retrieval_cls = _RETRIEVAL_CLASSES[self.retrieval_type]
+        except KeyError:
+            raise ValueError(
+                f"Unsupported retrieval_type '{self.retrieval_type}'. "
+                f"Supported: {sorted(_RETRIEVAL_CLASSES)}"
+            )
+
+        memories = await self.async_engram_client.memories.search(
+            query=query,
+            user_id=user_id,
+            group=self.engram_group,
+            retrieval_config=retrieval_cls(limit=self.retrieval_limit),
+        )
+
+        retrieved = [
+            MemoryWithTimestamp(
+                memory=m.content,
+                time_added=str(m.created_at),
+            )
+            for m in memories
+        ]
+
+        response = await self.qa_system.acall(
+            user_question=query,
+            retrieved_memories=retrieved,
+        )
+
+        return EngramAskResponse(
+            final_answer=response.answer,
+            raw_response={
+                "n_memories_retrieved": len(retrieved),
+                "memories": [r.model_dump() for r in retrieved],
+            },
+        )
+
+    async def initialize_async(self) -> None:
+        pass
+
+    async def close_async(self) -> None:
+        pass
