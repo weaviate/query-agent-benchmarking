@@ -79,4 +79,5 @@ def save_engram_manifest(result: IngestionResult, dataset_name: str) -> dict:
     with open(filepath, "w") as f:
         json.dump(manifest, f, indent=2)
 
+    print(f"Manifest: {filename}")
     return manifest
