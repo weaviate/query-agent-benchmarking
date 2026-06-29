@@ -148,15 +148,26 @@ def _all_complete(tenant_runs: dict[str, list[dict]], frontiers: dict[str, int])
     return all(frontiers[tid] == len(runs) - 1 for tid, runs in tenant_runs.items())
 
 
+def _print_user_lists(tenant_runs: dict[str, list[dict]], frontiers: dict[str, int]) -> None:
+    completed = [tid for tid, runs in tenant_runs.items() if frontiers[tid] == len(runs) - 1]
+    in_progress = [tid for tid in tenant_runs if tid not in completed]
+    q = '"'
+    print(f"completed: {','.join(q + tid + q for tid in completed)}")
+    print(f"in_progress: {','.join(q + tid + q for tid in in_progress)}")
+
+
 def run_single_pass(
     client: EngramClient,
     tenant_runs: dict[str, list[dict]],
     frontiers: dict[str, int],
+    show_tenants: bool = False,
 ) -> None:
     frontiers = _advance_all_frontiers(client, tenant_runs, frontiers)
     total = _total_runs(tenant_runs)
     done = _count_done(frontiers)
     print(f"{done}/{total} runs done  (still running: {total - done})")
+    if show_tenants:
+        _print_user_lists(tenant_runs, frontiers)
 
 
 def run_progress_loop(
@@ -164,6 +175,7 @@ def run_progress_loop(
     tenant_runs: dict[str, list[dict]],
     frontiers: dict[str, int],
     interval: float,
+    show_tenants: bool = False,
 ) -> None:
     total = _total_runs(tenant_runs)
 
@@ -183,6 +195,8 @@ def run_progress_loop(
 
     done = _count_done(frontiers)
     print(f"\nAll {done}/{total} runs finished")
+    if show_tenants:
+        _print_user_lists(tenant_runs, frontiers)
 
 
 def main() -> None:
@@ -196,6 +210,11 @@ def main() -> None:
         type=float,
         metavar="N",
         help="Poll every N seconds with a live progress bar until all runs finish",
+    )
+    parser.add_argument(
+        "--tenants",
+        action="store_true",
+        help="On exit, print comma-separated lists of completed and in-progress tenants",
     )
     args = parser.parse_args()
 
@@ -214,9 +233,9 @@ def main() -> None:
     client = _make_client()
 
     if args.poll is not None:
-        run_progress_loop(client, tenant_runs, frontiers, interval=args.poll)
+        run_progress_loop(client, tenant_runs, frontiers, interval=args.poll, show_tenants=args.tenants)
     else:
-        run_single_pass(client, tenant_runs, frontiers)
+        run_single_pass(client, tenant_runs, frontiers, show_tenants=args.tenants)
 
 
 if __name__ == "__main__":
