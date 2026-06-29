@@ -125,6 +125,7 @@ class EngramDSPyAgent:
         retrieval_type: str = "hybrid",
         engram_group: str = "default",
         user_id_prefix: str = "longmemeval-",
+        search_topics: Optional[list[str]] = None,
     ):
         api_key = engram_api_key or os.environ["ENGRAM_API_KEY"]
         self.engram_client = EngramClient(
@@ -139,6 +140,7 @@ class EngramDSPyAgent:
         self.retrieval_type = retrieval_type
         self.engram_group = engram_group
         self.user_id_prefix = user_id_prefix
+        self.search_topics = search_topics
 
         # TODO: dspy.configure() sets a global LM — this will overwrite any
         # existing DSPy LM config in the process. Consider using dspy.context()
@@ -179,6 +181,7 @@ class EngramDSPyAgent:
             user_id=user_id,
             group=self.engram_group,
             retrieval_config=retrieval_cls(limit=self.retrieval_limit),
+            topics=self.search_topics,
         )
 
         retrieved = [
@@ -234,6 +237,7 @@ class EngramDSPyAgent:
             user_id=user_id,
             group=self.engram_group,
             retrieval_config=retrieval_cls(limit=self.retrieval_limit),
+            topics=self.search_topics,
         )
 
         retrieved = [

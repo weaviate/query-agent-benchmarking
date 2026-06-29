@@ -150,6 +150,7 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
             retrieval_type=agent_cfg.get("retrieval_type", "hybrid"),
             engram_group=agent_cfg.get("engram_group", "default"),
             user_id_prefix=agent_cfg.get("user_id_prefix", "longmemeval-"),
+            search_topics=agent_cfg.get("search_topics"),
         )
     elif docs_collection or dataset_name:
         agent_cfg = _load_agent_config(agent_name)
