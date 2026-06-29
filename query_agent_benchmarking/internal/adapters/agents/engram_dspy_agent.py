@@ -72,8 +72,7 @@ class AnswerUserQueryWithMemory(dspy.Signature):
       * Current: present tense statements of fact
     - A current-state memory supersedes a past-state or plan memory about the same topic — do NOT hedge or say "unclear."
     - If a memory describes both a past and current state, treat them as distinct facts at different points in time — do not collapse them.
-    - When the question asks about the current state, give the most recent state, not the full history.
-    - The timestamps on the memories reflect storage time, NOT when the events originally occurred. Reason about temporal order from the content of the memories, not from the timestamps."""
+    - Memories are ordered from oldest to newest. If multiple memories appear to give different information, you should interpret this as information which has been updated over time. This is not a contradiction - the memory nearest the end is the newest, and so should be considered the current state."""
 
     user_question: str = dspy.InputField()
     retrieved_memories: list[MemoryWithTimestamp] = dspy.InputField()
@@ -187,9 +186,9 @@ class EngramDSPyAgent:
         retrieved = [
             MemoryWithTimestamp(
                 memory=m.content,
-                time_added=str(m.created_at),
+                time_added=str(m.updated_at),
             )
-            for m in memories
+            for m in sorted(memories, key=lambda m: m.updated_at)
         ]
 
         response = self.qa_system(
@@ -243,9 +242,9 @@ class EngramDSPyAgent:
         retrieved = [
             MemoryWithTimestamp(
                 memory=m.content,
-                time_added=str(m.created_at),
+                time_added=str(m.updated_at),
             )
-            for m in memories
+            for m in sorted(memories, key=lambda m: m.updated_at)
         ]
 
         response = await self.qa_system.acall(
