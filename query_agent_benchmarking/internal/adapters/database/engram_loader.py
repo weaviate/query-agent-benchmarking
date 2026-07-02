@@ -9,12 +9,24 @@ import asyncio
 import os
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Callable, Optional
 
 from engram import AsyncEngramClient, ConversationInput, EngramClient, MessageInput
 
 PRINT_INTERVAL = 10
+
+
+def _parse_session_date(session_date: str) -> "str | None":
+    """Parse "2023/05/20 (Sat) 10:58" → "2023-05-20T10:58:00Z". Returns None on failure."""
+    if not session_date:
+        return None
+    try:
+        dt = datetime.strptime(session_date, "%Y/%m/%d (%a) %H:%M")
+        return dt.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+    except ValueError:
+        return None
 
 
 def _parse_session_text(session_text: str) -> ConversationInput:
@@ -118,7 +130,7 @@ def _get_inputs_from_conversation(
 
     if ingestion_mode == "user_messages":
         return [
-            ConversationInput(messages=[m])
+            ConversationInput(messages=[m], updated_at=conversation.updated_at)
             for m in conversation.messages
             if m.role == "user"
         ]
@@ -129,10 +141,10 @@ def _get_inputs_from_conversation(
         for msg in conversation.messages:
             current.append(msg)
             if msg.role == "assistant":
-                turns.append(ConversationInput(messages=current))
+                turns.append(ConversationInput(messages=current, updated_at=conversation.updated_at))
                 current = []
         if current:
-            turns.append(ConversationInput(messages=current))
+            turns.append(ConversationInput(messages=current, updated_at=conversation.updated_at))
         return turns
 
     raise ValueError(
@@ -172,6 +184,7 @@ def _build_per_user_items(
 
         for session in sessions:
             conversation = _parse_session_text(session["session_text"])
+            conversation.updated_at = _parse_session_date(session.get("session_date", ""))
             if not conversation.messages:
                 skipped += 1
                 if verbose:
