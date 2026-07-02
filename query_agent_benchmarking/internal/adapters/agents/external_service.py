@@ -88,6 +88,7 @@ class ExternalAskService:
         query: str,
         oracle_context_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        question_date: Optional[str] = None,
     ) -> AskResponse:
         payload = {"question": query}
         if oracle_context_id is not None:
@@ -105,6 +106,7 @@ class ExternalAskService:
         query: str,
         oracle_context_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        question_date: Optional[str] = None,
     ) -> AskResponse:
         payload = {"question": query}
         if oracle_context_id is not None:

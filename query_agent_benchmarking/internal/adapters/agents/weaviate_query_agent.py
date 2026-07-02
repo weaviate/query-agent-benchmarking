@@ -243,6 +243,7 @@ class WeaviateQueryAgentAsk:
         query: str,
         oracle_context_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        question_date: Optional[str] = None,
     ) -> AskResponse:
         if self._agent is None:
             self.initialize_sync()
@@ -254,6 +255,7 @@ class WeaviateQueryAgentAsk:
         query: str,
         oracle_context_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        question_date: Optional[str] = None,
     ) -> AskResponse:
         response = await self._agent.ask(query)
         return AskResponse(final_answer=response.final_answer, raw_response=response)

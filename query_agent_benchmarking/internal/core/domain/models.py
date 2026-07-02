@@ -46,6 +46,7 @@ class InMemoryAskQuery(BaseModel):
     oracle_context_id: Optional[str] = None  # Optional: for oracle/hard-negative experiments
     tenant_id: Optional[str] = None  # Optional: for multi-tenant datasets (e.g., LongMemEval)
     question_type: Optional[str] = None  # Optional: for type-specific evaluation (e.g., LongMemEval)
+    question_date: Optional[str] = None  # Optional: date the question was asked (e.g., LongMemEval)
 
 
 # ============================================================================

@@ -23,6 +23,7 @@ class AskAgent(Protocol):
         query: str,
         oracle_context_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        question_date: Optional[str] = None,
     ) -> AskResponse:
         """Execute a synchronous ask query.
 
@@ -30,6 +31,7 @@ class AskAgent(Protocol):
             query: The question to answer.
             oracle_context_id: Optional document ID for oracle context.
             tenant_id: Optional tenant ID for multi-tenant datasets.
+            question_date: Optional date the question was asked (for temporal grounding).
 
         Returns:
             AskResponse containing the answer.
@@ -41,6 +43,7 @@ class AskAgent(Protocol):
         query: str,
         oracle_context_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        question_date: Optional[str] = None,
     ) -> AskResponse:
         """Execute an asynchronous ask query.
 
@@ -48,6 +51,7 @@ class AskAgent(Protocol):
             query: The question to answer.
             oracle_context_id: Optional document ID for oracle context.
             tenant_id: Optional tenant ID for multi-tenant datasets.
+            question_date: Optional date the question was asked (for temporal grounding).
 
         Returns:
             AskResponse containing the answer.

@@ -66,6 +66,7 @@ class AnswerUserQueryWithMemory(dspy.Signature):
     - If you find only gaps: answer with whatever relevant information IS available. Do NOT abstain just because the answer is incomplete.
 
     Temporal reasoning:
+    - The question was asked on the date provided in `question_date`. Treat that as "today" when interpreting any time-relative terms ("now", "yesterday", "this year", etc.).
     - When memories describe the same thing at different points in time, resolve the timeline. Look for language that distinguishes past states, plans/intentions, and current states:
       * Past: "used to", "previously"
       * Plans: "plans to", "intends to", "wants to", "will"
@@ -75,6 +76,9 @@ class AnswerUserQueryWithMemory(dspy.Signature):
     - Memories are ordered from oldest to newest. If multiple memories appear to give different information, you should interpret this as information which has been updated over time. This is not a contradiction - the memory nearest the end is the newest, and so should be considered the current state."""
 
     user_question: str = dspy.InputField()
+    question_date: str = dspy.InputField(
+        desc="The date on which this question was asked. Treat this as today's date when interpreting any time-relative language in the question or memories."
+    )
     retrieved_memories: list[MemoryWithTimestamp] = dspy.InputField()
     premise_check: str = dspy.OutputField(
         desc="List the key premises embedded in the question (role titles, names, dates, events, quantities). For each, state whether the memories SUPPORT it, CONTRADICT it (memories state a different fact), or are SILENT (memories don't mention it). Only mark CONTRADICT when the memories provide a conflicting fact — silence is not contradiction. If all premises are supported or the memories are simply silent, say 'Premises verified.'"
@@ -153,6 +157,7 @@ class EngramDSPyAgent:
         query: str,
         tenant_id: Optional[str] = None,
         oracle_context_id: Optional[str] = None,
+        question_date: Optional[str] = None,
     ) -> EngramAskResponse:
         """
         Retrieve memories from Engram and answer the question using DSPy.
@@ -193,6 +198,7 @@ class EngramDSPyAgent:
 
         response = self.qa_system(
             user_question=query,
+            question_date=question_date or "unknown",
             retrieved_memories=retrieved,
         )
 
@@ -209,6 +215,7 @@ class EngramDSPyAgent:
         query: str,
         tenant_id: Optional[str] = None,
         oracle_context_id: Optional[str] = None,
+        question_date: Optional[str] = None,
     ) -> EngramAskResponse:
         """
         Retrieve memories from Engram and answer the question using DSPy, both async.
@@ -249,6 +256,7 @@ class EngramDSPyAgent:
 
         response = await self.qa_system.acall(
             user_question=query,
+            question_date=question_date or "unknown",
             retrieved_memories=retrieved,
         )
 

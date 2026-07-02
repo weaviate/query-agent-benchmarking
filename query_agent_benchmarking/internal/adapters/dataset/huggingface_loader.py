@@ -423,6 +423,7 @@ def load_ask_longmemeval(
                 ground_truth_answer=item["answer"],
                 tenant_id=tid,
                 question_type=qtype_map.get(qid),
+                question_date=item.get("question_date"),
             )
         )
 

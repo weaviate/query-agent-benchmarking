@@ -46,7 +46,7 @@ class MockAskAgent:
     def __init__(self, answers: dict[str, str]):
         self.answers = answers
 
-    def run(self, query, oracle_context_id=None, tenant_id=None):
+    def run(self, query, oracle_context_id=None, tenant_id=None, question_date=None):
         answer = self.answers.get(query, "I don't know")
         return AskResponse(final_answer=answer)
 
@@ -100,7 +100,7 @@ class TestAskPipelineE2E:
         """Agent raises errors on some queries -> errors are handled gracefully."""
 
         class ErrorAgent:
-            def run(self, query, oracle_context_id=None, tenant_id=None):
+            def run(self, query, oracle_context_id=None, tenant_id=None, question_date=None):
                 if "2+2" in query:
                     raise ValueError("Simulated error")
                 return AskResponse(final_answer="Paris")
@@ -186,7 +186,7 @@ class TestAskPipelineE2E:
         received_tenants = []
 
         class TenantCapturingAgent:
-            def run(self, query, oracle_context_id=None, tenant_id=None):
+            def run(self, query, oracle_context_id=None, tenant_id=None, question_date=None):
                 received_tenants.append(tenant_id)
                 return AskResponse(final_answer="Meeting")
 

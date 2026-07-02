@@ -33,12 +33,12 @@ class MockAskAgent:
         self.responses = responses or {}
         self.call_count = 0
 
-    def run(self, query: str, oracle_context_id=None, tenant_id=None) -> AskResponse:
+    def run(self, query: str, oracle_context_id=None, tenant_id=None, question_date=None) -> AskResponse:
         self.call_count += 1
         answer = self.responses.get(query, "I don't know.")
         return AskResponse(final_answer=answer)
 
-    async def run_async(self, query: str, oracle_context_id=None, tenant_id=None) -> AskResponse:
+    async def run_async(self, query: str, oracle_context_id=None, tenant_id=None, question_date=None) -> AskResponse:
         return self.run(query, oracle_context_id, tenant_id)
 
     async def initialize_async(self):
