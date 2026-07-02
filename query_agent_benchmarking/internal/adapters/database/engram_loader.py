@@ -223,6 +223,7 @@ async def _submit_all(
     verbose: bool,
     ingestion_mode: str = "conversation",
     on_progress: Optional[Callable[[dict], None]] = None,
+    include_conversation_id: bool = True,
 ) -> list[RunRecord]:
     """Submit every session across all tenants concurrently per user.
 
@@ -234,6 +235,8 @@ async def _submit_all(
             ``"conversation"`` submits the full parsed conversation per session.
             ``"user_messages"`` submits each user message individually.
             ``"message_turn"`` submits each user/assistant exchange as one input.
+        include_conversation_id: Whether to include ``{"conversation_id": ...}``
+            in the ``properties`` of each ``memories.add()`` call.
     """
     per_user, skipped = _build_per_user_items(
         docs_by_tenant, user_id_prefix, ingestion_mode, verbose
@@ -258,7 +261,7 @@ async def _submit_all(
                     item.conv_input,
                     user_id=uid,
                     group=group,
-                    properties={"conversation_id": item.session_id},
+                    properties={"conversation_id": item.session_id} if include_conversation_id else {},
                 )
                 for uid, item in batch
             ],
@@ -436,6 +439,7 @@ def engram_ingest_all_tenants(
     ingestion_mode: str = "conversation",
     on_progress: Optional[Callable[[dict], None]] = None,
     dry_run: bool = False,
+    include_conversation_id: bool = True,
 ) -> IngestionResult:
     """
     Ingest sessions for all tenants into Engram.
@@ -466,6 +470,10 @@ def engram_ingest_all_tenants(
         dry_run: If True, count requests without submitting to Engram.
             No API key is required. Returns an ``IngestionResult`` with
             synthetic run records reflecting the would-be request count.
+        include_conversation_id: Whether to include ``{"conversation_id": ...}``
+            in the ``properties`` of each ``memories.add()`` call. Defaults to
+            True. Set to False when the Engram instance does not expect this
+            property.
 
     Returns:
         An ``IngestionResult`` with run records and submission timing.
@@ -490,7 +498,7 @@ def engram_ingest_all_tenants(
         total = sum(len(s) for s in docs_by_tenant.values())
         mode_label = f" (mode: {ingestion_mode})" if ingestion_mode != "conversation" else " (mode: conversation)"
         print(f"Submitting {total} sessions across {len(docs_by_tenant)} tenants{mode_label}...")
-    records = asyncio.run(_submit_all(submit_client, docs_by_tenant, group, user_id_prefix, ingest_delay, verbose, ingestion_mode, on_progress))
+    records = asyncio.run(_submit_all(submit_client, docs_by_tenant, group, user_id_prefix, ingest_delay, verbose, ingestion_mode, on_progress, include_conversation_id))
 
     submit_elapsed = time.time() - t0
     tenant_session_counts = {}

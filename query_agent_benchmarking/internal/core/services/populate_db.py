@@ -78,6 +78,7 @@ def _run_engram_loader(config: dict, dataset_name: str, poll: bool = True) -> di
     ingestion_mode = config.get("engram_ingestion_mode", "conversation")
     user_id_prefix = config.get("user_id_prefix", "longmemeval-")
     engram_dry_run = config.get("engram_dry_run", False)
+    include_conversation_id = config.get("engram_include_conversation_id", True)
     result = engram_ingest_all_tenants(
         docs_by_tenant,
         engram_base_url=engram_base_url,
@@ -85,6 +86,7 @@ def _run_engram_loader(config: dict, dataset_name: str, poll: bool = True) -> di
         ingestion_mode=ingestion_mode,
         user_id_prefix=user_id_prefix,
         dry_run=engram_dry_run,
+        include_conversation_id=include_conversation_id,
     )
     if engram_dry_run:
         return {}
