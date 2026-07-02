@@ -11,7 +11,6 @@ from typing import Optional
 from dataclasses import dataclass, field
 
 import dspy
-from pydantic import BaseModel
 
 from engram import (
     AsyncEngramClient,
@@ -33,11 +32,6 @@ _RETRIEVAL_CLASSES = {
 # ---------------------------------------------------------------------------
 # DSPy signatures
 # ---------------------------------------------------------------------------
-
-class MemoryWithTimestamp(BaseModel):
-    memory: str
-    time_added: str
-
 
 class AnswerUserQueryWithMemory(dspy.Signature):
     """Answer the user's question using the retrieved memories as your knowledge base.
@@ -79,7 +73,7 @@ class AnswerUserQueryWithMemory(dspy.Signature):
     question_date: str = dspy.InputField(
         desc="The date on which this question was asked. Treat this as today's date when interpreting any time-relative language in the question or memories."
     )
-    retrieved_memories: list[MemoryWithTimestamp] = dspy.InputField()
+    retrieved_memories: list[str] = dspy.InputField()
     premise_check: str = dspy.OutputField(
         desc="List the key premises embedded in the question (role titles, names, dates, events, quantities). For each, state whether the memories SUPPORT it, CONTRADICT it (memories state a different fact), or are SILENT (memories don't mention it). Only mark CONTRADICT when the memories provide a conflicting fact — silence is not contradiction. If all premises are supported or the memories are simply silent, say 'Premises verified.'"
     )
@@ -188,13 +182,8 @@ class EngramDSPyAgent:
             topics=self.search_topics,
         )
 
-        retrieved = [
-            MemoryWithTimestamp(
-                memory=m.content,
-                time_added=str(m.updated_at),
-            )
-            for m in sorted(memories, key=lambda m: m.updated_at)
-        ]
+        sorted_memories = sorted(memories, key=lambda m: m.updated_at)
+        retrieved = [m.content for m in sorted_memories]
 
         response = self.qa_system(
             user_question=query,
@@ -206,7 +195,10 @@ class EngramDSPyAgent:
             final_answer=response.answer,
             raw_response={
                 "n_memories_retrieved": len(retrieved),
-                "memories": [r.model_dump() for r in retrieved],
+                "memories": [
+                    {"memory": m.content, "time_added": str(m.updated_at)}
+                    for m in sorted_memories
+                ],
             },
         )
 
@@ -246,13 +238,8 @@ class EngramDSPyAgent:
             topics=self.search_topics,
         )
 
-        retrieved = [
-            MemoryWithTimestamp(
-                memory=m.content,
-                time_added=str(m.updated_at),
-            )
-            for m in sorted(memories, key=lambda m: m.updated_at)
-        ]
+        sorted_memories = sorted(memories, key=lambda m: m.updated_at)
+        retrieved = [m.content for m in sorted_memories]
 
         response = await self.qa_system.acall(
             user_question=query,
@@ -264,7 +251,10 @@ class EngramDSPyAgent:
             final_answer=response.answer,
             raw_response={
                 "n_memories_retrieved": len(retrieved),
-                "memories": [r.model_dump() for r in retrieved],
+                "memories": [
+                    {"memory": m.content, "time_added": str(m.updated_at)}
+                    for m in sorted_memories
+                ],
             },
         )
 
