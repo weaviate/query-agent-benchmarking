@@ -29,7 +29,8 @@ _STANDARD_TEMPLATE = (
     "steps to get the correct answer, you should also answer yes. If the response only "
     "contains a subset of the information required by the answer, answer no. "
     "\n\nQuestion: {question}\n\nCorrect Answer: {answer}\n\nModel Response: {response}"
-    "\n\nIs the model response correct? Answer yes or no only."
+    "\n\nIs the model response correct? "
+    "First reason through each rule in the criteria step by step, then give a boolean verdict"
 )
 
 _TEMPORAL_REASONING_TEMPLATE = (
@@ -42,7 +43,8 @@ _TEMPORAL_REASONING_TEMPLATE = (
     "asks for the number of days/weeks/months, etc., and the model makes off-by-one errors "
     "(e.g., predicting 19 days when the answer is 18), the model's response is still correct. "
     "\n\nQuestion: {question}\n\nCorrect Answer: {answer}\n\nModel Response: {response}"
-    "\n\nIs the model response correct? Answer yes or no only."
+    "\n\nIs the model response correct? "
+    "First reason through each rule in the criteria step by step, then give a boolean verdict"
 )
 
 _KNOWLEDGE_UPDATE_TEMPLATE = (
@@ -56,7 +58,8 @@ _KNOWLEDGE_UPDATE_TEMPLATE = (
     "vs. 'in a shoe rack in my closet'), it should be considered correct. Only answer no if "
     "the response gives a fundamentally different answer or misses the key updated fact."
     "\n\nQuestion: {question}\n\nCorrect Answer: {answer}\n\nModel Response: {response}"
-    "\n\nIs the model response correct? Answer yes or no only."
+    "\n\nIs the model response correct? "
+    "First reason through each rule in the criteria step by step, then give a boolean verdict"
 )
 
 _PREFERENCE_TEMPLATE = (
@@ -65,7 +68,8 @@ _PREFERENCE_TEMPLATE = (
     "answer no. The model does not need to reflect all the points in the rubric. The response "
     "is correct as long as it recalls and utilizes the user's personal information correctly."
     "\n\nQuestion: {question}\n\nRubric: {answer}\n\nModel Response: {response}"
-    "\n\nIs the model response correct? Answer yes or no only."
+    "\n\nIs the model response correct? "
+    "First reason through each rule in the criteria step by step, then give a boolean verdict"
 )
 
 _ABSTENTION_TEMPLATE = (
@@ -74,7 +78,8 @@ _ABSTENTION_TEMPLATE = (
     "The model could say that the information is incomplete, or some other information is "
     "given but the asked information is not."
     "\n\nQuestion: {question}\n\nExplanation: {answer}\n\nModel Response: {response}"
-    "\n\nDoes the model correctly identify the question as unanswerable? Answer yes or no only."
+    "\n\nDoes the model correctly identify the question as unanswerable? "
+    "First reason through each rule in the criteria step by step, then give a boolean verdict"
 )
 
 _TEMPLATE_MAP = {
@@ -121,7 +126,7 @@ def _build_prompt(
 
 class LongMemEvalJudgment(dspy.Signature):
     """Judge whether a model response is correct given type-specific evaluation criteria.
-    First reason through each rule in the criteria step by step, then answer yes or no.
+    First reason through each rule in the criteria step by step, then give a boolean verdict.
     """
 
     evaluation_prompt: str = dspy.InputField(
@@ -130,8 +135,8 @@ class LongMemEvalJudgment(dspy.Signature):
     reasoning: str = dspy.OutputField(
         description="Go through each rule in the evaluation criteria one by one. For each rule, determine whether the response satisfies it and why. Then give the overall reason for your final verdict."
     )
-    judgment: str = dspy.OutputField(
-        description="Answer yes or no only."
+    judgment: bool = dspy.OutputField(
+        description="True if the model response is correct, False otherwise."
     )
 
 
@@ -178,9 +183,8 @@ class LongMemEvalJudge:
         """Async version of _call_judge using dspy.Predict.acall()."""
         with dspy.context(lm=self.lm):
             response = await self.judge.acall(evaluation_prompt=prompt)
-        content = response.judgment or ""
+        aligned = bool(response.judgment)
         reasoning = response.reasoning or ""
-        aligned = "yes" in content.strip().lower()
 
         input_tokens = 0
         output_tokens = 0
@@ -202,9 +206,8 @@ class LongMemEvalJudge:
         """
         with dspy.context(lm=self.lm):
             response = self.judge(evaluation_prompt=prompt)
-        content = response.judgment or ""
+        aligned = bool(response.judgment)
         reasoning = response.reasoning or ""
-        aligned = "yes" in content.strip().lower()
 
         input_tokens = 0
         output_tokens = 0
