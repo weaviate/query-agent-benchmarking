@@ -50,14 +50,9 @@ class AnswerUserQueryWithMemory(dspy.Signature):
 
     BOTH types:
     - Synthesizing facts across multiple memories is expected and encouraged.
-    - BEFORE answering, check the question's premises against the memories (see premise_check).
-    - If the memories contain NO relevant information at all, say "The information provided is not enough." and explain why fully.
-
-    Contradiction vs. gap:
-    - A CONTRADICTION is when the question assumes a specific fact (role title, name, date, event, location) and the memories state a DIFFERENT fact.
-    - A GAP is when the memories are simply silent on a topic — they neither confirm nor deny it.
-    - If you find a contradiction: you MUST abstain. Say "The information provided is not enough." then explain what the question assumed vs. what the memories actually say.
-    - If you find only gaps: answer with whatever relevant information IS available. Do NOT abstain just because the answer is incomplete.
+    - BEFORE answering, identify which memories are relevant to answering the question. Then, reason through these instructions, making sure to follow them exactly, and ensure that you have done all required temporal reasoning. Finally, decide whether you have the information you need to answer the question or should abstain, again making sure to follow the instructions about this decision.
+    - If you have partial information about a question, use the reasoning field to make the best possible deduction you can from the memories. You should not abstain from answering if you have partial information, as you can still provide a best-effort answer.
+    - You should only abstain if the memories contain NO relevant information at all. In this case, say "The information provided is not enough." and explain why fully. Information is only not relevant if the question assumes a specific fact (role title, name, date, event, location) and the memories state a DIFFERENT fact.
 
     Temporal reasoning:
     - The question was asked on the date provided in `question_date`. Treat that as "today" when interpreting any time-relative terms ("now", "yesterday", "this year", etc.).
@@ -74,8 +69,8 @@ class AnswerUserQueryWithMemory(dspy.Signature):
         desc="The date on which this question was asked. Treat this as today's date when interpreting any time-relative language in the question or memories."
     )
     retrieved_memories: list[str] = dspy.InputField()
-    premise_check: str = dspy.OutputField(
-        desc="List the key premises embedded in the question (role titles, names, dates, events, quantities). For each, state whether the memories SUPPORT it, CONTRADICT it (memories state a different fact), or are SILENT (memories don't mention it). Only mark CONTRADICT when the memories provide a conflicting fact — silence is not contradiction. If all premises are supported or the memories are simply silent, say 'Premises verified.'"
+    reasoning: str = dspy.OutputField(
+        desc="First, identify which memories are relevant to answering the question. Then, reason through the instructions above, making sure to follow them exactly, and ensure that you have done all required temporal reasoning. Finally, decide whether you have the information you need to answer the question or should abstain, again making sure to follow the instructions about this decision above."
     )
     answer: str = dspy.OutputField(
         desc="If the premise check found a CONTRADICTION (memories state a different fact than the question assumes), abstain: say 'The information provided is not enough.' and explain the discrepancy. For factual questions, answer strictly from the memories. For preference/recommendation questions, synthesize the user's stored preferences, habits, and interests into a personalized suggestion — this is expected, not fabrication."
