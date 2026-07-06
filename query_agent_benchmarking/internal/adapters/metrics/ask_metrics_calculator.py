@@ -212,16 +212,17 @@ class LongMemEvalAskCalculator:
     evaluation protocol from the LongMemEval paper (Wu et al., ICLR 2025).
     """
 
-    def __init__(self, model: str = "openai/gpt-5.4", api_key: str | None = None):
+    def __init__(self, model: str = "openai/gpt-5.4", api_key: str | None = None, ensemble_k: int = 1):
         self.model = model
-        self.judge = LongMemEvalJudge(model=model, api_key=api_key)
+        self.ensemble_k = ensemble_k
+        self.judge = LongMemEvalJudge(model=model, api_key=api_key, ensemble_k=ensemble_k)
 
     def compute(self, results: list[AskResult]) -> dict:
         print(f"\n\033[94mAnalyzing {len(results)} ask results with LongMemEval judge...\033[0m")
         print(f"Judge model: {self.model}")
 
         alignment_scores = []
-        judge_reasonings: list[str | None] = []
+        judge_reasonings: list[list[dict] | None] = []
         query_times = []
         misaligned_indices = []
         total_input_tokens = 0
@@ -280,7 +281,7 @@ class LongMemEvalAskCalculator:
             "alignment_score_scores": alignment_scores,
             "judge_reasonings": judge_reasonings,
             "judge_model": self.model,
-            "ensemble_k": 1,
+            "ensemble_k": self.ensemble_k,
             "type_accuracy": type_accuracy,
             "type_counts": {t: len(scores) for t, scores in sorted(type_scores.items())},
         }

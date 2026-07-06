@@ -139,8 +139,8 @@ class LongMemEvalJudge:
 
     Uses DSPy for LLM inference with type-specific prompts per question category,
     following the paper's setup:
-    - Simple yes/no output (no chain-of-thought)
     - Type-specific prompts per question category
+    - Optional ensemble voting: call the judge ensemble_k times, majority vote wins
 
     Satisfies the LLMJudge protocol from core/ports/llm_judge.py.
     """
@@ -151,6 +151,7 @@ class LongMemEvalJudge:
         api_key: Optional[str] = None,
         default_question_type: str = "multi-session",
         cache: bool = False,
+        ensemble_k: int = 1,
     ):
         """Initialize the LongMemEval judge.
 
@@ -162,6 +163,7 @@ class LongMemEvalJudge:
         """
         self.model = model
         self.default_question_type = default_question_type
+        self.ensemble_k = ensemble_k
 
         self.lm = dspy.LM(
             model,
@@ -221,8 +223,8 @@ class LongMemEvalJudge:
         """
         qtype = question_type or self.default_question_type
         prompt = _build_prompt(qtype, question, correct_answer, system_answer, question_id)
-        aligned, _, _, _ = self._call_judge(prompt)
-        return aligned
+        votes = sum(self._call_judge(prompt)[0] for _ in range(self.ensemble_k))
+        return votes >= self.ensemble_k / 2
 
     def evaluate_with_details(
         self,
@@ -249,15 +251,25 @@ class LongMemEvalJudge:
         is_abstention = question_id is not None and "_abs" in question_id
         prompt = _build_prompt(qtype, question, correct_answer, system_answer, question_id)
 
-        aligned, reasoning, input_tokens, output_tokens = self._call_judge(prompt)
+        vote_results = []
+        total_input_tokens = 0
+        total_output_tokens = 0
+        for _ in range(self.ensemble_k):
+            aligned_i, reasoning_i, in_tok, out_tok = self._call_judge(prompt)
+            vote_results.append({"vote": aligned_i, "reasoning": reasoning_i})
+            total_input_tokens += in_tok
+            total_output_tokens += out_tok
+
+        votes = sum(v["vote"] for v in vote_results)
+        majority_aligned = votes >= self.ensemble_k / 2
 
         return {
-            "aligned": aligned,
+            "aligned": majority_aligned,
             "question_type": qtype,
             "is_abstention": is_abstention,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "votes": 1,
-            "ensemble_k": 1,
-            "reasoning": reasoning,
+            "input_tokens": total_input_tokens,
+            "output_tokens": total_output_tokens,
+            "votes": votes,
+            "ensemble_k": self.ensemble_k,
+            "reasoning": vote_results,
         }

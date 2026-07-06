@@ -319,7 +319,16 @@ function buildMarkdownReport(
                   : "✗ wrong";
             L(`- **${name}** — ${status}${time}`);
             L(`  - Answer: ${cell.system_answer ? cell.system_answer : "_(empty)_"}`);
-            if (cell.judge_reasoning) L(`  - Judge: ${cell.judge_reasoning}`);
+            if (cell.judge_reasoning) {
+              const r = cell.judge_reasoning;
+              if (Array.isArray(r)) {
+                (r as { vote: boolean; reasoning: string }[]).forEach((v, i) =>
+                  L(`  - Judge vote ${i + 1} (${v.vote ? "yes" : "no"}): ${v.reasoning}`)
+                );
+              } else {
+                L(`  - Judge: ${r as string}`);
+              }
+            }
           } else {
             const status = cell.correct ? "✓ hit" : "✗ miss";
             const gt = new Set(row.ground_truth_ids ?? []);
@@ -1232,16 +1241,39 @@ function CellDetail({
         <p className="text-sm rounded-md p-2 mb-2" style={{ background: "var(--bg-card)", color: "var(--text-primary)" }}>
           {cell.system_answer || <em style={{ color: "var(--text-muted)" }}>(empty)</em>}
         </p>
-        {cell.judge_reasoning && (
-          <details>
-            <summary className="text-xs cursor-pointer" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-              Judge reasoning
-            </summary>
-            <p className="mt-1 text-xs rounded-md p-2" style={{ background: "var(--bg-card)", color: "var(--text-secondary)" }}>
-              {cell.judge_reasoning}
-            </p>
-          </details>
-        )}
+        {cell.judge_reasoning && (() => {
+          const votes: { vote: boolean; reasoning: string }[] = Array.isArray(cell.judge_reasoning)
+            ? cell.judge_reasoning as { vote: boolean; reasoning: string }[]
+            : [{ vote: true, reasoning: cell.judge_reasoning as string }];
+          return (
+            <details>
+              <summary className="text-xs cursor-pointer" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                Judge reasoning{votes.length > 1 ? ` (${votes.length} votes)` : ""}
+              </summary>
+              <div className="mt-1 space-y-1">
+                {votes.map((v, i) => (
+                  <div key={i}>
+                    {votes.length > 1 && (
+                      <span
+                        className="text-xs"
+                        style={{
+                          color: v.vote ? "var(--color-green)" : "var(--color-red)",
+                          fontFamily: "var(--font-mono)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {v.vote ? "✓" : "✗"} Vote {i + 1}
+                      </span>
+                    )}
+                    <p className="mt-0.5 text-xs rounded-md p-2" style={{ background: "var(--bg-card)", color: "var(--text-secondary)", whiteSpace: "pre-wrap" }}>
+                      {v.reasoning}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </details>
+          );
+        })()}
       </div>
     );
   }

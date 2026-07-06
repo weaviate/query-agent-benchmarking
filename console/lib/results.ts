@@ -5,6 +5,11 @@ import path from "path";
 // Types
 // ============================================================================
 
+export interface JudgeVote {
+  vote: boolean;
+  reasoning: string;
+}
+
 export interface TrialMetadata {
   dataset: string;
   agent_name: string;
@@ -82,7 +87,7 @@ export interface AskQuery {
   is_error?: boolean;
   oracle_context_id?: string;
   tenant_id?: string;
-  judge_reasoning?: string;
+  judge_reasoning?: string | JudgeVote[];
   question_type?: string;
   retrieved_context?: Record<string, unknown>;
 }
@@ -309,7 +314,7 @@ export interface ComparisonCell {
   system_answer?: string;
   score?: number;
   is_error?: boolean;
-  judge_reasoning?: string;
+  judge_reasoning?: string | JudgeVote[];
 }
 
 /** One query aligned across all compared experiments (joined by question text). */

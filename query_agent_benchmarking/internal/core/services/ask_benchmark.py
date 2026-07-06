@@ -174,7 +174,7 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     metrics_across_trials = []
 
     if use_longmemeval:
-        metrics_calculator = LongMemEvalAskCalculator(model=judge_model)
+        metrics_calculator = LongMemEvalAskCalculator(model=judge_model, ensemble_k=ensemble_k)
     elif use_officeqa_metric:
         metrics_calculator = OfficeQAAskCalculator(tolerance=officeqa_tolerance)
     elif use_exact_match:

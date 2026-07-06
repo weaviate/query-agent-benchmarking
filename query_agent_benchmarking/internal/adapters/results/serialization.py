@@ -113,7 +113,7 @@ def save_ask_trial_results(
     config: dict[str, Any],
     trial_number: int,
     alignment_scores: list[int] | None = None,
-    judge_reasonings: list[str | None] | None = None,
+    judge_reasonings: list[str | list[dict] | None] | None = None,
 ) -> None:
     """
     Save raw query results for a single ask trial.
