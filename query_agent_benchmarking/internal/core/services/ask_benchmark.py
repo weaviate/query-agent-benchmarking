@@ -169,12 +169,15 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     judge_model = config.get("judge_model", "openai/gpt-4.1")
     ensemble_k = config.get("ensemble_k", 3)
     use_reasoning = config.get("use_reasoning", False)
+    max_concurrent_judge = config.get("max_concurrent_judge", 10)
 
     num_trials = config.get("num_trials", 1)
     metrics_across_trials = []
 
     if use_longmemeval:
-        metrics_calculator = LongMemEvalAskCalculator(model=judge_model, ensemble_k=ensemble_k)
+        metrics_calculator = LongMemEvalAskCalculator(
+            model=judge_model, ensemble_k=ensemble_k, max_concurrent_judge=max_concurrent_judge
+        )
     elif use_officeqa_metric:
         metrics_calculator = OfficeQAAskCalculator(tolerance=officeqa_tolerance)
     elif use_exact_match:
@@ -221,7 +224,10 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
                 sleep_between_requests=config.get("sleep_between_requests", 0.0),
             )
 
-        metrics = metrics_calculator.compute(results)
+        if hasattr(metrics_calculator, 'compute_async'):
+            metrics = await metrics_calculator.compute_async(results)
+        else:
+            metrics = metrics_calculator.compute(results)
 
         print(f"\n\033[92mTrial {trial+1} Results:\033[0m")
         print(f"  {score_key}: {metrics[score_key]:.2%}")

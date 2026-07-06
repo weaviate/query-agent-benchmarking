@@ -12,6 +12,7 @@ Uses DSPy for LLM inference with separate prompt-engineered instructions per que
 Output format: simple yes/no (no chain-of-thought reasoning).
 """
 
+import asyncio
 import os
 from typing import Optional
 
@@ -173,6 +174,26 @@ class LongMemEvalJudge:
 
         self.judge = dspy.Predict(LongMemEvalJudgment)
 
+    async def _call_judge_async(self, prompt: str) -> tuple[bool, str, int, int]:
+        """Async version of _call_judge using dspy.Predict.acall()."""
+        with dspy.context(lm=self.lm):
+            response = await self.judge.acall(evaluation_prompt=prompt)
+        content = response.judgment or ""
+        reasoning = response.reasoning or ""
+        aligned = "yes" in content.strip().lower()
+
+        input_tokens = 0
+        output_tokens = 0
+        try:
+            usage = response.get_lm_usage()
+            if usage and self.model in usage:
+                input_tokens = usage[self.model].get("prompt_tokens", 0)
+                output_tokens = usage[self.model].get("completion_tokens", 0)
+        except Exception:
+            pass
+
+        return aligned, reasoning, input_tokens, output_tokens
+
     def _call_judge(self, prompt: str) -> tuple[bool, str, int, int]:
         """Call the LLM judge and parse yes/no response.
 
@@ -269,6 +290,37 @@ class LongMemEvalJudge:
             "is_abstention": is_abstention,
             "input_tokens": total_input_tokens,
             "output_tokens": total_output_tokens,
+            "votes": votes,
+            "ensemble_k": self.ensemble_k,
+            "reasoning": vote_results,
+        }
+
+    async def evaluate_with_details_async(
+        self,
+        question: str,
+        system_answer: str,
+        correct_answer: str,
+        question_type: Optional[str] = None,
+        question_id: Optional[str] = None,
+    ) -> dict:
+        """Async version of evaluate_with_details. Runs all ensemble_k calls concurrently."""
+        qtype = question_type or self.default_question_type
+        is_abstention = question_id is not None and "_abs" in question_id
+        prompt = _build_prompt(qtype, question, correct_answer, system_answer, question_id)
+
+        call_results = await asyncio.gather(*[
+            self._call_judge_async(prompt) for _ in range(self.ensemble_k)
+        ])
+
+        vote_results = [{"vote": a, "reasoning": r} for a, r, _, _ in call_results]
+        votes = sum(v["vote"] for v in vote_results)
+
+        return {
+            "aligned": votes >= self.ensemble_k / 2,
+            "question_type": qtype,
+            "is_abstention": is_abstention,
+            "input_tokens": sum(c[2] for c in call_results),
+            "output_tokens": sum(c[3] for c in call_results),
             "votes": votes,
             "ensemble_k": self.ensemble_k,
             "reasoning": vote_results,
