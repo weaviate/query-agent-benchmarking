@@ -221,6 +221,7 @@ class LongMemEvalAskCalculator:
         print(f"Judge model: {self.model}")
 
         alignment_scores = []
+        judge_reasonings: list[str | None] = []
         query_times = []
         misaligned_indices = []
         total_input_tokens = 0
@@ -231,6 +232,7 @@ class LongMemEvalAskCalculator:
             if result.system_answer.startswith("[ERROR]"):
                 print(f"\n\033[91mSkipping evaluation for query {i} due to error.\033[0m")
                 alignment_scores.append(None)
+                judge_reasonings.append(None)
                 continue
 
             qtype = result.query.question_type or "multi-session"
@@ -244,6 +246,7 @@ class LongMemEvalAskCalculator:
             aligned = judge_result["aligned"]
             score = 1 if aligned else 0
             alignment_scores.append(score)
+            judge_reasonings.append(judge_result.get("reasoning"))
             query_times.append(result.time_taken)
             total_input_tokens += judge_result.get("input_tokens", 0)
             total_output_tokens += judge_result.get("output_tokens", 0)
@@ -275,6 +278,7 @@ class LongMemEvalAskCalculator:
             "metric": "longmemeval_judge",
             "avg_alignment_score": float(np.mean(valid_scores)) if valid_scores else 0,
             "alignment_score_scores": alignment_scores,
+            "judge_reasonings": judge_reasonings,
             "judge_model": self.model,
             "ensemble_k": 1,
             "type_accuracy": type_accuracy,

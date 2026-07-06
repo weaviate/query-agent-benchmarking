@@ -120,11 +120,14 @@ def _build_prompt(
 
 class LongMemEvalJudgment(dspy.Signature):
     """Judge whether a model response is correct given type-specific evaluation criteria.
-    Answer yes or no only.
+    First reason through each rule in the criteria step by step, then answer yes or no.
     """
 
     evaluation_prompt: str = dspy.InputField(
         description="The full evaluation prompt with type-specific instructions, question, correct answer, and model response."
+    )
+    reasoning: str = dspy.OutputField(
+        description="Go through each rule in the evaluation criteria one by one. For each rule, determine whether the response satisfies it and why. Then give the overall reason for your final verdict."
     )
     judgment: str = dspy.OutputField(
         description="Answer yes or no only."
@@ -168,15 +171,16 @@ class LongMemEvalJudge:
 
         self.judge = dspy.Predict(LongMemEvalJudgment)
 
-    def _call_judge(self, prompt: str) -> tuple[bool, int, int]:
+    def _call_judge(self, prompt: str) -> tuple[bool, str, int, int]:
         """Call the LLM judge and parse yes/no response.
 
         Returns:
-            Tuple of (aligned, input_tokens, output_tokens).
+            Tuple of (aligned, reasoning, input_tokens, output_tokens).
         """
         with dspy.context(lm=self.lm):
             response = self.judge(evaluation_prompt=prompt)
         content = response.judgment or ""
+        reasoning = response.reasoning or ""
         aligned = "yes" in content.strip().lower()
 
         input_tokens = 0
@@ -189,7 +193,7 @@ class LongMemEvalJudge:
         except Exception:
             pass  # Token tracking is best-effort
 
-        return aligned, input_tokens, output_tokens
+        return aligned, reasoning, input_tokens, output_tokens
 
     # ------------------------------------------------------------------
     # LLMJudge protocol methods
@@ -217,7 +221,7 @@ class LongMemEvalJudge:
         """
         qtype = question_type or self.default_question_type
         prompt = _build_prompt(qtype, question, correct_answer, system_answer, question_id)
-        aligned, _, _ = self._call_judge(prompt)
+        aligned, _, _, _ = self._call_judge(prompt)
         return aligned
 
     def evaluate_with_details(
@@ -245,7 +249,7 @@ class LongMemEvalJudge:
         is_abstention = question_id is not None and "_abs" in question_id
         prompt = _build_prompt(qtype, question, correct_answer, system_answer, question_id)
 
-        aligned, input_tokens, output_tokens = self._call_judge(prompt)
+        aligned, reasoning, input_tokens, output_tokens = self._call_judge(prompt)
 
         return {
             "aligned": aligned,
@@ -255,5 +259,5 @@ class LongMemEvalJudge:
             "output_tokens": output_tokens,
             "votes": 1,
             "ensemble_k": 1,
-            "reasoning": None,  # LongMemEval judge uses no chain-of-thought
+            "reasoning": reasoning,
         }
