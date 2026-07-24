@@ -27,11 +27,6 @@ dependencies = [
   "uvicorn>=0.44.0",
 ]
 
-# TEMPORARY: use the local weaviate-agents client (branch exposing the search
-# `effort` argument) instead of the published package. Revert before release.
-[tool.uv.sources]
-weaviate-agents = { path = "../weaviate-agents-python-client", editable = true }
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["query_agent_benchmarking*"]

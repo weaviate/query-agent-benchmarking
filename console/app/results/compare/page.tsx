@@ -34,6 +34,8 @@ interface CompareData {
   isEffortSweep: boolean;
   // True when experiments are per-effort averages across datasets.
   isAggregate?: boolean;
+  // Aggregate mode only: set when the groups don't cover identical dataset sets.
+  warning?: string;
 }
 
 /** Dataset family names with canonical casing for display titles. */
@@ -94,7 +96,7 @@ function formatMetricName(key: string): string {
   name = name.replace(/recall_at_(\d+)/g, "Recall@$1");
   name = name.replace(/nDCG_at_(\d+)/g, "nDCG@$1");
   name = name.replace("nDCG_at_k", "nDCG@10");
-  name = name.replace(/alpha_nDCG_at_(\d+)/g, "alpha-nDCG@$1");
+  name = name.replace(/alpha_ndcg_at_(\d+)/gi, "alpha-nDCG@$1");
   name = name.replace(/coverage_at_(\d+)/g, "Coverage@$1");
   name = name.replace(/success_at_(\d+)/g, "Success@$1");
   name = name.replace("alignment_score", "Alignment");
@@ -198,6 +200,10 @@ function buildMarkdownReport(
   if (data.isAggregate) {
     L(`_Metrics are macro-averaged across datasets; ± values show the std of the cross-dataset average across trials._`);
     L();
+    if (data.warning) {
+      L(`> **Warning:** ${data.warning}`);
+      L();
+    }
   }
 
   // ── Experiments ──────────────────────────────────────────────────────────
@@ -300,14 +306,20 @@ function buildMarkdownReport(
     });
     L();
 
-    // Speed comparison (only meaningful for a 2-way comparison).
-    if (experiments.length === 2) {
+    // Speed comparison — 2-way, or low-vs-high effort within a sweep
+    // (mirrors the on-page Speed card's delta anchors).
+    const iLowT = experiments.findIndex((e) => e.effort === "low");
+    const iHighT = experiments.findIndex((e) => e.effort === "high");
+    const sweepSpeed = data.isEffortSweep && iLowT !== -1 && iHighT !== -1;
+    if (experiments.length === 2 || sweepSpeed) {
+      const iA = sweepSpeed ? iLowT : 0;
+      const iB = sweepSpeed ? iHighT : 1;
       const timeKey = metricKeys.find((k) => isTimeMetric(k));
-      const t0 = timeKey ? experiments[0].metrics[timeKey] : null;
-      const t1 = timeKey ? experiments[1].metrics[timeKey] : null;
-      if (t0 !== null && t1 !== null) {
-        const faster = t0 < t1 ? 0 : 1;
-        const slower = 1 - faster;
+      const t0 = timeKey ? experiments[iA].metrics[timeKey] : null;
+      const t1 = timeKey ? experiments[iB].metrics[timeKey] : null;
+      if (timeKey && t0 != null && t1 != null) {
+        const faster = t0 < t1 ? iA : iB;
+        const slower = faster === iA ? iB : iA;
         const speedup = ((Math.max(t0, t1) - Math.min(t0, t1)) / Math.max(t0, t1)) * 100;
         if (speedup >= 0.1) {
           L(`### Speed`);
@@ -318,6 +330,15 @@ function buildMarkdownReport(
               `(${Math.min(t0, t1).toFixed(2)}s vs ${Math.max(t0, t1).toFixed(2)}s).`,
           );
           L();
+          // Sweeps with 3+ columns: list every column's timing so baselines and
+          // mid-tier efforts aren't dropped from the report.
+          if (experiments.length > 2) {
+            experiments.forEach((exp, i) => {
+              const t = exp.metrics[timeKey];
+              L(`- ${reportColLabel(exp, i)}: ${t != null ? `${t.toFixed(2)}s` : "—"}`);
+            });
+            L();
+          }
         }
       }
     }
@@ -674,7 +695,7 @@ function BarChart({
 
         {bars.map((b, i) => {
           const cx = M.left + slot * i + slot / 2;
-          if (b.value === null) {
+          if (b.value == null) {
             return (
               <text key={i} x={cx} y={y(0) - 6} textAnchor="middle" fontSize={10} fill="var(--text-muted)">
                 --
@@ -1267,6 +1288,16 @@ function ComparePageInner() {
         </button>
       </div>
 
+      {/* ── Unbalanced-aggregate warning ──────────────────────────────────── */}
+      {data.isAggregate && data.warning && (
+        <div
+          className="brand-card p-4 mb-6 text-sm"
+          style={{ color: "var(--color-warn)", background: "rgba(255,199,44,0.08)" }}
+        >
+          {data.warning}
+        </div>
+      )}
+
       {/* ── Experiment legend ─────────────────────────────────────────────── */}
       <div
         className="grid gap-4 mb-8"
@@ -1278,7 +1309,7 @@ function ComparePageInner() {
             <div
               key={exp.id}
               className="brand-card p-5"
-              style={{ borderLeft: `3px solid ${c.fg.replace("var(", "").replace(")", "")}` }}
+              style={{ borderLeft: `3px solid ${c.fg}` }}
             >
               <div className="flex items-center gap-2 mb-2">
                 <span
@@ -1501,8 +1532,11 @@ function ComparePageInner() {
         </div>
       </section>
 
-      {/* ── Effort sweep charts ───────────────────────────────────────────── */}
-      {data.isEffortSweep && <EffortChartsSection data={data} />}
+      {/* ── Effort sweep charts. Keyed by the experiment set so metric-selection
+          state resets when navigation swaps in different data. ─────────────── */}
+      {data.isEffortSweep && (
+        <EffortChartsSection key={experiments.map((e) => e.id).join("|")} data={data} />
+      )}
 
       {/* ── Analysis section ──────────────────────────────────────────────── */}
       {analysis && (
@@ -1876,8 +1910,8 @@ function PerQueryBody({
             </tr>
           </thead>
           <tbody>
-            {filteredRows.map((row, ri) => (
-              <ComparisonRowView key={ri} row={row} mode={mode} experiments={experiments} />
+            {filteredRows.map((row) => (
+              <ComparisonRowView key={row.question} row={row} mode={mode} experiments={experiments} />
             ))}
           </tbody>
         </table>

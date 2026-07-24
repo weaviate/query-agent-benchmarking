@@ -104,6 +104,36 @@ export function GET(request: NextRequest) {
       const rb = b[0] in EFFORT_RANK ? EFFORT_RANK[b[0]] : 99;
       return ra - rb || a[0].localeCompare(b[0]);
     });
+    // Sort each group's runs by dataset so per-dataset breakdowns line up
+    // across columns.
+    for (const [, exps] of ordered) {
+      exps.sort((a, b) => a!.dataset.localeCompare(b!.dataset));
+    }
+
+    // Validate the groups: a cross-dataset average is only comparable when
+    // every group covers the same datasets, each exactly once.
+    let warning: string | null = null;
+    const groupDatasets = ordered.map(([key, exps]) => ({
+      key,
+      datasets: exps.map((e) => e!.dataset),
+    }));
+    for (const g of groupDatasets) {
+      const dupes = [...new Set(g.datasets.filter((d, i) => g.datasets.indexOf(d) !== i))];
+      if (dupes.length > 0) {
+        warning = `Unbalanced comparison: '${g.key}' includes the same dataset more than once (${dupes.join(", ")}), so its average double-counts ${dupes.length === 1 ? "that dataset" : "those datasets"}.`;
+        break;
+      }
+    }
+    if (!warning) {
+      const union = [...new Set(groupDatasets.flatMap((g) => g.datasets))];
+      const incomplete = groupDatasets.filter((g) => g.datasets.length !== union.length);
+      if (incomplete.length > 0) {
+        const largest = groupDatasets.reduce((a, b) => (b.datasets.length > a.datasets.length ? b : a));
+        const g = incomplete.find((x) => x.key !== largest.key) ?? incomplete[0];
+        const missing = union.filter((d) => !g.datasets.includes(d));
+        warning = `Unbalanced comparison: '${largest.key}' averages ${largest.datasets.length} datasets but '${g.key}' averages ${g.datasets.length} (missing: ${missing.join(", ")}).`;
+      }
+    }
 
     const experiments = ordered.map(([key, exps]) => {
       const metrics: Record<string, number | null> = {};
@@ -118,25 +148,29 @@ export function GET(request: NextRequest) {
         const mean = nums.length > 0 ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
         metrics[mk] = mean;
         // Std across trials of the cross-dataset average: average trial N over
-        // all datasets, then take the std of those per-trial averages. Dataset
-        // difficulty differences don't inflate it — only run-to-run variance does.
+        // all datasets, then take the std of those per-trial averages. Only
+        // the first min-trial-count trials are pooled so every per-trial
+        // average covers every dataset — pooling unequal trial counts would
+        // bias the std. Dataset difficulty differences don't inflate it —
+        // only run-to-run variance does.
         const base = mk.replace(/_mean$/, "");
-        const byTrial = new Map<number, number[]>();
-        for (const e of exps) {
-          const rawTrials = Array.isArray(e!.aggregated?.["trials"])
-            ? (e!.aggregated!["trials"] as Record<string, unknown>[])
-            : [];
-          rawTrials.forEach((t, i) => {
-            const v = t[base];
-            if (typeof v !== "number") return;
-            const trialNum = typeof t["trial"] === "number" ? (t["trial"] as number) : i + 1;
-            if (!byTrial.has(trialNum)) byTrial.set(trialNum, []);
-            byTrial.get(trialNum)!.push(v);
-          });
+        const perRunTrialVals = exps
+          .map((e) => {
+            const rawTrials = Array.isArray(e!.aggregated?.["trials"])
+              ? (e!.aggregated!["trials"] as Record<string, unknown>[])
+              : [];
+            return rawTrials
+              .map((t) => t[base])
+              .filter((v): v is number => typeof v === "number");
+          })
+          .filter((vs) => vs.length > 0);
+        const minTrials =
+          perRunTrialVals.length > 0 ? Math.min(...perRunTrialVals.map((vs) => vs.length)) : 0;
+        const trialMeans: number[] = [];
+        for (let t = 0; t < minTrials; t++) {
+          const vs = perRunTrialVals.map((vals) => vals[t]);
+          trialMeans.push(vs.reduce((a, b) => a + b, 0) / vs.length);
         }
-        const trialMeans = [...byTrial.values()].map(
-          (vs) => vs.reduce((a, b) => a + b, 0) / vs.length,
-        );
         if (trialMeans.length > 1) {
           const tm = trialMeans.reduce((a, b) => a + b, 0) / trialMeans.length;
           metricsStd[mk] = Math.sqrt(
@@ -181,6 +215,7 @@ export function GET(request: NextRequest) {
       experiments,
       isEffortSweep: aggIsEffortSweep,
       isAggregate: true,
+      ...(warning ? { warning } : {}),
     });
   }
 

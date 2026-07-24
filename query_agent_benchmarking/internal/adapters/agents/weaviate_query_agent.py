@@ -174,18 +174,23 @@ class WeaviateQueryAgentSearch:
             searches=_extract_searches(response),
         )
 
+    def _search_kwargs(self) -> dict:
+        # `effort` is only forwarded when set: omitting it lets the agents
+        # server apply its own default, and keeps clients that don't accept
+        # the argument yet working.
+        kwargs = {"limit": 20, "filtering": self.filtering}
+        if self.effort is not None:
+            kwargs["effort"] = self.effort
+        return kwargs
+
     def run(self, query: str, tenant: Optional[str] = None) -> SearchAgentResponse:
         if self._agent is None:
             self.initialize_sync()
-        response = self._agent.search(
-            query, limit=20, filtering=self.filtering, effort=self.effort
-        )
+        response = self._agent.search(query, **self._search_kwargs())
         return self._build_response(response)
 
     async def run_async(self, query: str, tenant: Optional[str] = None) -> SearchAgentResponse:
-        response = await self._agent.search(
-            query, limit=20, filtering=self.filtering, effort=self.effort
-        )
+        response = await self._agent.search(query, **self._search_kwargs())
         return self._build_response(response)
 
     async def close_async(self):

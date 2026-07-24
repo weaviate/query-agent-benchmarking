@@ -257,7 +257,7 @@ def print_effort_comparison(
                 row += "—".center(col_w)
                 continue
             std = stds[e].get(base)
-            cell = f"{value:.4f}" + (f" ±{std:.3f}" if std else "")
+            cell = f"{value:.4f}" + (f" ±{std:.3f}" if std is not None else "")
             if best is not None and value == best:
                 # pad to account for the invisible ANSI codes
                 row += f"{_GREEN}{cell}{_RESET}".center(col_w + len(_GREEN) + len(_RESET))
@@ -290,4 +290,10 @@ def print_effort_suite(suite_results: dict[str, dict[str, dict[str, Any]]]) -> N
     print(f"{_BOLD}EFFORT SWEEP — {len(suite_results)} dataset(s){_RESET}")
     print("=" * 72)
     for dataset, results_by_effort in suite_results.items():
+        # A dataset that failed before its sweep ran maps to {"error": "..."}
+        # (see run_search_evals) rather than a per-effort results dict.
+        error = results_by_effort.get("error")
+        if isinstance(error, str):
+            print(f"\n{_RED}{dataset} failed: {error}{_RESET}")
+            continue
         print_effort_comparison(results_by_effort, dataset=dataset)

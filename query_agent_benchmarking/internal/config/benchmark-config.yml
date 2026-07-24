@@ -1,12 +1,10 @@
 # =============================================================================
 # Search Mode Settings
 # =============================================================================
-search_agent_name: "query-agent-search-mode"
+search_agent_name: "external_service"
 
 # Single dataset — used by run-search-benchmark.py.
-# irpapers-text-only queries the IRPapersTextOnly_Default collection
-# (transcription text only, no image vectors).
-search_dataset: obliq-bench-congress
+search_dataset: filtered-cars
 
 # Multiple datasets — used by run_search_evals (scripts/run-search-benchmark-multi.py).
 # Same "list in config" idea as `dataset_names` in database_loader_config.yml.
@@ -75,8 +73,10 @@ sleep_between_requests: 0
 
 # Safeguard: truncate search query text longer than this many tokens
 # (approximated at ~4 chars/token — no tokenizer dependency) before sending to
-# the agent. BRIGHT queries can be very long. Unset or 0 disables truncation.
-max_query_tokens: 200
+# the agent. Unset or 0 disables truncation. Off by default — truncation
+# changes benchmark semantics; enable per run (e.g. 200 for BRIGHT, whose long
+# queries can blow through embedding-provider tokens-per-minute rate limits).
+max_query_tokens: 0
 
 use_subset: False
 num_samples: 100

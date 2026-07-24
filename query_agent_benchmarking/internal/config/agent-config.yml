@@ -14,10 +14,10 @@ query-agent-ask-mode:
   agents_host: https://api.agents.weaviate.io
 
 query-agent-search-mode:
-  # Local agents server exposing the new search-mode `effort` control.
-  agents_host: http://localhost:8000
-  # Compute effort for search mode: "low" | "medium" | "high".
-  effort: low
+  agents_host: https://api.agents.weaviate.io
+  # Compute effort for search mode: "low" | "medium" | "high". When unset the
+  # agents server applies its own default.
+  # effort: low
 
 # =============================================================================
 # External Service (BYOS)
