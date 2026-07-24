@@ -49,10 +49,9 @@ pip install query-agent-benchmarking
 ```python
 import query_agent_benchmarking
 
-# Search eval
+# Search eval (defaults to agent_name="query-agent-search-mode")
 query_agent_benchmarking.run_search_eval(
     search_dataset="beir/scifact/test",
-    agent_name="query-agent-search-mode",
 )
 
 # Compare multiple search agents
