@@ -5,6 +5,8 @@ Orchestrates search mode benchmarks using IR metrics like Recall@K, nDCG@K, etc.
 """
 
 import asyncio
+import time
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Any, Union
 
@@ -24,11 +26,18 @@ from query_agent_benchmarking.internal.core.domain.models import (
 from query_agent_benchmarking.internal.core.domain.query_execution import (
     run_search_queries,
     run_search_queries_async,
+    truncate_long_queries,
 )
 from query_agent_benchmarking.internal.core.domain.analysis import aggregate_metrics
 from query_agent_benchmarking.internal.adapters.metrics.ir_metrics_calculator import IRMetricsCalculator
 from query_agent_benchmarking.internal.adapters.results.json_file_repository import JsonFileResultRepository
-from query_agent_benchmarking.internal.core.domain.display import pretty_print_in_memory_query, print_results_comparison, print_suite_results
+from query_agent_benchmarking.internal.core.domain.display import (
+    pretty_print_in_memory_query,
+    print_results_comparison,
+    print_suite_results,
+    print_effort_comparison,
+    print_effort_suite,
+)
 from query_agent_benchmarking.internal.config.loader import load_config, merge_configs
 from query_agent_benchmarking.internal.config.config import (
     supported_search_datasets,
@@ -41,12 +50,96 @@ from query_agent_benchmarking.internal.config.config import (
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "benchmark-config.yml"
 DEFAULT_AGENT_CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "agent-config.yml"
 
+# Effort levels swept (in order) when ``effort_sweep`` is enabled.
+EFFORT_LEVELS = ["low", "medium", "high"]
+
 
 def _load_agent_config(agent_name: str, agent_config_path: Optional[Path] = None) -> dict[str, Any]:
     """Load agent-specific parameters from agent-config.yml."""
     path = agent_config_path or DEFAULT_AGENT_CONFIG_PATH
     all_agents = load_config(path)
     return dict(all_agents.get(agent_name, {}))
+
+
+def _baseline_label(agent_name: str) -> str:
+    """Display label for a baseline agent: ``hybrid-search[...]`` -> ``hybrid``."""
+    base_name, _ = parse_agent_name(agent_name)
+    return base_name[: -len("-search")] if base_name.endswith("-search") else base_name
+
+
+async def _run_effort_sweep(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Run one search eval per effort level and collect results for comparison.
+
+    Runs each level sequentially (so timings are clean and the agents server
+    isn't hit by three concurrent sweeps), giving every level its own result
+    files via an effort-tagged run id. Baseline agents from
+    ``effort_sweep_baselines`` (e.g. "hybrid-search") each run once alongside
+    the effort levels as reference points. Per-run config overrides from
+    ``effort_sweep_overrides`` (keyed by effort level, baseline agent name, or
+    baseline label) are applied on top of the shared config — e.g. to give
+    cheap runs higher ``max_concurrent`` than expensive ones. Returns a dict
+    mapping each effort level / baseline label to
+    ``{"metrics": <aggregated>, "seconds": float, "error": str | None}``.
+    """
+    sweep_id = datetime.now().strftime("%Y%m%d-%H%M%S")
+    base_output = config.get("output_path")
+    per_run_overrides = config.get("effort_sweep_overrides") or {}
+    results_by_effort: dict[str, dict[str, Any]] = {}
+
+    async def run_tagged(key: str, overrides: dict[str, Any]) -> None:
+        # Fresh config per run: _run_search_eval mutates the dict it's given.
+        cfg = dict(config)
+        cfg.pop("effort_sweep", None)
+        cfg.pop("effort_sweep_baselines", None)
+        cfg.pop("effort_sweep_overrides", None)
+        cfg["sweep_id"] = sweep_id
+        cfg["run_id"] = f"{sweep_id}-effort_{key}"
+        cfg.update(overrides)
+        if base_output:
+            path = Path(base_output)
+            cfg["output_path"] = str(path.parent / f"{path.stem}_effort_{key}{path.suffix}")
+
+        start = time.perf_counter()
+        try:
+            aggregated = await _run_search_eval(cfg)
+            error = None
+        except Exception as exc:  # keep sweeping so one run can't sink the rest
+            aggregated = {}
+            error = str(exc)
+            print(f"\033[91m{key!r} failed: {exc}\033[0m")
+
+        results_by_effort[key] = {
+            "metrics": aggregated,
+            "seconds": time.perf_counter() - start,
+            "error": error,
+        }
+
+    for level in EFFORT_LEVELS:
+        print(f"\n{'#' * 72}")
+        print(f"# Running search benchmark with \033[1meffort={level!r}\033[0m")
+        print(f"{'#' * 72}")
+        await run_tagged(level, {"effort": level, **per_run_overrides.get(level, {})})
+
+    for agent_name in config.get("effort_sweep_baselines") or []:
+        label = _baseline_label(agent_name)
+        print(f"\n{'#' * 72}")
+        print(f"# Running search benchmark with baseline \033[1m{agent_name!r}\033[0m")
+        print(f"{'#' * 72}")
+        # The label doubles as the persisted "effort" tag so results files and
+        # the console place the baseline alongside the effort levels; non-query-
+        # agent adapters ignore the effort parameter at construction time.
+        # Overrides may be keyed by the full agent name or its display label.
+        await run_tagged(
+            label,
+            {
+                "search_agent_name": agent_name,
+                "agent_name": agent_name,
+                "effort": label,
+                **per_run_overrides.get(agent_name, per_run_overrides.get(label, {})),
+            },
+        )
+
+    return results_by_effort
 
 
 def _resolve_search_agent_name(
@@ -185,6 +278,10 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
         queries = queries[:config["num_samples"]]
         print(f"Using a subset of {config['num_samples']} queries.")
 
+    max_query_tokens = config.get("max_query_tokens")
+    if max_query_tokens:
+        queries = truncate_long_queries(queries, max_query_tokens)
+
     # Use a user-provided search agent if available; otherwise build one from config.
     user_provided_agent: Optional[SearchAgent] = config.pop("search_agent", None)
 
@@ -234,6 +331,11 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
         # Eval-level config takes precedence, then the agent default, then "recall".
         resolved_filtering = config.get("filtering") or agent_cfg.get("filtering") or "recall"
         config["filtering"] = resolved_filtering
+        # Query Agent search compute effort ("low" | "medium" | "high"). Eval-level
+        # config takes precedence, then the agent default; when unset the agents
+        # server applies its own default.
+        resolved_effort = config.get("effort") or agent_cfg.get("effort")
+        config["effort"] = resolved_effort
 
         query_agent = create_search_agent(
             agent_name,
@@ -246,6 +348,7 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
             embedding_providers=embedding_providers,
             external_service_host=resolved_external_service_host,
             filtering=resolved_filtering,
+            effort=resolved_effort,
         )
 
     num_trials = config.get("num_trials", 1)
@@ -269,7 +372,8 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
                     queries=queries,
                     query_agent=query_agent,
                     batch_size=config.get("batch_size", 10),
-                    max_concurrent=config.get("max_concurrent", 5)
+                    max_concurrent=config.get("max_concurrent", 5),
+                    sleep_between_requests=config.get("sleep_between_requests", 0),
                 )
             finally:
                 await query_agent.close_async()
@@ -278,6 +382,7 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
             results = run_search_queries(
                 queries=queries,
                 query_agent=query_agent,
+                sleep_between_requests=config.get("sleep_between_requests", 0),
             )
 
         result_repo.save_trial_results(
@@ -327,6 +432,8 @@ def run_search_eval(
     search_target: Optional[str] = None,
     search_target_vector: Optional[str] = None,
     filtering: Optional[str] = None,
+    effort: Optional[str] = None,
+    effort_sweep: Optional[bool] = None,
     **kwargs
 ) -> dict[str, Any]:
     """
@@ -366,10 +473,22 @@ def run_search_eval(
             generate multiple Weaviate queries spanning different filters and
             interpretations) or "precision" (generate a single query targeting the
             most likely interpretation). Only applies to "query-agent-search-mode".
+        effort: Query Agent search compute effort: "low", "medium", or "high".
+            Controls how much compute search mode spends per query. When None,
+            the agents server applies its own default. Only applies to
+            "query-agent-search-mode".
+        effort_sweep: When True, run the benchmark once per effort level
+            ("low", "medium", "high") and print a side-by-side comparison. Any
+            single ``effort`` value is ignored in this mode. Only meaningful for
+            "query-agent-search-mode". Baseline agents listed in the
+            ``effort_sweep_baselines`` config (e.g. "hybrid-search") each run
+            once per sweep and appear alongside the effort levels.
         **kwargs: Additional config overrides.
 
     Returns:
-        Dict containing aggregated metrics across trials.
+        Dict containing aggregated metrics across trials. When ``effort_sweep``
+        is True, instead returns a dict mapping each effort level to
+        ``{"metrics": <aggregated>, "seconds": float, "error": str | None}``.
     """
     if config_path is None:
         config_path = DEFAULT_CONFIG_PATH
@@ -399,10 +518,21 @@ def run_search_eval(
         "search_target": search_target,
         "search_target_vector": search_target_vector,
         "filtering": filtering,
+        "effort": effort,
+        "effort_sweep": effort_sweep,
         **kwargs
     }
 
     final_config = merge_configs(file_config, override_config)
+
+    # An effort sweep only makes sense for the Query Agent search mode; a
+    # user-provided search_agent ignores effort, so don't run it three times.
+    if final_config.get("effort_sweep") and not final_config.get("search_agent"):
+        results_by_effort = asyncio.run(_run_effort_sweep(final_config))
+        print_effort_comparison(
+            results_by_effort, dataset=final_config.get("search_dataset")
+        )
+        return results_by_effort
 
     return asyncio.run(_run_search_eval(final_config))
 
@@ -430,6 +560,7 @@ def compare_search_agents(
     search_target: Optional[str] = None,
     search_target_vector: Optional[str] = None,
     filtering: Optional[str] = None,
+    effort: Optional[str] = None,
     **kwargs
 ) -> dict[str, dict[str, Any]]:
     """Run search benchmark for multiple query agents and compare results."""
@@ -465,6 +596,7 @@ def compare_search_agents(
         "search_target": search_target,
         "search_target_vector": search_target_vector,
         "filtering": filtering,
+        "effort": effort,
         **kwargs
     }
 
@@ -508,6 +640,8 @@ def run_search_evals(
     search_target: Optional[str] = None,
     search_target_vector: Optional[str] = None,
     filtering: Optional[str] = None,
+    effort: Optional[str] = None,
+    effort_sweep: Optional[bool] = None,
     **kwargs
 ) -> dict[str, dict[str, Any]]:
     """
@@ -539,10 +673,18 @@ def run_search_evals(
         search_target_vector: Legacy vector-name key.
         filtering: Query Agent search filtering strategy, "recall" (default) or
             "precision". Only applies to "query-agent-search-mode".
+        effort: Query Agent search compute effort, "low", "medium", or "high".
+            When None, the agents server applies its own default. Only applies
+            to "query-agent-search-mode".
+        effort_sweep: When True, sweep every effort level ("low", "medium",
+            "high") for each dataset and print a per-dataset comparison. Only
+            meaningful for "query-agent-search-mode".
         **kwargs: Additional config overrides.
 
     Returns:
-        Dict mapping dataset name to its aggregated metrics.
+        Dict mapping dataset name to its aggregated metrics. When
+        ``effort_sweep`` is True, each dataset instead maps to its
+        ``results_by_effort`` dict (effort level -> metrics/seconds/error).
     """
     if config_path is None:
         config_path = DEFAULT_CONFIG_PATH
@@ -577,8 +719,14 @@ def run_search_evals(
         "search_target": search_target,
         "search_target_vector": search_target_vector,
         "filtering": filtering,
+        "effort": effort,
+        "effort_sweep": effort_sweep,
         **kwargs
     }
+
+    effort_sweep_on = bool(
+        effort_sweep if effort_sweep is not None else file_config.get("effort_sweep")
+    )
 
     suite_results: dict[str, dict[str, Any]] = {}
     for dataset in datasets:
@@ -596,14 +744,19 @@ def run_search_evals(
                 path.parent / f"{path.stem}_{safe_name}{path.suffix}"
             )
 
+        merged = merge_configs(file_config, dataset_override)
         try:
-            suite_results[dataset] = asyncio.run(
-                _run_search_eval(merge_configs(file_config, dataset_override))
-            )
+            if effort_sweep_on:
+                suite_results[dataset] = asyncio.run(_run_effort_sweep(merged))
+            else:
+                suite_results[dataset] = asyncio.run(_run_search_eval(merged))
         except Exception as e:
             print(f"\033[91mError running {dataset}: {e}\033[0m")
             suite_results[dataset] = {"error": str(e)}
 
-    print_suite_results(suite_results)
+    if effort_sweep_on:
+        print_effort_suite(suite_results)
+    else:
+        print_suite_results(suite_results)
 
     return suite_results

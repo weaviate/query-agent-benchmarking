@@ -375,7 +375,7 @@ export default function ExperimentDetailPage({
                 Agent: <code style={{ fontFamily: "var(--font-mono)" }}>{experiment.agent_name}</code>
               </span>
               <span className="brand-badge" style={{
-                background: experiment.mode === "search" ? "rgba(122,199,192,0.25)" : "rgba(165,144,221,0.25)",
+                background: experiment.mode === "search" ? "rgba(1,198,201,0.25)" : "rgba(165,144,221,0.25)",
                 color: "#fff",
               }}>
                 {experiment.mode}
@@ -427,7 +427,7 @@ export default function ExperimentDetailPage({
                         className="h-1.5 rounded-full transition-all"
                         style={{
                           width: `${Math.min(num * 100, 100)}%`,
-                          background: num >= 0.8 ? "var(--color-green)" : num >= 0.5 ? "var(--color-teal)" : "var(--color-coral)",
+                          background: num >= 0.8 ? "var(--color-green)" : num >= 0.5 ? "var(--color-cyan)" : "var(--color-coral)",
                         }}
                       />
                     </div>

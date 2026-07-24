@@ -34,6 +34,7 @@ def create_search_agent(
     embedding_providers: Optional[Sequence[str]] = None,
     external_service_host: Optional[str] = None,
     filtering: Optional[str] = None,
+    effort: Optional[str] = None,
 ):
     """Create a SearchAgent adapter based on agent_name.
 
@@ -54,6 +55,10 @@ def create_search_agent(
             generate multiple Weaviate queries) or "precision" (generate a
             single query for the most likely interpretation). Only applies to
             "query-agent-search-mode".
+        effort: Query Agent search compute effort, "low", "medium", or "high".
+            Controls how much compute search mode spends per query. When None,
+            the agents server applies its own default. Only applies to
+            "query-agent-search-mode".
 
     Returns:
         An object implementing the SearchAgent protocol.
@@ -73,6 +78,7 @@ def create_search_agent(
             docs_collection=docs_collection,
             agents_host=agents_host,
             filtering=filtering,
+            effort=effort,
             **_embedding_kwargs,
         )
 

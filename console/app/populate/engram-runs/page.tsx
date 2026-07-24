@@ -92,7 +92,7 @@ export default function EngramRunsPage() {
                 <div className="flex items-center gap-2">
                   <span
                     className="inline-block rounded px-2 py-0.5 text-xs font-medium"
-                    style={{ background: "rgba(97,189,115,0.12)", color: "var(--color-green)" }}
+                    style={{ background: "rgba(1,245,122,0.12)", color: "var(--color-green)" }}
                   >
                     {m.dataset}
                   </span>

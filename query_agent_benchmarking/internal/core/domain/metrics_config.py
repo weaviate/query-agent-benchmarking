@@ -108,6 +108,12 @@ DATASET_METRICS_REGISTRY: tuple[MetricsProfile, ...] = (
         MetricSpec("recall", {"k": 10}),
         MetricSpec("nDCG", {"k": 10}),
     ), primary_metric="nDCG_at_10"),
+    MetricsProfile("obliq-bench-", (
+        MetricSpec("recall", {"k": 1}),
+        MetricSpec("recall", {"k": 5}),
+        MetricSpec("recall", {"k": 20}),
+        MetricSpec("nDCG", {"k": 10}),
+    ), primary_metric="nDCG_at_10"),
     MetricsProfile("reasonir-biology-subset", (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),

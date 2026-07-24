@@ -563,7 +563,7 @@ export default function PopulatePage() {
       {status === "success" && engramManifest && manifestTotals && (
         <div
           className="rounded-lg p-5 mb-6"
-          style={{ background: "rgba(97,189,115,0.08)", border: "1px solid var(--color-green)" }}
+          style={{ background: "rgba(1,245,122,0.08)", border: "1px solid var(--color-green)" }}
         >
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm font-semibold" style={{ color: "var(--color-green)" }}>
@@ -682,7 +682,7 @@ export default function PopulatePage() {
                             <span
                               className="inline-block rounded px-1.5 py-0.5 text-xs font-medium"
                               style={{
-                                background: r.status === "completed" ? "rgba(97,189,115,0.15)" : "rgba(244,64,78,0.15)",
+                                background: r.status === "completed" ? "rgba(1,245,122,0.15)" : "rgba(255,79,94,0.15)",
                                 color: r.status === "completed" ? "var(--color-green)" : "var(--color-coral)",
                               }}
                             >
@@ -708,7 +708,7 @@ export default function PopulatePage() {
       {status === "success" && !engramManifest && (
         <div
           className="rounded-lg p-4 mb-6 flex items-center justify-between"
-          style={{ background: "rgba(97,189,115,0.12)", border: "1px solid var(--color-green)" }}
+          style={{ background: "rgba(1,245,122,0.12)", border: "1px solid var(--color-green)" }}
         >
           <span className="text-sm font-medium" style={{ color: "var(--color-green)" }}>
             Database populated successfully in {elapsed}s
@@ -722,7 +722,7 @@ export default function PopulatePage() {
       {status === "error" && (
         <div
           className="rounded-lg p-4 mb-6"
-          style={{ background: "rgba(244,64,78,0.08)", border: "1px solid var(--color-coral)" }}
+          style={{ background: "rgba(255,79,94,0.08)", border: "1px solid var(--color-coral)" }}
         >
           <p className="text-sm font-medium mb-1" style={{ color: "var(--color-coral)" }}>
             Population failed

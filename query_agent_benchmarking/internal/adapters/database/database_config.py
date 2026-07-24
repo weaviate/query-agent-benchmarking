@@ -34,6 +34,7 @@ supported_database_datasets = (
     "vidore_v3_hr",
     "wixqa",
     "browsecomp-plus",
+    "obliq-bench-congress",
 )
 
 

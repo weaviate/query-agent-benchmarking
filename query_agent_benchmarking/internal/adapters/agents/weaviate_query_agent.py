@@ -24,6 +24,7 @@ from query_agent_benchmarking.internal.adapters.clients.provider_headers import 
 )
 
 Filtering = Literal["recall", "precision"]
+Effort = Literal["low", "medium", "high"]
 
 
 def _validate_filtering(filtering: Optional[str]) -> Filtering:
@@ -40,6 +41,22 @@ def _validate_filtering(filtering: Optional[str]) -> Filtering:
             f"filtering must be 'recall' or 'precision'; got {filtering!r}."
         )
     return filtering
+
+
+def _validate_effort(effort: Optional[str]) -> Optional[Effort]:
+    """Normalize and validate the search-mode compute effort level.
+
+    "low" | "medium" | "high" controls how much compute search mode spends on a
+    query. Returns ``None`` when unset, in which case ``effort`` is omitted from
+    the request entirely and the agents server applies its own default.
+    """
+    if effort is None:
+        return None
+    if effort not in ("low", "medium", "high"):
+        raise ValueError(
+            f"effort must be 'low', 'medium', or 'high'; got {effort!r}."
+        )
+    return effort
 
 
 def _dump_optional(value: Any) -> Optional[Any]:
@@ -90,12 +107,14 @@ class WeaviateQueryAgentSearch:
         image_embedding_model: Optional[str] = None,
         embedding_providers: Optional[Sequence[str]] = None,
         filtering: Optional[str] = None,
+        effort: Optional[str] = None,
     ):
         info = resolve_collection_info(dataset_name, docs_collection)
         self.collection = info["collection"]
         self.id_property = info["id_property"]
         self.agents_host = agents_host or "https://api.agents.weaviate.io"
         self.filtering: Filtering = _validate_filtering(filtering)
+        self.effort: Optional[Effort] = _validate_effort(effort)
         self.headers = resolve_headers_for_models(
             embedding_model=embedding_model,
             text_embedding_model=text_embedding_model,
@@ -158,11 +177,15 @@ class WeaviateQueryAgentSearch:
     def run(self, query: str, tenant: Optional[str] = None) -> SearchAgentResponse:
         if self._agent is None:
             self.initialize_sync()
-        response = self._agent.search(query, limit=20, filtering=self.filtering)
+        response = self._agent.search(
+            query, limit=20, filtering=self.filtering, effort=self.effort
+        )
         return self._build_response(response)
 
     async def run_async(self, query: str, tenant: Optional[str] = None) -> SearchAgentResponse:
-        response = await self._agent.search(query, limit=20, filtering=self.filtering)
+        response = await self._agent.search(
+            query, limit=20, filtering=self.filtering, effort=self.effort
+        )
         return self._build_response(response)
 
     async def close_async(self):

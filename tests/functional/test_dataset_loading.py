@@ -40,6 +40,7 @@ SEARCH_DATASETS = [
     "filtered-cars",
     "multihoprag",
     "longmemeval-s",
+    "obliq-bench-congress",
     # officeqa and vidore_v3_hr are excluded:
     #   - officeqa requires local PDF files
     #   - vidore_v3_hr downloads very large image data

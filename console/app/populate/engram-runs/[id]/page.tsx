@@ -52,9 +52,9 @@ interface RunDetail {
 }
 
 const OP_COLORS: Record<string, { bg: string; fg: string }> = {
-  created: { bg: "rgba(97,189,115,0.15)", fg: "var(--color-green)" },
+  created: { bg: "rgba(1,245,122,0.15)", fg: "var(--color-green)" },
   updated: { bg: "rgba(100,149,237,0.15)", fg: "cornflowerblue" },
-  deleted: { bg: "rgba(244,64,78,0.12)", fg: "var(--color-coral)" },
+  deleted: { bg: "rgba(255,79,94,0.12)", fg: "var(--color-coral)" },
 };
 
 function RunDetailPanel({
@@ -396,7 +396,7 @@ export default function EngramRunDetailPage() {
                       <span
                         className="inline-block rounded px-1.5 py-0.5 text-xs font-medium"
                         style={{
-                          background: r.status === "completed" ? "rgba(97,189,115,0.15)" : "rgba(244,64,78,0.15)",
+                          background: r.status === "completed" ? "rgba(1,245,122,0.15)" : "rgba(255,79,94,0.15)",
                           color: r.status === "completed" ? "var(--color-green)" : "var(--color-coral)",
                         }}
                       >

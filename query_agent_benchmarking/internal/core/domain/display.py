@@ -42,7 +42,12 @@ def pretty_print_in_memory_query(in_memory_query: InMemoryQuery):
 
 def pretty_print_in_memory_document(in_memory_document_object: dict):
     """Pretty print an in-memory document with colored output."""
-    print(f"Dataset ID: {in_memory_document_object['dataset_id']}")
+    # Raw docs name their ID differently per dataset; the DatasetSpec maps
+    # them to `dataset_id` only at insert time.
+    for id_field in ("dataset_id", "doc_id", "id", "corpus_id", "docid"):
+        if id_field in in_memory_document_object:
+            print(f"Dataset ID: {in_memory_document_object[id_field]}")
+            break
     if "content" in in_memory_document_object:
         print(f"\t\033[96mDocument\033[0m: {in_memory_document_object['content']}")
     print("=" * 60)
@@ -146,3 +151,143 @@ def print_suite_results(suite_results: dict[str, dict[str, Any]]) -> None:
                 print(f"  {format_name(metric_key)}: {value:.3f}")
 
     print()
+
+
+# ANSI colors, matching the style used elsewhere in this module.
+_GREEN = "\033[92m"
+_RED = "\033[91m"
+_DIM = "\033[2m"
+_BOLD = "\033[1m"
+_RESET = "\033[0m"
+
+# Canonical ordering for effort levels (unknown levels are appended as-is).
+_EFFORT_ORDER = ["low", "medium", "high"]
+
+
+def _ordered_levels(results_by_effort: dict[str, Any]) -> list[str]:
+    """Order effort levels low -> high, with any unknown levels appended."""
+    levels = [e for e in _EFFORT_ORDER if e in results_by_effort]
+    levels += [e for e in results_by_effort if e not in levels]
+    return levels
+
+
+def _effort_metric_label(base: str) -> str:
+    """``avg_recall@1`` -> ``recall@1`` (drop the avg_ prefix for display)."""
+    return base[len("avg_"):] if base.startswith("avg_") else base
+
+
+def _effort_means_and_stds(entry: dict[str, Any]) -> tuple[dict, dict]:
+    """Split an aggregated-metrics dict into {base: mean} and {base: std}.
+
+    Aggregated keys look like ``avg_recall@1_mean`` / ``avg_recall@1_std``;
+    both returned dicts are keyed by the shared ``avg_recall@1`` base.
+    """
+    metrics = entry.get("metrics", {}) or {}
+    means, stds = {}, {}
+    for key, value in metrics.items():
+        if key.endswith("_mean") and isinstance(value, (int, float)):
+            base = key[: -len("_mean")]
+            means[base] = value
+            std = metrics.get(f"{base}_std")
+            if isinstance(std, (int, float)):
+                stds[base] = std
+    return means, stds
+
+
+def print_effort_comparison(
+    results_by_effort: dict[str, dict[str, Any]],
+    dataset: str | None = None,
+) -> None:
+    """Print a metric x effort comparison table for a single dataset.
+
+    ``results_by_effort`` maps an effort level ("low"|"medium"|"high") to
+    ``{"metrics": <aggregated metrics>, "seconds": float, "error": str | None}``.
+    The best (highest) value per metric is highlighted, a ``Δ(high−low)`` column
+    summarizes the effect of effort, and wall-clock per level is printed below.
+    """
+    levels = _ordered_levels(results_by_effort)
+    if not levels:
+        return
+
+    means = {e: _effort_means_and_stds(results_by_effort[e])[0] for e in levels}
+    stds = {e: _effort_means_and_stds(results_by_effort[e])[1] for e in levels}
+
+    # Metric rows in first-seen order across levels.
+    metric_order: list[str] = []
+    for e in levels:
+        for base in means[e]:
+            if base not in metric_order:
+                metric_order.append(base)
+
+    title = "EFFORT COMPARISON"
+    if dataset:
+        title += f" — {dataset}"
+    print("\n" + "=" * 72)
+    print(f"{_BOLD}{title}{_RESET}")
+    print("=" * 72)
+
+    if not metric_order:
+        print(f"{_RED}No metrics to compare (all effort levels failed?).{_RESET}")
+        for e in levels:
+            err = results_by_effort[e].get("error")
+            if err:
+                print(f"  {e}: {err}")
+        print()
+        return
+
+    name_w = max([len("Metric")] + [len(_effort_metric_label(b)) for b in metric_order])
+    col_w = 16
+    has_delta = "low" in levels and "high" in levels
+
+    header = "Metric".ljust(name_w) + "".join(e.center(col_w) for e in levels)
+    if has_delta:
+        header += "Δ(high−low)".rjust(col_w)
+    print("\n" + header)
+    print("-" * len(header))
+
+    for base in metric_order:
+        values = {e: means[e].get(base) for e in levels}
+        present = [v for v in values.values() if v is not None]
+        best = max(present) if present else None
+
+        row = _effort_metric_label(base).ljust(name_w)
+        for e in levels:
+            value = values[e]
+            if value is None:
+                row += "—".center(col_w)
+                continue
+            std = stds[e].get(base)
+            cell = f"{value:.4f}" + (f" ±{std:.3f}" if std else "")
+            if best is not None and value == best:
+                # pad to account for the invisible ANSI codes
+                row += f"{_GREEN}{cell}{_RESET}".center(col_w + len(_GREEN) + len(_RESET))
+            else:
+                row += cell.center(col_w)
+
+        if has_delta:
+            low, high = values["low"], values["high"]
+            row += (f"{high - low:+.4f}" if low is not None and high is not None else "—").rjust(col_w)
+        print(row)
+
+    print(f"\n{_DIM}Wall-clock:{_RESET}")
+    for e in levels:
+        seconds = results_by_effort[e].get("seconds")
+        note = "  (failed)" if results_by_effort[e].get("error") else ""
+        secs = f"{seconds:8.1f}s" if isinstance(seconds, (int, float)) else "       —"
+        print(f"  {e.ljust(name_w)} {secs}{note}")
+    print("=" * 72 + "\n")
+
+
+def print_effort_suite(suite_results: dict[str, dict[str, dict[str, Any]]]) -> None:
+    """Print effort comparisons for every dataset in a multi-dataset sweep.
+
+    ``suite_results`` maps a dataset name to its ``results_by_effort`` dict.
+    Each dataset gets its own comparison table.
+    """
+    if not suite_results:
+        return
+    print("\n" + "=" * 72)
+    print(f"{_BOLD}EFFORT SWEEP — {len(suite_results)} dataset(s){_RESET}")
+    print("=" * 72)
+    for dataset, results_by_effort in suite_results.items():
+        print_effort_comparison(results_by_effort, dataset=dataset)

@@ -1,4 +1,4 @@
-dataset_name: filtered-cars
+dataset_name: obliq-bench-congress
 
 # Multiple datasets — used by populate_db_multi
 dataset_names:
