@@ -434,6 +434,8 @@ def run_search_eval(
     filtering: Optional[str] = None,
     effort: Optional[str] = None,
     effort_sweep: Optional[bool] = None,
+    effort_sweep_baselines: Optional[list[str]] = None,
+    effort_sweep_overrides: Optional[dict[str, dict[str, Any]]] = None,
     **kwargs
 ) -> dict[str, Any]:
     """
@@ -480,9 +482,16 @@ def run_search_eval(
         effort_sweep: When True, run the benchmark once per effort level
             ("low", "medium", "high") and print a side-by-side comparison. Any
             single ``effort`` value is ignored in this mode. Only meaningful for
-            "query-agent-search-mode". Baseline agents listed in the
-            ``effort_sweep_baselines`` config (e.g. "hybrid-search") each run
-            once per sweep and appear alongside the effort levels.
+            "query-agent-search-mode".
+        effort_sweep_baselines: Baseline agent names (e.g. ["hybrid-search"])
+            to include in the effort sweep as reference points. Each runs once
+            per sweep (same trials/queries) and appears alongside the effort
+            levels in the comparison. Only used when ``effort_sweep`` is True.
+        effort_sweep_overrides: Per-run config overrides applied during the
+            effort sweep, keyed by effort level ("low"/"medium"/"high") or
+            baseline agent name/label (e.g. "hybrid-search"). Values are dicts
+            of config keys (e.g. ``{"max_concurrent": 2}``) applied to that run
+            only. Only used when ``effort_sweep`` is True.
         **kwargs: Additional config overrides.
 
     Returns:
@@ -520,6 +529,8 @@ def run_search_eval(
         "filtering": filtering,
         "effort": effort,
         "effort_sweep": effort_sweep,
+        "effort_sweep_baselines": effort_sweep_baselines,
+        "effort_sweep_overrides": effort_sweep_overrides,
         **kwargs
     }
 
@@ -642,6 +653,8 @@ def run_search_evals(
     filtering: Optional[str] = None,
     effort: Optional[str] = None,
     effort_sweep: Optional[bool] = None,
+    effort_sweep_baselines: Optional[list[str]] = None,
+    effort_sweep_overrides: Optional[dict[str, dict[str, Any]]] = None,
     **kwargs
 ) -> dict[str, dict[str, Any]]:
     """
@@ -679,6 +692,12 @@ def run_search_evals(
         effort_sweep: When True, sweep every effort level ("low", "medium",
             "high") for each dataset and print a per-dataset comparison. Only
             meaningful for "query-agent-search-mode".
+        effort_sweep_baselines: Baseline agent names (e.g. ["hybrid-search"])
+            to include in each dataset's effort sweep as reference points.
+            Only used when ``effort_sweep`` is True.
+        effort_sweep_overrides: Per-run config overrides applied during the
+            effort sweep, keyed by effort level ("low"/"medium"/"high") or
+            baseline agent name/label. Only used when ``effort_sweep`` is True.
         **kwargs: Additional config overrides.
 
     Returns:
@@ -721,6 +740,8 @@ def run_search_evals(
         "filtering": filtering,
         "effort": effort,
         "effort_sweep": effort_sweep,
+        "effort_sweep_baselines": effort_sweep_baselines,
+        "effort_sweep_overrides": effort_sweep_overrides,
         **kwargs
     }
 
