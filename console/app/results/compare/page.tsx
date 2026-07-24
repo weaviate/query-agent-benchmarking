@@ -1174,8 +1174,17 @@ function ComparePageInner() {
 
       const now = new Date();
       const md = buildMarkdownReport(data, analysis, queries, now.toLocaleString());
-      const stamp = now.toISOString().slice(0, 10);
-      downloadMarkdown(md, `experiment-comparison-${stamp}.md`);
+      // Unique filename: report kind + dataset (when shared) + date-and-time
+      // stamp so multiple exports on the same day don't collide.
+      const stamp = now.toISOString().slice(0, 19).replace(/[T:]/g, "-");
+      const kind = data.isEffortSweep ? "effort-sweep" : "experiment-comparison";
+      const datasets = new Set(data.experiments.map((e) => e.dataset));
+      const scope = data.isAggregate
+        ? "averaged"
+        : datasets.size === 1
+          ? chartSlug(data.experiments[0].dataset)
+          : "";
+      downloadMarkdown(md, [kind, scope, stamp].filter(Boolean).join("-") + ".md");
     } finally {
       setExporting(false);
     }
