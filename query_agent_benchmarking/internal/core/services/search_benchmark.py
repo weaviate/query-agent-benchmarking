@@ -53,6 +53,13 @@ DEFAULT_AGENT_CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "con
 # Effort levels swept (in order) when ``effort_sweep`` is enabled.
 EFFORT_LEVELS = ["low", "medium", "high"]
 
+# Agent used when no ``search_agent_name``/``agent_name`` is configured.
+DEFAULT_SEARCH_AGENT = "query-agent-search-mode"
+
+# Baseline agents included in the effort sweep when ``effort_sweep_baselines``
+# is not configured. Pass an empty list to sweep without baselines.
+DEFAULT_EFFORT_SWEEP_BASELINES = ["hybrid-search"]
+
 
 def _load_agent_config(agent_name: str, agent_config_path: Optional[Path] = None) -> dict[str, Any]:
     """Load agent-specific parameters from agent-config.yml."""
@@ -73,8 +80,8 @@ async def _run_effort_sweep(config: dict[str, Any]) -> dict[str, dict[str, Any]]
     Runs each level sequentially (so timings are clean and the agents server
     isn't hit by three concurrent sweeps), giving every level its own result
     files via an effort-tagged run id. Baseline agents from
-    ``effort_sweep_baselines`` (e.g. "hybrid-search") each run once alongside
-    the effort levels as reference points. Per-run config overrides from
+    ``effort_sweep_baselines`` (default: "hybrid-search") each run once
+    alongside the effort levels as reference points. Per-run config overrides from
     ``effort_sweep_overrides`` (keyed by effort level, baseline agent name, or
     baseline label) are applied on top of the shared config — e.g. to give
     cheap runs higher ``max_concurrent`` than expensive ones. Returns a dict
@@ -120,7 +127,10 @@ async def _run_effort_sweep(config: dict[str, Any]) -> dict[str, dict[str, Any]]
         print(f"{'#' * 72}")
         await run_tagged(level, {"effort": level, **per_run_overrides.get(level, {})})
 
-    for agent_name in config.get("effort_sweep_baselines") or []:
+    baselines = config.get("effort_sweep_baselines")
+    if baselines is None:
+        baselines = DEFAULT_EFFORT_SWEEP_BASELINES
+    for agent_name in baselines:
         label = _baseline_label(agent_name)
         print(f"\n{'#' * 72}")
         print(f"# Running search benchmark with baseline \033[1m{agent_name!r}\033[0m")
@@ -147,9 +157,9 @@ def _resolve_search_agent_name(
     dataset_identifier: Optional[str],
 ) -> str:
     """Resolve agent name and optional target vector from config."""
-    raw_agent_name = config.get("search_agent_name") or config.get("agent_name")
-    if raw_agent_name is None:
-        raise ValueError("No search_agent_name provided in config")
+    raw_agent_name = (
+        config.get("search_agent_name") or config.get("agent_name") or DEFAULT_SEARCH_AGENT
+    )
     if isinstance(raw_agent_name, list):
         raise ValueError(
             "run_search_eval expects a single agent name. "
@@ -449,7 +459,7 @@ def run_search_eval(
         docs_collection: DocsCollection for custom datasets.
         queries: Queries as QueriesCollection, list[InMemoryQuery], or list[InMemorySearchQuery].
         agent_name: Agent to use ("query-agent-search-mode", "hybrid-search", or "external_service").
-            Ignored when search_agent is provided.
+            Defaults to "query-agent-search-mode". Ignored when search_agent is provided.
         search_agent: A user-provided retriever instance implementing the SearchAgent protocol.
             When provided, the agent_name factory lookup is skipped and this object is used
             directly. Must implement run() and run_async() returning list[ObjectID].
@@ -483,10 +493,11 @@ def run_search_eval(
             ("low", "medium", "high") and print a side-by-side comparison. Any
             single ``effort`` value is ignored in this mode. Only meaningful for
             "query-agent-search-mode".
-        effort_sweep_baselines: Baseline agent names (e.g. ["hybrid-search"])
-            to include in the effort sweep as reference points. Each runs once
-            per sweep (same trials/queries) and appears alongside the effort
-            levels in the comparison. Only used when ``effort_sweep`` is True.
+        effort_sweep_baselines: Baseline agent names to include in the effort
+            sweep as reference points. Each runs once per sweep (same
+            trials/queries) and appears alongside the effort levels in the
+            comparison. Defaults to ["hybrid-search"]; pass an empty list to
+            sweep without baselines. Only used when ``effort_sweep`` is True.
         effort_sweep_overrides: Per-run config overrides applied during the
             effort sweep, keyed by effort level ("low"/"medium"/"high") or
             baseline agent name/label (e.g. "hybrid-search"). Values are dicts
@@ -692,8 +703,9 @@ def run_search_evals(
         effort_sweep: When True, sweep every effort level ("low", "medium",
             "high") for each dataset and print a per-dataset comparison. Only
             meaningful for "query-agent-search-mode".
-        effort_sweep_baselines: Baseline agent names (e.g. ["hybrid-search"])
-            to include in each dataset's effort sweep as reference points.
+        effort_sweep_baselines: Baseline agent names to include in each
+            dataset's effort sweep as reference points. Defaults to
+            ["hybrid-search"]; pass an empty list to sweep without baselines.
             Only used when ``effort_sweep`` is True.
         effort_sweep_overrides: Per-run config overrides applied during the
             effort sweep, keyed by effort level ("low"/"medium"/"high") or

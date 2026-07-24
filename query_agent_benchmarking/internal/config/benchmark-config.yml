@@ -1,7 +1,7 @@
 # =============================================================================
 # Search Mode Settings
 # =============================================================================
-search_agent_name: "external_service"
+search_agent_name: "query-agent-search-mode"
 
 # Single dataset — used by run-search-benchmark.py.
 search_dataset: filtered-cars
@@ -23,7 +23,8 @@ effort_sweep: false
 
 # Baseline agents to include in the effort sweep as reference points. Each runs
 # once per sweep (same trials/queries) and appears alongside low/medium/high in
-# the comparison. Supports "hybrid-search".
+# the comparison. Supports "hybrid-search". Defaults to hybrid-search when
+# unset; set to an empty list ([]) to sweep without baselines.
 effort_sweep_baselines:
   - hybrid-search
 

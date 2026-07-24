@@ -64,6 +64,23 @@ def test_per_run_overrides_applied(captured_configs):
         assert "effort_sweep_overrides" not in cfg
 
 
+def test_baselines_default_to_hybrid_search(captured_configs):
+    config = {"effort_sweep": True}
+
+    results = asyncio.run(search_benchmark._run_effort_sweep(config))
+
+    assert set(results) == {"low", "medium", "high", "hybrid"}
+    assert captured_configs["hybrid"]["search_agent_name"] == "hybrid-search"
+
+
+def test_empty_baselines_disable_baseline_runs(captured_configs):
+    config = {"effort_sweep": True, "effort_sweep_baselines": []}
+
+    results = asyncio.run(search_benchmark._run_effort_sweep(config))
+
+    assert set(results) == {"low", "medium", "high"}
+
+
 def test_runs_without_overrides_use_shared_settings(captured_configs):
     config = {
         "search_agent_name": "query-agent-search-mode",
