@@ -14,7 +14,7 @@ query-agent-ask-mode:
   agents_host: https://api.agents.weaviate.io
 
 query-agent-search-mode:
-  agents_host: http://localhost:8000
+  agents_host: https://api.agents.weaviate.io
   # Compute effort for search mode: "medium" | "high" | "ultrahigh". When
   # unset the agents server applies its own default.
   # effort: medium
