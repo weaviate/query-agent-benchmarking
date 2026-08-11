@@ -471,23 +471,49 @@ function AskQueriesView({ queries }: { queries: AskQuery[] }) {
                 </p>
               </div>
             </div>
-            {q.judge_reasoning && (
-              <details className="mt-3">
-                <summary className="text-xs cursor-pointer" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
-                  Judge Reasoning
-                </summary>
-                <p
-                  className="mt-2 text-sm rounded-md p-3"
-                  style={{
-                    background: "rgba(122,214,235,0.08)",
-                    border: "1px solid rgba(122,214,235,0.2)",
-                    color: "var(--text-secondary)",
-                  }}
-                >
-                  {q.judge_reasoning}
-                </p>
-              </details>
-            )}
+            {q.judge_reasoning && (() => {
+              const votes: { vote: boolean; reasoning: string }[] = Array.isArray(q.judge_reasoning)
+                ? q.judge_reasoning as { vote: boolean; reasoning: string }[]
+                : [{ vote: true, reasoning: q.judge_reasoning as string }];
+              return (
+                <details className="mt-3">
+                  <summary className="text-xs cursor-pointer" style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                    Judge Reasoning{votes.length > 1 ? ` (${votes.length} votes)` : ""}
+                  </summary>
+                  <div className="mt-2 space-y-2">
+                    {votes.map((v, i) => (
+                      <div key={i}>
+                        {votes.length > 1 && (
+                          <div className="flex items-center gap-1 mb-1">
+                            <span
+                              className="text-xs"
+                              style={{
+                                color: v.vote ? "var(--color-green)" : "var(--color-red)",
+                                fontFamily: "var(--font-mono)",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {v.vote ? "✓" : "✗"} Vote {i + 1}
+                            </span>
+                          </div>
+                        )}
+                        <p
+                          className="text-sm rounded-md p-3"
+                          style={{
+                            background: "rgba(122,214,235,0.08)",
+                            border: "1px solid rgba(122,214,235,0.2)",
+                            color: "var(--text-secondary)",
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {v.reasoning}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              );
+            })()}
             {q.retrieved_context && (
               <RetrievedContextPanel context={q.retrieved_context} />
             )}

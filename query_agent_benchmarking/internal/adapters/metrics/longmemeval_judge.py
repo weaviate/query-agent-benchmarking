@@ -12,6 +12,7 @@ Uses DSPy for LLM inference with separate prompt-engineered instructions per que
 Output format: simple yes/no (no chain-of-thought reasoning).
 """
 
+import asyncio
 import os
 from typing import Optional
 
@@ -28,7 +29,8 @@ _STANDARD_TEMPLATE = (
     "steps to get the correct answer, you should also answer yes. If the response only "
     "contains a subset of the information required by the answer, answer no. "
     "\n\nQuestion: {question}\n\nCorrect Answer: {answer}\n\nModel Response: {response}"
-    "\n\nIs the model response correct? Answer yes or no only."
+    "\n\nIs the model response correct? "
+    "First reason through each rule in the criteria step by step, then give a boolean verdict"
 )
 
 _TEMPORAL_REASONING_TEMPLATE = (
@@ -41,7 +43,8 @@ _TEMPORAL_REASONING_TEMPLATE = (
     "asks for the number of days/weeks/months, etc., and the model makes off-by-one errors "
     "(e.g., predicting 19 days when the answer is 18), the model's response is still correct. "
     "\n\nQuestion: {question}\n\nCorrect Answer: {answer}\n\nModel Response: {response}"
-    "\n\nIs the model response correct? Answer yes or no only."
+    "\n\nIs the model response correct? "
+    "First reason through each rule in the criteria step by step, then give a boolean verdict"
 )
 
 _KNOWLEDGE_UPDATE_TEMPLATE = (
@@ -55,7 +58,8 @@ _KNOWLEDGE_UPDATE_TEMPLATE = (
     "vs. 'in a shoe rack in my closet'), it should be considered correct. Only answer no if "
     "the response gives a fundamentally different answer or misses the key updated fact."
     "\n\nQuestion: {question}\n\nCorrect Answer: {answer}\n\nModel Response: {response}"
-    "\n\nIs the model response correct? Answer yes or no only."
+    "\n\nIs the model response correct? "
+    "First reason through each rule in the criteria step by step, then give a boolean verdict"
 )
 
 _PREFERENCE_TEMPLATE = (
@@ -64,7 +68,8 @@ _PREFERENCE_TEMPLATE = (
     "answer no. The model does not need to reflect all the points in the rubric. The response "
     "is correct as long as it recalls and utilizes the user's personal information correctly."
     "\n\nQuestion: {question}\n\nRubric: {answer}\n\nModel Response: {response}"
-    "\n\nIs the model response correct? Answer yes or no only."
+    "\n\nIs the model response correct? "
+    "First reason through each rule in the criteria step by step, then give a boolean verdict"
 )
 
 _ABSTENTION_TEMPLATE = (
@@ -73,7 +78,8 @@ _ABSTENTION_TEMPLATE = (
     "The model could say that the information is incomplete, or some other information is "
     "given but the asked information is not."
     "\n\nQuestion: {question}\n\nExplanation: {answer}\n\nModel Response: {response}"
-    "\n\nDoes the model correctly identify the question as unanswerable? Answer yes or no only."
+    "\n\nDoes the model correctly identify the question as unanswerable? "
+    "First reason through each rule in the criteria step by step, then give a boolean verdict"
 )
 
 _TEMPLATE_MAP = {
@@ -120,14 +126,17 @@ def _build_prompt(
 
 class LongMemEvalJudgment(dspy.Signature):
     """Judge whether a model response is correct given type-specific evaluation criteria.
-    Answer yes or no only.
+    First reason through each rule in the criteria step by step, then give a boolean verdict.
     """
 
     evaluation_prompt: str = dspy.InputField(
         description="The full evaluation prompt with type-specific instructions, question, correct answer, and model response."
     )
-    judgment: str = dspy.OutputField(
-        description="Answer yes or no only."
+    reasoning: str = dspy.OutputField(
+        description="Go through each rule in the evaluation criteria one by one. For each rule, determine whether the response satisfies it and why. Then give the overall reason for your final verdict."
+    )
+    judgment: bool = dspy.OutputField(
+        description="True if the model response is correct, False otherwise."
     )
 
 
@@ -136,8 +145,8 @@ class LongMemEvalJudge:
 
     Uses DSPy for LLM inference with type-specific prompts per question category,
     following the paper's setup:
-    - Simple yes/no output (no chain-of-thought)
     - Type-specific prompts per question category
+    - Optional ensemble voting: call the judge ensemble_k times, majority vote wins
 
     Satisfies the LLMJudge protocol from core/ports/llm_judge.py.
     """
@@ -148,6 +157,7 @@ class LongMemEvalJudge:
         api_key: Optional[str] = None,
         default_question_type: str = "multi-session",
         cache: bool = False,
+        ensemble_k: int = 1,
     ):
         """Initialize the LongMemEval judge.
 
@@ -159,6 +169,7 @@ class LongMemEvalJudge:
         """
         self.model = model
         self.default_question_type = default_question_type
+        self.ensemble_k = ensemble_k
 
         self.lm = dspy.LM(
             model,
@@ -168,16 +179,35 @@ class LongMemEvalJudge:
 
         self.judge = dspy.Predict(LongMemEvalJudgment)
 
-    def _call_judge(self, prompt: str) -> tuple[bool, int, int]:
+    async def _call_judge_async(self, prompt: str) -> tuple[bool, str, int, int]:
+        """Async version of _call_judge using dspy.Predict.acall()."""
+        with dspy.context(lm=self.lm):
+            response = await self.judge.acall(evaluation_prompt=prompt)
+        aligned = bool(response.judgment)
+        reasoning = response.reasoning or ""
+
+        input_tokens = 0
+        output_tokens = 0
+        try:
+            usage = response.get_lm_usage()
+            if usage and self.model in usage:
+                input_tokens = usage[self.model].get("prompt_tokens", 0)
+                output_tokens = usage[self.model].get("completion_tokens", 0)
+        except Exception:
+            pass
+
+        return aligned, reasoning, input_tokens, output_tokens
+
+    def _call_judge(self, prompt: str) -> tuple[bool, str, int, int]:
         """Call the LLM judge and parse yes/no response.
 
         Returns:
-            Tuple of (aligned, input_tokens, output_tokens).
+            Tuple of (aligned, reasoning, input_tokens, output_tokens).
         """
         with dspy.context(lm=self.lm):
             response = self.judge(evaluation_prompt=prompt)
-        content = response.judgment or ""
-        aligned = "yes" in content.strip().lower()
+        aligned = bool(response.judgment)
+        reasoning = response.reasoning or ""
 
         input_tokens = 0
         output_tokens = 0
@@ -189,7 +219,7 @@ class LongMemEvalJudge:
         except Exception:
             pass  # Token tracking is best-effort
 
-        return aligned, input_tokens, output_tokens
+        return aligned, reasoning, input_tokens, output_tokens
 
     # ------------------------------------------------------------------
     # LLMJudge protocol methods
@@ -217,8 +247,8 @@ class LongMemEvalJudge:
         """
         qtype = question_type or self.default_question_type
         prompt = _build_prompt(qtype, question, correct_answer, system_answer, question_id)
-        aligned, _, _ = self._call_judge(prompt)
-        return aligned
+        votes = sum(self._call_judge(prompt)[0] for _ in range(self.ensemble_k))
+        return votes >= self.ensemble_k / 2
 
     def evaluate_with_details(
         self,
@@ -245,15 +275,56 @@ class LongMemEvalJudge:
         is_abstention = question_id is not None and "_abs" in question_id
         prompt = _build_prompt(qtype, question, correct_answer, system_answer, question_id)
 
-        aligned, input_tokens, output_tokens = self._call_judge(prompt)
+        vote_results = []
+        total_input_tokens = 0
+        total_output_tokens = 0
+        for _ in range(self.ensemble_k):
+            aligned_i, reasoning_i, in_tok, out_tok = self._call_judge(prompt)
+            vote_results.append({"vote": aligned_i, "reasoning": reasoning_i})
+            total_input_tokens += in_tok
+            total_output_tokens += out_tok
+
+        votes = sum(v["vote"] for v in vote_results)
+        majority_aligned = votes >= self.ensemble_k / 2
 
         return {
-            "aligned": aligned,
+            "aligned": majority_aligned,
             "question_type": qtype,
             "is_abstention": is_abstention,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "votes": 1,
-            "ensemble_k": 1,
-            "reasoning": None,  # LongMemEval judge uses no chain-of-thought
+            "input_tokens": total_input_tokens,
+            "output_tokens": total_output_tokens,
+            "votes": votes,
+            "ensemble_k": self.ensemble_k,
+            "reasoning": vote_results,
+        }
+
+    async def evaluate_with_details_async(
+        self,
+        question: str,
+        system_answer: str,
+        correct_answer: str,
+        question_type: Optional[str] = None,
+        question_id: Optional[str] = None,
+    ) -> dict:
+        """Async version of evaluate_with_details. Runs all ensemble_k calls concurrently."""
+        qtype = question_type or self.default_question_type
+        is_abstention = question_id is not None and "_abs" in question_id
+        prompt = _build_prompt(qtype, question, correct_answer, system_answer, question_id)
+
+        call_results = await asyncio.gather(*[
+            self._call_judge_async(prompt) for _ in range(self.ensemble_k)
+        ])
+
+        vote_results = [{"vote": a, "reasoning": r} for a, r, _, _ in call_results]
+        votes = sum(v["vote"] for v in vote_results)
+
+        return {
+            "aligned": votes >= self.ensemble_k / 2,
+            "question_type": qtype,
+            "is_abstention": is_abstention,
+            "input_tokens": sum(c[2] for c in call_results),
+            "output_tokens": sum(c[3] for c in call_results),
+            "votes": votes,
+            "ensemble_k": self.ensemble_k,
+            "reasoning": vote_results,
         }

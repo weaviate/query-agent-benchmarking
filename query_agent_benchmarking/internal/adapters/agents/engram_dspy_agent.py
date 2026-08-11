@@ -11,9 +11,9 @@ from typing import Optional
 from dataclasses import dataclass, field
 
 import dspy
-from pydantic import BaseModel
 
 from engram import (
+    AsyncEngramClient,
     EngramClient,
     BM25Retrieval,
     FetchRetrieval,
@@ -33,52 +33,44 @@ _RETRIEVAL_CLASSES = {
 # DSPy signatures
 # ---------------------------------------------------------------------------
 
-class MemoryWithTimestamp(BaseModel):
-    memory: str
-    time_added: str
-
-
 class AnswerUserQueryWithMemory(dspy.Signature):
     """Answer the user's question using the retrieved memories as your knowledge base.
 
     Determine the question type, then apply the matching strategy:
 
-    FACTUAL questions ("What is my cat's name?", "Where do I work?", "How many engineers do I lead?"):
+    FACTUAL questions:
     - Answer using ONLY facts explicitly stated in the memories.
     - Only mention specific names, numbers, products, or details if they appear in the memories.
     - Do NOT fabricate or guess facts.
 
-    PREFERENCE / RECOMMENDATION questions ("What should I cook?", "What should I serve?", "What would I enjoy?"):
+    PREFERENCE / RECOMMENDATION questions:
     - These ask you to USE the user's stored preferences, habits, and interests to make a personalized suggestion.
     - You SHOULD synthesize across memories to form a recommendation grounded in what the user likes, has, or has done.
-    - Example: if memories say the user grows basil and cherry tomatoes, and they ask what to cook, suggest dishes featuring those ingredients. This is the correct behavior, not fabrication.
     - Do NOT abstain just because no memory literally answers the question — the memories provide the ingredients for your recommendation.
 
     BOTH types:
     - Synthesizing facts across multiple memories is expected and encouraged.
-    - BEFORE answering, check the question's premises against the memories (see premise_check).
-    - If the memories contain NO relevant information at all, say "The information provided is not enough."
-
-    Contradiction vs. gap:
-    - A CONTRADICTION is when the question assumes a specific fact (role title, name, date, event, location) and the memories state a DIFFERENT fact. Example: the question says "Software Engineer Manager" but memories say "Senior Software Engineer" — these are two different roles, so this is a contradiction.
-    - A GAP is when the memories are simply silent on a topic — they neither confirm nor deny it.
-    - If you find a contradiction: you MUST abstain. Say "The information provided is not enough." then explain what the question assumed vs. what the memories actually say.
-    - If you find only gaps: answer with whatever relevant information IS available. Do NOT abstain just because the answer is incomplete.
+    - BEFORE answering, identify which memories are relevant to answering the question. Then, reason through these instructions, making sure to follow them exactly, and ensure that you have done all required temporal reasoning. Finally, decide whether you have the information you need to answer the question or should abstain, again making sure to follow the instructions about this decision.
+    - If you have partial information about a question, use the reasoning field to make the best possible deduction you can from the memories. You should not abstain from answering if you have partial information, as you can still provide a best-effort answer.
+    - You should only abstain if the memories contain NO relevant information at all. In this case, say "The information provided is not enough." and explain why fully. Information is only not relevant if the question assumes a specific fact (role title, name, date, event, location) and the memories state a DIFFERENT fact.
 
     Temporal reasoning:
+    - The question was asked on the date provided in `question_date`. Treat that as "today" when interpreting any time-relative terms ("now", "yesterday", "this year", etc.).
     - When memories describe the same thing at different points in time, resolve the timeline. Look for language that distinguishes past states, plans/intentions, and current states:
-      * Past: "stored under the bed", "used to", "previously"
+      * Past: "used to", "previously"
       * Plans: "plans to", "intends to", "wants to", "will"
-      * Current: present tense statements of fact ("keeps sneakers in a shoe rack", "is in a shoe rack")
-    - A current-state memory supersedes a past-state or plan memory about the same topic. If one memory says "sneakers are under the bed" (past) and another says "sneakers are in a shoe rack" (current), the answer is the shoe rack — do NOT hedge or say "unclear."
+      * Current: present tense statements of fact
+    - A current-state memory supersedes a past-state or plan memory about the same topic — do NOT hedge or say "unclear."
     - If a memory describes both a past and current state, treat them as distinct facts at different points in time — do not collapse them.
-    - When the question asks about the current state ("Where do I currently keep..."), give the most recent state, not the full history.
-    - The timestamps on the memories reflect storage time, NOT when the events originally occurred. Reason about temporal order from the content of the memories, not from the timestamps."""
+    - Memories are ordered from oldest to newest. If multiple memories appear to give different information, you should interpret this as information which has been updated over time. This is not a contradiction - the memory nearest the end is the newest, and so should be considered the current state."""
 
     user_question: str = dspy.InputField()
-    retrieved_memories: list[MemoryWithTimestamp] = dspy.InputField()
-    premise_check: str = dspy.OutputField(
-        desc="List the key premises embedded in the question (role titles, names, dates, events, quantities). For each, state whether the memories SUPPORT it, CONTRADICT it (memories state a different fact), or are SILENT (memories don't mention it). Only mark CONTRADICT when the memories provide a conflicting fact — silence is not contradiction. If all premises are supported or the memories are simply silent, say 'Premises verified.'"
+    question_date: str = dspy.InputField(
+        desc="The date on which this question was asked. Treat this as today's date when interpreting any time-relative language in the question or memories."
+    )
+    retrieved_memories: list[str] = dspy.InputField()
+    reasoning: str = dspy.OutputField(
+        desc="First, identify which memories are relevant to answering the question. Then, reason through the instructions above, making sure to follow them exactly, and ensure that you have done all required temporal reasoning. Finally, decide whether you have the information you need to answer the question or should abstain, again making sure to follow the instructions about this decision above."
     )
     answer: str = dspy.OutputField(
         desc="If the premise check found a CONTRADICTION (memories state a different fact than the question assumes), abstain: say 'The information provided is not enough.' and explain the discrepancy. For factual questions, answer strictly from the memories. For preference/recommendation questions, synthesize the user's stored preferences, habits, and interests into a personalized suggestion — this is expected, not fabrication."
@@ -125,15 +117,22 @@ class EngramDSPyAgent:
         retrieval_type: str = "hybrid",
         engram_group: str = "default",
         user_id_prefix: str = "longmemeval-",
+        search_topics: Optional[list[str]] = None,
     ):
+        api_key = engram_api_key or os.environ["ENGRAM_API_KEY"]
         self.engram_client = EngramClient(
-            api_key=engram_api_key or os.environ["ENGRAM_API_KEY"],
+            api_key=api_key,
+            base_url=engram_base_url,
+        )
+        self.async_engram_client = AsyncEngramClient(
+            api_key=api_key,
             base_url=engram_base_url,
         )
         self.retrieval_limit = retrieval_limit
         self.retrieval_type = retrieval_type
         self.engram_group = engram_group
         self.user_id_prefix = user_id_prefix
+        self.search_topics = search_topics
 
         # TODO: dspy.configure() sets a global LM — this will overwrite any
         # existing DSPy LM config in the process. Consider using dspy.context()
@@ -147,6 +146,7 @@ class EngramDSPyAgent:
         query: str,
         tenant_id: Optional[str] = None,
         oracle_context_id: Optional[str] = None,
+        question_date: Optional[str] = None,
     ) -> EngramAskResponse:
         """
         Retrieve memories from Engram and answer the question using DSPy.
@@ -174,18 +174,15 @@ class EngramDSPyAgent:
             user_id=user_id,
             group=self.engram_group,
             retrieval_config=retrieval_cls(limit=self.retrieval_limit),
+            topics=self.search_topics,
         )
 
-        retrieved = [
-            MemoryWithTimestamp(
-                memory=m.content,
-                time_added=str(m.created_at),
-            )
-            for m in memories
-        ]
+        sorted_memories = sorted(memories, key=lambda m: m.updated_at)
+        retrieved = [m.content for m in sorted_memories]
 
         response = self.qa_system(
             user_question=query,
+            question_date=question_date or "unknown",
             retrieved_memories=retrieved,
         )
 
@@ -193,6 +190,71 @@ class EngramDSPyAgent:
             final_answer=response.answer,
             raw_response={
                 "n_memories_retrieved": len(retrieved),
-                "memories": [r.model_dump() for r in retrieved],
+                "memories": [
+                    {"memory": m.content, "time_added": str(m.updated_at)}
+                    for m in sorted_memories
+                ],
             },
         )
+
+    async def run_async(
+        self,
+        query: str,
+        tenant_id: Optional[str] = None,
+        oracle_context_id: Optional[str] = None,
+        question_date: Optional[str] = None,
+    ) -> EngramAskResponse:
+        """
+        Retrieve memories from Engram and answer the question using DSPy, both async.
+
+        Args:
+            query: The user's question.
+            tenant_id: Tenant whose memories to search.
+            oracle_context_id: Unused, kept for interface compatibility.
+        """
+        if tenant_id is None:
+            raise ValueError("tenant_id is required for EngramDSPyAgent")
+
+        user_id = f"{self.user_id_prefix}{tenant_id}"
+
+        try:
+            retrieval_cls = _RETRIEVAL_CLASSES[self.retrieval_type]
+        except KeyError:
+            raise ValueError(
+                f"Unsupported retrieval_type '{self.retrieval_type}'. "
+                f"Supported: {sorted(_RETRIEVAL_CLASSES)}"
+            )
+
+        memories = await self.async_engram_client.memories.search(
+            query=query,
+            user_id=user_id,
+            group=self.engram_group,
+            retrieval_config=retrieval_cls(limit=self.retrieval_limit),
+            topics=self.search_topics,
+        )
+
+        sorted_memories = sorted(memories, key=lambda m: m.updated_at)
+        retrieved = [m.content for m in sorted_memories]
+
+        response = await self.qa_system.acall(
+            user_question=query,
+            question_date=question_date or "unknown",
+            retrieved_memories=retrieved,
+        )
+
+        return EngramAskResponse(
+            final_answer=response.answer,
+            raw_response={
+                "n_memories_retrieved": len(retrieved),
+                "memories": [
+                    {"memory": m.content, "time_added": str(m.updated_at)}
+                    for m in sorted_memories
+                ],
+            },
+        )
+
+    async def initialize_async(self) -> None:
+        pass
+
+    async def close_async(self) -> None:
+        pass

@@ -215,6 +215,7 @@ def run_ask_queries(
                 query=query.question,
                 oracle_context_id=query.oracle_context_id,
                 tenant_id=query.tenant_id,
+                question_date=query.question_date,
             )
             query_time_taken = time.time() - query_start_time
             results.append(AskResult(
@@ -267,6 +268,7 @@ async def run_ask_queries_async(
                     query=query.question,
                     oracle_context_id=query.oracle_context_id,
                     tenant_id=query.tenant_id,
+                    question_date=query.question_date,
                 )
                 query_time_taken = time.time() - query_start_time
                 return AskResult(

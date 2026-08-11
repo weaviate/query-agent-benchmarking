@@ -7,8 +7,11 @@ Provides calculators for different ask evaluation strategies:
 - LongMemEvalAskCalculator: Uses LongMemEval's type-specific LLM judge
 """
 
+import asyncio
+
 import numpy as np
 from tqdm import tqdm
+from tqdm.asyncio import tqdm as atqdm
 
 from query_agent_benchmarking.internal.core.domain.models import AskResult
 from query_agent_benchmarking.internal.adapters.metrics.lmjudge_alignment import LMJudge
@@ -212,15 +215,19 @@ class LongMemEvalAskCalculator:
     evaluation protocol from the LongMemEval paper (Wu et al., ICLR 2025).
     """
 
-    def __init__(self, model: str = "openai/gpt-5.4", api_key: str | None = None):
+    def __init__(self, model: str = "openai/gpt-5.4", api_key: str | None = None,
+                 ensemble_k: int = 1, max_concurrent_judge: int = 10):
         self.model = model
-        self.judge = LongMemEvalJudge(model=model, api_key=api_key)
+        self.ensemble_k = ensemble_k
+        self.max_concurrent_judge = max_concurrent_judge
+        self.judge = LongMemEvalJudge(model=model, api_key=api_key, ensemble_k=ensemble_k)
 
     def compute(self, results: list[AskResult]) -> dict:
         print(f"\n\033[94mAnalyzing {len(results)} ask results with LongMemEval judge...\033[0m")
         print(f"Judge model: {self.model}")
 
         alignment_scores = []
+        judge_reasonings: list[list[dict] | None] = []
         query_times = []
         misaligned_indices = []
         total_input_tokens = 0
@@ -231,6 +238,7 @@ class LongMemEvalAskCalculator:
             if result.system_answer.startswith("[ERROR]"):
                 print(f"\n\033[91mSkipping evaluation for query {i} due to error.\033[0m")
                 alignment_scores.append(None)
+                judge_reasonings.append(None)
                 continue
 
             qtype = result.query.question_type or "multi-session"
@@ -244,6 +252,7 @@ class LongMemEvalAskCalculator:
             aligned = judge_result["aligned"]
             score = 1 if aligned else 0
             alignment_scores.append(score)
+            judge_reasonings.append(judge_result.get("reasoning"))
             query_times.append(result.time_taken)
             total_input_tokens += judge_result.get("input_tokens", 0)
             total_output_tokens += judge_result.get("output_tokens", 0)
@@ -275,8 +284,81 @@ class LongMemEvalAskCalculator:
             "metric": "longmemeval_judge",
             "avg_alignment_score": float(np.mean(valid_scores)) if valid_scores else 0,
             "alignment_score_scores": alignment_scores,
+            "judge_reasonings": judge_reasonings,
             "judge_model": self.model,
-            "ensemble_k": 1,
+            "ensemble_k": self.ensemble_k,
+            "type_accuracy": type_accuracy,
+            "type_counts": {t: len(scores) for t, scores in sorted(type_scores.items())},
+        }
+
+        self._print_summary(valid_scores, results_dict, misaligned_indices,
+                            total_input_tokens, total_output_tokens, type_accuracy)
+        return results_dict
+
+    async def compute_async(self, results: list[AskResult]) -> dict:
+        """Async version of compute() — runs all judge calls concurrently."""
+        semaphore = asyncio.Semaphore(self.max_concurrent_judge)
+
+        async def evaluate_one(i: int, result: AskResult):
+            if result.system_answer.startswith("[ERROR]"):
+                return i, None, None, result.time_taken
+            qtype = result.query.question_type or "multi-session"
+            async with semaphore:
+                judge_result = await self.judge.evaluate_with_details_async(
+                    question=result.query.question,
+                    system_answer=result.system_answer,
+                    correct_answer=result.query.ground_truth_answer,
+                    question_type=qtype,
+                )
+            return i, judge_result, qtype, result.time_taken
+
+        print(f"\n\033[94mAnalyzing {len(results)} ask results with LongMemEval judge (async, max_concurrent={self.max_concurrent_judge})...\033[0m")
+        print(f"Judge model: {self.model}, Ensemble K: {self.ensemble_k}")
+
+        raw = await atqdm.gather(
+            *[evaluate_one(i, r) for i, r in enumerate(results)],
+            desc="Running LongMemEval judge",
+        )
+
+        alignment_scores: list[int | None] = []
+        judge_reasonings: list[list[dict] | None] = []
+        query_times = []
+        misaligned_indices = []
+        total_input_tokens = 0
+        total_output_tokens = 0
+        type_scores: dict[str, list[int]] = {}
+
+        for i, judge_result, qtype, time_taken in sorted(raw, key=lambda x: x[0]):
+            if judge_result is None:
+                alignment_scores.append(None)
+                judge_reasonings.append(None)
+                continue
+            score = 1 if judge_result["aligned"] else 0
+            alignment_scores.append(score)
+            judge_reasonings.append(judge_result.get("reasoning"))
+            query_times.append(time_taken)
+            total_input_tokens += judge_result.get("input_tokens", 0)
+            total_output_tokens += judge_result.get("output_tokens", 0)
+            type_scores.setdefault(qtype, []).append(score)
+            if not judge_result["aligned"]:
+                misaligned_indices.append(i)
+
+        type_accuracy = {
+            t: float(np.mean(scores)) for t, scores in sorted(type_scores.items())
+        }
+        valid_scores = [s for s in alignment_scores if s is not None]
+        results_dict = {
+            "avg_query_time": float(np.mean(query_times)) if query_times else 0,
+            "query_times": query_times,
+            "misaligned_indices": misaligned_indices,
+            "total_input_tokens": total_input_tokens,
+            "total_output_tokens": total_output_tokens,
+            "metric": "longmemeval_judge",
+            "avg_alignment_score": float(np.mean(valid_scores)) if valid_scores else 0,
+            "alignment_score_scores": alignment_scores,
+            "judge_reasonings": judge_reasonings,
+            "judge_model": self.model,
+            "ensemble_k": self.ensemble_k,
             "type_accuracy": type_accuracy,
             "type_counts": {t: len(scores) for t, scores in sorted(type_scores.items())},
         }

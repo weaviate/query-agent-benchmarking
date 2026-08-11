@@ -51,8 +51,8 @@ class TestBuildPrompt:
         assert self.A in prompt
         assert self.R in prompt
 
-    def test_all_prompts_end_with_yes_or_no(self):
+    def test_all_prompts_end_with_question(self):
         for qtype in ("single-session-user", "temporal-reasoning", "knowledge-update",
                        "single-session-preference"):
             prompt = _build_prompt(qtype, self.Q, self.A, self.R)
-            assert prompt.strip().endswith("Answer yes or no only.")
+            assert prompt.strip().endswith("?")

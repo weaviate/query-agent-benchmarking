@@ -5,12 +5,28 @@ This is the database-population counterpart for Engram, analogous to
 sessions into Engram's memory system on a per-tenant basis.
 """
 
+import asyncio
 import os
 import time
-from typing import Optional, Callable
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from types import SimpleNamespace
+from typing import Callable, Optional
 
-from engram import EngramClient, ConversationInput, MessageInput
+from engram import AsyncEngramClient, ConversationInput, EngramClient, MessageInput
+
+PRINT_INTERVAL = 10
+
+
+def _parse_session_date(session_date: str) -> "str | None":
+    """Parse "2023/05/20 (Sat) 10:58" → "2023-05-20T10:58:00Z". Returns None on failure."""
+    if not session_date:
+        return None
+    try:
+        dt = datetime.strptime(session_date, "%Y/%m/%d (%a) %H:%M")
+        return dt.replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+    except ValueError:
+        return None
 
 
 def _parse_session_text(session_text: str) -> ConversationInput:
@@ -97,26 +113,69 @@ class TenantIngestionStats:
     run_durations: list[float] = field(default_factory=list)
 
 
-def _submit_all(
-    client: EngramClient,
-    docs_by_tenant: dict[str, list[dict]],
-    group: str,
-    user_id_prefix: str,
-    ingest_delay: float,
-    verbose: bool,
-    ingestion_mode: str = "conversation",
-    on_progress: Optional[Callable[[dict], None]] = None,
-) -> list[RunRecord]:
-    """Submit every session across all tenants. Returns run records for polling.
+def _get_inputs_from_conversation(
+    conversation: ConversationInput,
+    ingestion_mode: str,
+) -> list[ConversationInput]:
+    """Split a parsed conversation into the list of inputs to submit to Engram.
 
-    Args:
-        ingestion_mode: ``"conversation"`` submits the full parsed conversation
-            per session. ``"user_messages"`` submits each user message
-            individually as a single-message conversation (no assistant context).
+    - ``conversation``: one input — the full conversation.
+    - ``user_messages``: one input per user message (assistant turns discarded).
+    - ``message_turn``: one input per assistant message encountered, accumulating
+      all messages since the last flush; any trailing messages after the final
+      assistant turn become one last input.
     """
-    records: list[RunRecord] = []
-    total = sum(len(sessions) for sessions in docs_by_tenant.values())
-    submitted = 0
+    if ingestion_mode == "conversation":
+        return [conversation]
+
+    if ingestion_mode == "user_messages":
+        return [
+            ConversationInput(messages=[m], updated_at=conversation.updated_at)
+            for m in conversation.messages
+            if m.role == "user"
+        ]
+
+    if ingestion_mode == "message_turn":
+        turns: list[ConversationInput] = []
+        current: list[MessageInput] = []
+        for msg in conversation.messages:
+            current.append(msg)
+            if msg.role == "assistant":
+                turns.append(ConversationInput(messages=current, updated_at=conversation.updated_at))
+                current = []
+        if current:
+            turns.append(ConversationInput(messages=current, updated_at=conversation.updated_at))
+        return turns
+
+    raise ValueError(
+        f"Unsupported ingestion_mode '{ingestion_mode}'. "
+        f"Supported: conversation, user_messages, message_turn"
+    )
+
+
+@dataclass
+class _SubmitItem:
+    """One pending ``memories.add`` call with all metadata needed to record results."""
+    user_id: str
+    conv_input: ConversationInput
+    tenant_id: str
+    session_id: str
+    session_date: str
+    input_idx: int
+
+
+def _build_per_user_items(
+    docs_by_tenant: dict[str, list[dict]],
+    user_id_prefix: str,
+    ingestion_mode: str,
+    verbose: bool,
+) -> tuple[dict[str, list[_SubmitItem]], int]:
+    """Pre-process all sessions into per-user ordered submit queues.
+
+    Returns ``(per_user_items, skipped_count)`` where ``per_user_items`` maps
+    ``user_id -> [_SubmitItem, ...]`` in strict session → split order.
+    """
+    per_user: dict[str, list[_SubmitItem]] = {}
     skipped = 0
 
     for tenant_id in sorted(docs_by_tenant.keys()):
@@ -125,6 +184,7 @@ def _submit_all(
 
         for session in sessions:
             conversation = _parse_session_text(session["session_text"])
+            conversation.updated_at = _parse_session_date(session.get("session_date", ""))
             if not conversation.messages:
                 skipped += 1
                 if verbose:
@@ -132,78 +192,97 @@ def _submit_all(
                     print(f"  Skipped session {sid} for tenant {tenant_id}: no valid messages after parsing")
                 continue
 
-            if ingestion_mode == "user_messages":
-                # Submit each user message as its own single-message conversation
-                user_messages = [m for m in conversation.messages if m.role == "user"]
-                if not user_messages:
-                    skipped += 1
-                    if verbose:
-                        sid = session.get("session_id", "?")
-                        print(f"  Skipped session {sid} for tenant {tenant_id}: no user messages")
-                    continue
-                for msg_idx, msg in enumerate(user_messages):
-                    single = ConversationInput(messages=[msg])
-                    t_submit = time.time()
-                    try:
-                        run = client.memories.add(
-                            single,
-                            user_id=user_id,
-                            group=group,
-                            properties={"conversation_id": session.get("session_id")},
-                        )
-                    except Exception as e:
-                        skipped += 1
-                        if verbose:
-                            sid = session.get("session_id", "?")
-                            print(f"  Skipped session {sid} msg {msg_idx} for tenant {tenant_id}: {e}")
-                        continue
-                    records.append(RunRecord(
-                        run_id=run.run_id,
-                        tenant_id=tenant_id,
-                        submitted_at=t_submit,
-                        session_id=session.get("session_id", ""),
-                        session_date=session.get("session_date", ""),
-                    ))
-                    submitted += 1
+            inputs = _get_inputs_from_conversation(conversation, ingestion_mode)
+            if not inputs:
+                skipped += 1
+                if verbose:
+                    sid = session.get("session_id", "?")
+                    print(f"  Skipped session {sid} for tenant {tenant_id}: no inputs after splitting")
+                continue
 
-                    if on_progress:
-                        on_progress({
-                            "phase": "submit",
-                            "submitted": submitted,
-                            "skipped": skipped,
-                            "total": total,
-                            "tenant_id": tenant_id,
-                            "session_id": session.get("session_id", ""),
-                            "msg_index": msg_idx,
-                        })
-
-                    if verbose and submitted % 50 == 0:
-                        print(f"  Submitted {submitted} user messages")
-
-                    if ingest_delay > 0:
-                        time.sleep(ingest_delay)
-            else:
-                # Default: submit the full conversation
-                t_submit = time.time()
-                try:
-                    run = client.memories.add(
-                        conversation,
-                        user_id=user_id,
-                        group=group,
-                        properties={"conversation_id": session.get("session_id")},
-                    )
-                except Exception as e:
-                    skipped += 1
-                    if verbose:
-                        sid = session.get("session_id", "?")
-                        print(f"  Skipped session {sid} for tenant {tenant_id}: {e}")
-                    continue
-                records.append(RunRecord(
-                    run_id=run.run_id,
+            items = per_user.setdefault(user_id, [])
+            for input_idx, conv_input in enumerate(inputs):
+                items.append(_SubmitItem(
+                    user_id=user_id,
+                    conv_input=conv_input,
                     tenant_id=tenant_id,
-                    submitted_at=t_submit,
                     session_id=session.get("session_id", ""),
                     session_date=session.get("session_date", ""),
+                    input_idx=input_idx,
+                ))
+
+    return per_user, skipped
+
+
+async def _submit_all(
+    client: "AsyncEngramClient | _DryRunEngramClient",
+    docs_by_tenant: dict[str, list[dict]],
+    group: str,
+    user_id_prefix: str,
+    ingest_delay: float,
+    verbose: bool,
+    ingestion_mode: str = "conversation",
+    on_progress: Optional[Callable[[dict], None]] = None,
+    include_conversation_id: bool = True,
+) -> list[RunRecord]:
+    """Submit every session across all tenants concurrently per user.
+
+    Within each user, items are submitted in strict session → split order.
+    Across users, items at the same index position are submitted concurrently.
+
+    Args:
+        ingestion_mode: How to split each session into Engram ``add()`` calls.
+            ``"conversation"`` submits the full parsed conversation per session.
+            ``"user_messages"`` submits each user message individually.
+            ``"message_turn"`` submits each user/assistant exchange as one input.
+        include_conversation_id: Whether to include ``{"conversation_id": ...}``
+            in the ``properties`` of each ``memories.add()`` call.
+    """
+    per_user, skipped = _build_per_user_items(
+        docs_by_tenant, user_id_prefix, ingestion_mode, verbose
+    )
+
+    total = sum(len(items) for items in per_user.values())
+    submitted = 0
+    max_len = max((len(items) for items in per_user.values()), default=0)
+    records: list[RunRecord] = []
+
+    for i in range(max_len):
+        batch = [
+            (uid, items[i])
+            for uid, items in per_user.items()
+            if i < len(items)
+        ]
+
+        t_submit = time.time()
+        results = await asyncio.gather(
+            *[
+                client.memories.add(
+                    item.conv_input,
+                    user_id=uid,
+                    group=group,
+                    properties={"conversation_id": item.session_id} if include_conversation_id else {},
+                )
+                for uid, item in batch
+            ],
+            return_exceptions=True,
+        )
+
+        for (uid, item), result in zip(batch, results):
+            if isinstance(result, Exception):
+                skipped += 1
+                if verbose:
+                    print(
+                        f"  Skipped session {item.session_id} input {item.input_idx}"
+                        f" for tenant {item.tenant_id}: {result}"
+                    )
+            else:
+                records.append(RunRecord(
+                    run_id=result.run_id,
+                    tenant_id=item.tenant_id,
+                    submitted_at=t_submit,
+                    session_id=item.session_id,
+                    session_date=item.session_date,
                 ))
                 submitted += 1
 
@@ -213,27 +292,27 @@ def _submit_all(
                         "submitted": submitted,
                         "skipped": skipped,
                         "total": total,
-                        "tenant_id": tenant_id,
-                        "session_id": session.get("session_id", ""),
+                        "tenant_id": item.tenant_id,
+                        "session_id": item.session_id,
+                        "input_index": item.input_idx,
                     })
 
-                if verbose and submitted % 50 == 0:
-                    print(f"  Submitted {submitted}/{total}")
+                if verbose and submitted % PRINT_INTERVAL == 0:
+                    print(f"  Submitted {submitted}")
 
-                if ingest_delay > 0:
-                    time.sleep(ingest_delay)
+        if ingest_delay > 0:
+            await asyncio.sleep(ingest_delay)
 
     if verbose:
-        mode_label = "user messages" if ingestion_mode == "user_messages" else "sessions"
-        print(f"  All {submitted} {mode_label} submitted across {len(docs_by_tenant)} tenants")
+        print(f"  All {submitted} inputs submitted across {len(per_user)} tenants (mode: {ingestion_mode})")
         if skipped:
-            print(f"  Skipped {skipped} due to errors")
+            print(f"  Skipped {skipped} due to errors or empty splits")
 
     return records
 
 
 def _poll_and_collect(
-    client: EngramClient,
+    client,
     records: list[RunRecord],
     poll_interval: float,
     verbose: bool,
@@ -331,7 +410,7 @@ def _poll_and_collect(
                 "memories_created": total_created,
             })
 
-        if verbose and completed % 50 == 0:
+        if verbose and completed % PRINT_INTERVAL == 0:
             print(f"  Completed {completed}/{len(records)}")
 
     # Set elapsed_seconds to wall-clock time from first submission to last completion
@@ -353,20 +432,24 @@ def engram_ingest_all_tenants(
     engram_api_key: Optional[str] = None,
     group: str = "default",
     user_id_prefix: str = "longmemeval-",
-    ingest_delay: float = 0.1,
+    ingest_delay: float = 0.0,
     poll: bool = False,
     poll_interval: float = 2.0,
     verbose: bool = True,
     ingestion_mode: str = "conversation",
     on_progress: Optional[Callable[[dict], None]] = None,
+    dry_run: bool = False,
+    include_conversation_id: bool = True,
 ) -> IngestionResult:
     """
     Ingest sessions for all tenants into Engram.
 
-    Submits all sessions across every tenant first. If ``poll=True``, also
-    polls every run to completion and populates per-tenant stats with
-    operation counts and run durations. Otherwise returns immediately after
-    submission (fire-and-forget).
+    Submits all sessions across every tenant first. Within each user the
+    submission order is strictly preserved (session N before N+1, split M
+    before M+1). Across users, submissions at the same position are issued
+    concurrently. If ``poll=True``, also polls every run to completion and
+    populates per-tenant stats with operation counts and run durations.
+    Otherwise returns immediately after submission (fire-and-forget).
 
     Args:
         docs_by_tenant: Dict mapping tenant_id -> list of session dicts.
@@ -374,36 +457,61 @@ def engram_ingest_all_tenants(
         engram_api_key: Engram API key. Falls back to ``ENGRAM_API_KEY`` env var.
         group: Engram memory group name.
         user_id_prefix: Prefix for Engram user IDs.
-        ingest_delay: Seconds to sleep between session submissions.
+        ingest_delay: Seconds to sleep between submission rounds.
         poll: Whether to poll runs to completion and collect stats.
         poll_interval: Seconds between run-status polls (only used when poll=True).
         verbose: Print progress updates.
-        ingestion_mode: ``"conversation"`` (default) submits the full parsed
-            conversation per session. ``"user_messages"`` submits each user
-            message individually as a single-message conversation.
+        ingestion_mode: How to split each session into Engram ``add()`` calls.
+            ``"conversation"`` (default) submits the full conversation per session.
+            ``"user_messages"`` submits each user message individually.
+            ``"message_turn"`` submits each user/assistant exchange as one input,
+            accumulating until each assistant message; trailing user-only messages
+            become a final input.
+        dry_run: If True, count requests without submitting to Engram.
+            No API key is required. Returns an ``IngestionResult`` with
+            synthetic run records reflecting the would-be request count.
+        include_conversation_id: Whether to include ``{"conversation_id": ...}``
+            in the ``properties`` of each ``memories.add()`` call. Defaults to
+            True. Set to False when the Engram instance does not expect this
+            property.
 
     Returns:
         An ``IngestionResult`` with run records and submission timing.
         If ``poll=True``, ``result.stats`` contains per-tenant stats.
     """
-    client = EngramClient(
-        api_key=engram_api_key or os.environ["ENGRAM_API_KEY"],
-        base_url=engram_base_url,
-    )
+    api_key = engram_api_key or (None if dry_run else os.environ["ENGRAM_API_KEY"])
+
+    if dry_run:
+        submit_client = _DryRunEngramClient()
+        ingest_delay = 0.0
+        poll = False
+    else:
+        submit_client = AsyncEngramClient(
+            api_key=api_key,
+            base_url=engram_base_url,
+        )
 
     t0 = time.time()
 
-    # Phase 1: submit everything
+    # Phase 1: submit everything (async, concurrent across users)
     if verbose:
         total = sum(len(s) for s in docs_by_tenant.values())
-        mode_label = f" (mode: {ingestion_mode})" if ingestion_mode != "conversation" else ""
+        mode_label = f" (mode: {ingestion_mode})" if ingestion_mode != "conversation" else " (mode: conversation)"
         print(f"Submitting {total} sessions across {len(docs_by_tenant)} tenants{mode_label}...")
-    records = _submit_all(client, docs_by_tenant, group, user_id_prefix, ingest_delay, verbose, ingestion_mode, on_progress)
+    records = asyncio.run(_submit_all(submit_client, docs_by_tenant, group, user_id_prefix, ingest_delay, verbose, ingestion_mode, on_progress, include_conversation_id))
 
     submit_elapsed = time.time() - t0
     tenant_session_counts = {}
     for rec in records:
         tenant_session_counts[rec.tenant_id] = tenant_session_counts.get(rec.tenant_id, 0) + 1
+
+    if dry_run and verbose:
+        print(
+            f"\n[Dry run] Would submit {len(records)} requests across {len(tenant_session_counts)} tenants"
+        )
+        for tid in sorted(tenant_session_counts):
+            print(f"  {tid}: {tenant_session_counts[tid]} requests")
+        print("[Dry run] No data was sent to Engram.")
 
     result = IngestionResult(
         run_records=records,
@@ -419,10 +527,11 @@ def engram_ingest_all_tenants(
             print("  Polling disabled — returning immediately (fire-and-forget)")
         return result
 
-    # Phase 2: poll all runs to completion
+    # Phase 2: poll all runs to completion (sync client — polling is not parallelised)
+    poll_client = EngramClient(api_key=api_key, base_url=engram_base_url)
     if verbose:
         print(f"Polling {len(records)} runs for completion...")
-    stats_map, completions = _poll_and_collect(client, records, poll_interval, verbose, on_progress)
+    stats_map, completions = _poll_and_collect(poll_client, records, poll_interval, verbose, on_progress)
 
     result.stats = [stats_map[tid] for tid in sorted(stats_map)]
     result.run_completions = completions
@@ -440,3 +549,22 @@ def engram_ingest_all_tenants(
             )
 
     return result
+
+
+class _DryRunEngramClient:
+    """No-op async Engram client for dry-run counting — no HTTP calls made."""
+
+    def __init__(self):
+        self._count = 0
+        self.memories = self
+        self.runs = self
+
+    async def add(self, *args, **kwargs):
+        self._count += 1
+        return SimpleNamespace(run_id=f"dry-run-{self._count}")
+
+    async def get(self, *args, **kwargs):
+        return SimpleNamespace(
+            status="completed",
+            committed_operations=SimpleNamespace(created=[], updated=[], deleted=[]),
+        )

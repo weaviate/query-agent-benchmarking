@@ -1,6 +1,10 @@
 """Tests for the Engram ingestion loader's session-text parser."""
 
+import pytest
+
 from query_agent_benchmarking.internal.adapters.database.engram_loader import (
+    _get_inputs_from_conversation,
+    _parse_session_date,
     _parse_session_text,
 )
 
@@ -85,3 +89,62 @@ class TestParseSessionText:
         result = _parse_session_text(text)
         assert len(result.messages) == 1
         assert result.messages[0].role == "assistant"
+
+
+class TestParseSessionDate:
+    @pytest.mark.parametrize("session_date, expected", [
+        ("2023/05/20 (Sat) 10:58", "2023-05-20T10:58:00Z"),
+        ("2023/05/27 (Sat) 05:39", "2023-05-27T05:39:00Z"),
+        ("2023/05/28 (Sun) 02:58", "2023-05-28T02:58:00Z"),
+        ("2000/01/01 (Sat) 00:00", "2000-01-01T00:00:00Z"),
+        ("",                        None),
+        ("not a date",              None),
+        ("2023-05-20",              None),
+    ])
+    def test_parse_session_date(self, session_date, expected):
+        assert _parse_session_date(session_date) == expected
+
+
+class TestGetInputsFromConversation:
+    """Verify updated_at is propagated to all split ConversationInputs."""
+
+    _SESSION = "user: Hi\nassistant: Hello!\nuser: How are you?\nassistant: Fine."
+    _UPDATED_AT = "2023-05-20T10:58:00Z"
+
+    def _make_conversation(self, updated_at=None):
+        conv = _parse_session_text(self._SESSION)
+        conv.updated_at = updated_at
+        return conv
+
+    def test_conversation_mode_preserves_updated_at(self):
+        conv = self._make_conversation(self._UPDATED_AT)
+        results = _get_inputs_from_conversation(conv, "conversation")
+        assert len(results) == 1
+        assert results[0].updated_at == self._UPDATED_AT
+
+    def test_conversation_mode_none_updated_at(self):
+        conv = self._make_conversation(None)
+        results = _get_inputs_from_conversation(conv, "conversation")
+        assert results[0].updated_at is None
+
+    def test_user_messages_mode_propagates_updated_at(self):
+        conv = self._make_conversation(self._UPDATED_AT)
+        results = _get_inputs_from_conversation(conv, "user_messages")
+        assert len(results) == 2
+        assert all(r.updated_at == self._UPDATED_AT for r in results)
+
+    def test_user_messages_mode_none_updated_at(self):
+        conv = self._make_conversation(None)
+        results = _get_inputs_from_conversation(conv, "user_messages")
+        assert all(r.updated_at is None for r in results)
+
+    def test_message_turn_mode_propagates_updated_at(self):
+        conv = self._make_conversation(self._UPDATED_AT)
+        results = _get_inputs_from_conversation(conv, "message_turn")
+        assert len(results) == 2
+        assert all(r.updated_at == self._UPDATED_AT for r in results)
+
+    def test_message_turn_mode_none_updated_at(self):
+        conv = self._make_conversation(None)
+        results = _get_inputs_from_conversation(conv, "message_turn")
+        assert all(r.updated_at is None for r in results)

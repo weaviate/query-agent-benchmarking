@@ -30,7 +30,7 @@ DEFAULT_CONFIG_PATH = (
 )
 
 
-def populate_db(recreate: bool = True, tag: str = "Default") -> None:
+def populate_db(recreate: bool = True, tag: str = "Default", poll: bool = True) -> None:
     """
     Load dataset from config and populate the target database.
 
@@ -41,6 +41,8 @@ def populate_db(recreate: bool = True, tag: str = "Default") -> None:
     Args:
         recreate: Whether to drop existing collection before creating.
         tag: Suffix to add to collection name.
+        poll: Whether to poll Engram runs to completion. When False, submits
+            fire-and-forget and returns immediately.
     """
     config = load_config(DEFAULT_CONFIG_PATH)
 
@@ -49,14 +51,14 @@ def populate_db(recreate: bool = True, tag: str = "Default") -> None:
     database_target = config.get("database_target", "weaviate")
 
     if database_target == "engram":
-        manifest = _run_engram_loader(config, dataset_name)
+        manifest = _run_engram_loader(config, dataset_name, poll=poll)
         print(f"\nEngram manifest saved with {len(manifest.get('runs', []))} run records")
         return
 
     _run_weaviate_loader(config, dataset_name, recreate=recreate, tag=tag)
 
 
-def _run_engram_loader(config: dict, dataset_name: str) -> dict:
+def _run_engram_loader(config: dict, dataset_name: str, poll: bool = True) -> dict:
     """Ingest LongMemEval sessions into Engram and persist a run manifest.
 
     Returns:
@@ -72,8 +74,22 @@ def _run_engram_loader(config: dict, dataset_name: str) -> dict:
         tenant_ids=tenant_ids,
     )
 
+    engram_base_url = config.get("engram_base_url", "https://dev-engram.labs.weaviate.io")
     ingestion_mode = config.get("engram_ingestion_mode", "conversation")
-    result = engram_ingest_all_tenants(docs_by_tenant, poll=True, ingestion_mode=ingestion_mode)
+    user_id_prefix = config.get("user_id_prefix", "longmemeval-")
+    engram_dry_run = config.get("engram_dry_run", False)
+    include_conversation_id = config.get("engram_include_conversation_id", True)
+    result = engram_ingest_all_tenants(
+        docs_by_tenant,
+        engram_base_url=engram_base_url,
+        poll=poll,
+        ingestion_mode=ingestion_mode,
+        user_id_prefix=user_id_prefix,
+        dry_run=engram_dry_run,
+        include_conversation_id=include_conversation_id,
+    )
+    if engram_dry_run:
+        return {}
     manifest = save_engram_manifest(result, dataset_name)
     return manifest
 

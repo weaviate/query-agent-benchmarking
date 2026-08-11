@@ -26,7 +26,7 @@ class MockAskAgent:
     def __init__(self):
         self.queries_received = []
 
-    def run(self, query, oracle_context_id=None, tenant_id=None):
+    def run(self, query, oracle_context_id=None, tenant_id=None, question_date=None):
         self.queries_received.append((query, oracle_context_id, tenant_id))
         return AskResponse(final_answer="Test answer")
 
@@ -90,7 +90,7 @@ class TestRunAskQueries:
 
     def test_error_handling(self):
         class ErrorAgent:
-            def run(self, query, oracle_context_id=None, tenant_id=None):
+            def run(self, query, oracle_context_id=None, tenant_id=None, question_date=None):
                 raise RuntimeError("Test error")
 
         queries = [
