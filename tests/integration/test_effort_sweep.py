@@ -34,19 +34,19 @@ def test_per_run_overrides_applied(captured_configs):
         "effort_sweep_baselines": ["hybrid-search"],
         "effort_sweep_overrides": {
             "hybrid-search": {"max_concurrent": 5, "sleep_between_requests": 0},
-            "low": {"max_concurrent": 5, "sleep_between_requests": 0},
-            "medium": {"max_concurrent": 2, "sleep_between_requests": 2},
+            "medium": {"max_concurrent": 5, "sleep_between_requests": 0},
             "high": {"max_concurrent": 2, "sleep_between_requests": 2},
+            "ultrahigh": {"max_concurrent": 2, "sleep_between_requests": 2},
         },
     }
 
     results = asyncio.run(search_benchmark._run_effort_sweep(config))
 
-    assert set(results) == {"low", "medium", "high", "hybrid"}
+    assert set(results) == {"medium", "high", "ultrahigh", "hybrid"}
     assert all(entry["error"] is None for entry in results.values())
 
-    low = captured_configs["low"]
-    assert (low["max_concurrent"], low["sleep_between_requests"]) == (5, 0)
+    medium = captured_configs["medium"]
+    assert (medium["max_concurrent"], medium["sleep_between_requests"]) == (5, 0)
 
     # Baseline runs are keyed by their display label but may be configured
     # under the full agent name.
@@ -54,7 +54,7 @@ def test_per_run_overrides_applied(captured_configs):
     assert (hybrid["max_concurrent"], hybrid["sleep_between_requests"]) == (5, 0)
     assert hybrid["search_agent_name"] == "hybrid-search"
 
-    for level in ("medium", "high"):
+    for level in ("high", "ultrahigh"):
         cfg = captured_configs[level]
         assert (cfg["max_concurrent"], cfg["sleep_between_requests"]) == (2, 2)
 
@@ -69,7 +69,7 @@ def test_baselines_default_to_hybrid_search(captured_configs):
 
     results = asyncio.run(search_benchmark._run_effort_sweep(config))
 
-    assert set(results) == {"low", "medium", "high", "hybrid"}
+    assert set(results) == {"medium", "high", "ultrahigh", "hybrid"}
     assert captured_configs["hybrid"]["search_agent_name"] == "hybrid-search"
 
 
@@ -78,7 +78,7 @@ def test_empty_baselines_disable_baseline_runs(captured_configs):
 
     results = asyncio.run(search_benchmark._run_effort_sweep(config))
 
-    assert set(results) == {"low", "medium", "high"}
+    assert set(results) == {"medium", "high", "ultrahigh"}
 
 
 def test_runs_without_overrides_use_shared_settings(captured_configs):
@@ -87,13 +87,13 @@ def test_runs_without_overrides_use_shared_settings(captured_configs):
         "max_concurrent": 3,
         "sleep_between_requests": 1,
         "effort_sweep": True,
-        "effort_sweep_overrides": {"low": {"max_concurrent": 8}},
+        "effort_sweep_overrides": {"medium": {"max_concurrent": 8}},
     }
 
     asyncio.run(search_benchmark._run_effort_sweep(config))
 
-    assert captured_configs["low"]["max_concurrent"] == 8
-    assert captured_configs["low"]["sleep_between_requests"] == 1
-    for level in ("medium", "high"):
+    assert captured_configs["medium"]["max_concurrent"] == 8
+    assert captured_configs["medium"]["sleep_between_requests"] == 1
+    for level in ("high", "ultrahigh"):
         cfg = captured_configs[level]
         assert (cfg["max_concurrent"], cfg["sleep_between_requests"]) == (3, 1)

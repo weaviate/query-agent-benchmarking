@@ -17,7 +17,7 @@ interface ExperimentSummary {
   keyMetric: { name: string; value: number | null };
 }
 
-const EFFORT_ORDER: Record<string, number> = { hybrid: 0, low: 1, medium: 2, high: 3 };
+const EFFORT_ORDER: Record<string, number> = { hybrid: 0, medium: 1, high: 2, ultrahigh: 3 };
 
 const POLL_INTERVAL_MS = 5_000;
 

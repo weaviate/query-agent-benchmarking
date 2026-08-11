@@ -161,11 +161,11 @@ _BOLD = "\033[1m"
 _RESET = "\033[0m"
 
 # Canonical ordering for effort levels (unknown levels are appended as-is).
-_EFFORT_ORDER = ["low", "medium", "high"]
+_EFFORT_ORDER = ["medium", "high", "ultrahigh"]
 
 
 def _ordered_levels(results_by_effort: dict[str, Any]) -> list[str]:
-    """Order effort levels low -> high, with any unknown levels appended."""
+    """Order effort levels medium -> ultrahigh, with any unknown levels appended."""
     levels = [e for e in _EFFORT_ORDER if e in results_by_effort]
     levels += [e for e in results_by_effort if e not in levels]
     return levels
@@ -200,7 +200,7 @@ def print_effort_comparison(
 ) -> None:
     """Print a metric x effort comparison table for a single dataset.
 
-    ``results_by_effort`` maps an effort level ("low"|"medium"|"high") to
+    ``results_by_effort`` maps an effort level ("medium"|"high"|"ultrahigh") to
     ``{"metrics": <aggregated metrics>, "seconds": float, "error": str | None}``.
     The best (highest) value per metric is highlighted, a ``Δ(high−low)`` column
     summarizes the effect of effort, and wall-clock per level is printed below.
@@ -237,11 +237,13 @@ def print_effort_comparison(
 
     name_w = max([len("Metric")] + [len(_effort_metric_label(b)) for b in metric_order])
     col_w = 16
-    has_delta = "low" in levels and "high" in levels
+    has_delta = "medium" in levels and "ultrahigh" in levels
+    delta_label = "Δ(ultrahigh−medium)"
+    delta_w = max(col_w, len(delta_label))
 
     header = "Metric".ljust(name_w) + "".join(e.center(col_w) for e in levels)
     if has_delta:
-        header += "Δ(high−low)".rjust(col_w)
+        header += delta_label.rjust(delta_w)
     print("\n" + header)
     print("-" * len(header))
 
@@ -265,8 +267,8 @@ def print_effort_comparison(
                 row += cell.center(col_w)
 
         if has_delta:
-            low, high = values["low"], values["high"]
-            row += (f"{high - low:+.4f}" if low is not None and high is not None else "—").rjust(col_w)
+            low, high = values["medium"], values["ultrahigh"]
+            row += (f"{high - low:+.4f}" if low is not None and high is not None else "—").rjust(delta_w)
         print(row)
 
     print(f"\n{_DIM}Wall-clock:{_RESET}")

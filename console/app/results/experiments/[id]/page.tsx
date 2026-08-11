@@ -211,7 +211,7 @@ function buildExperimentReport(
     L(`| Metric | Value |`);
     L(`| :--- | ---: |`);
     for (const { key, value } of exp.metricEntries) {
-      L(`| ${escPipe(key.replace(/_/g, " "))} | ${escPipe(value)} |`);
+      L(`| ${escPipe(key.replace(/recall_at_1(?!\d)/g, "success_at_1").replace(/_/g, " "))} | ${escPipe(value)} |`);
     }
     L();
   }
@@ -416,7 +416,9 @@ export default function ExperimentDetailPage({
               return (
                 <div key={key} className="brand-card p-4">
                   <div className="eyebrow mb-2">
-                    {key.replace(/_/g, " ")}
+                    {/* recall_at_1 is stored under that key but computed as
+                        Success@1 (binary hit), so it's displayed as success. */}
+                    {key.replace(/recall_at_1(?!\d)/g, "success_at_1").replace(/_/g, " ")}
                   </div>
                   <div className="text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
                     {value}

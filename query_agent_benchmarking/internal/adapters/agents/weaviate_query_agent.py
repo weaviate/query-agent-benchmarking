@@ -24,7 +24,7 @@ from query_agent_benchmarking.internal.adapters.clients.provider_headers import 
 )
 
 Filtering = Literal["recall", "precision"]
-Effort = Literal["low", "medium", "high"]
+Effort = Literal["medium", "high", "ultrahigh"]
 
 
 def _validate_filtering(filtering: Optional[str]) -> Filtering:
@@ -46,15 +46,15 @@ def _validate_filtering(filtering: Optional[str]) -> Filtering:
 def _validate_effort(effort: Optional[str]) -> Optional[Effort]:
     """Normalize and validate the search-mode compute effort level.
 
-    "low" | "medium" | "high" controls how much compute search mode spends on a
-    query. Returns ``None`` when unset, in which case ``effort`` is omitted from
+    "medium" | "high" | "ultrahigh" controls how much compute search mode spends
+    on a query. Returns ``None`` when unset, in which case ``effort`` is omitted from
     the request entirely and the agents server applies its own default.
     """
     if effort is None:
         return None
-    if effort not in ("low", "medium", "high"):
+    if effort not in ("medium", "high", "ultrahigh"):
         raise ValueError(
-            f"effort must be 'low', 'medium', or 'high'; got {effort!r}."
+            f"effort must be 'medium', 'high', or 'ultrahigh'; got {effort!r}."
         )
     return effort
 

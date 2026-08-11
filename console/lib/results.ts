@@ -137,7 +137,7 @@ export interface Experiment {
   mode: "search" | "ask" | "unknown";
   num_trials: number;
   timestamp: string;
-  /** Query Agent search-mode compute effort ("low" | "medium" | "high"), when known. */
+  /** Query Agent search-mode compute effort ("medium" | "high" | "ultrahigh"), when known. */
   effort: string | null;
   /** Query Agent search filtering strategy ("recall" | "precision"), when known. */
   filtering: string | null;
@@ -152,12 +152,12 @@ export interface Experiment {
 }
 
 /** Canonical sweep column ordering: the hybrid-search baseline leads as the
- *  reference point, then the effort levels read low → high. */
+ *  reference point, then the effort levels read medium → ultrahigh. */
 export const EFFORT_RANK: Record<string, number> = {
   hybrid: 0,
-  low: 1,
-  medium: 2,
-  high: 3,
+  medium: 1,
+  high: 2,
+  ultrahigh: 3,
 };
 
 // ============================================================================
@@ -291,7 +291,7 @@ export function loadAllExperiments(): Experiment[] {
     let sweep_id = aggConfig?.sweep_id ?? firstTrial?.metadata?.sweep_id ?? null;
     const filtering = aggConfig?.filtering ?? firstTrial?.metadata?.filtering ?? null;
     if (!effort || !sweep_id) {
-      const m = baseName.match(/-(\d{8}-\d{6})-effort_(low|medium|high|hybrid)-results$/);
+      const m = baseName.match(/-(\d{8}-\d{6})-effort_(medium|high|ultrahigh|hybrid)-results$/);
       if (m) {
         sweep_id = sweep_id ?? m[1];
         effort = effort ?? m[2];
@@ -439,7 +439,7 @@ export function buildQueryComparison(ids: string[]): QueryComparison | null {
 
   if (matched.length < 2) return null;
 
-  // Match the compare API's column ordering: baseline first, then low → high.
+  // Match the compare API's column ordering: baseline first, then medium → ultrahigh.
   if (
     matched.every((e) => e.effort != null && e.effort in EFFORT_RANK) &&
     new Set(matched.map((e) => e.effort)).size === matched.length
@@ -623,6 +623,9 @@ export function saveLabel(id: string, label: string): void {
  */
 function formatMetricKey(key: string): string {
   let name = key.replace(/^avg_/, "").replace(/_mean$/, "");
+  // The @1 metric is stored under a recall_at_1 key but is computed as
+  // Success@1 (binary hit), so it's displayed under that name.
+  name = name.replace(/recall_at_1(?!\d)/g, "success_at_1");
   name = name.replace(/recall_at_(\d+)/g, "Recall@$1");
   name = name.replace(/nDCG_at_(\d+)/g, "nDCG@$1");
   name = name.replace(/success_at_(\d+)/g, "Success@$1");

@@ -6,7 +6,7 @@ Mirrors scripts/populate-db-multi.py: the dataset list comes from
 cross-dataset summary is printed.
 
 If ``effort_sweep: true`` is set in the config, every dataset is additionally
-swept across the "low"/"medium"/"high" effort levels and a per-dataset effort
+swept across the "medium"/"high"/"ultrahigh" effort levels and a per-dataset effort
 comparison is printed.
 
     uv run python3 scripts/run-search-benchmark-multi.py

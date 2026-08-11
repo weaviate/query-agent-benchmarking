@@ -55,7 +55,7 @@ def create_search_agent(
             generate multiple Weaviate queries) or "precision" (generate a
             single query for the most likely interpretation). Only applies to
             "query-agent-search-mode".
-        effort: Query Agent search compute effort, "low", "medium", or "high".
+        effort: Query Agent search compute effort, "medium", "high", or "ultrahigh".
             Controls how much compute search mode spends per query. When None,
             the agents server applies its own default. Only applies to
             "query-agent-search-mode".

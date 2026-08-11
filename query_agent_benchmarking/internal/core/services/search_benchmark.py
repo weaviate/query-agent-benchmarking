@@ -51,7 +51,7 @@ DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" /
 DEFAULT_AGENT_CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "agent-config.yml"
 
 # Effort levels swept (in order) when ``effort_sweep`` is enabled.
-EFFORT_LEVELS = ["low", "medium", "high"]
+EFFORT_LEVELS = ["medium", "high", "ultrahigh"]
 
 # Agent used when no ``search_agent_name``/``agent_name`` is configured.
 DEFAULT_SEARCH_AGENT = "query-agent-search-mode"
@@ -341,7 +341,7 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
         # Eval-level config takes precedence, then the agent default, then "recall".
         resolved_filtering = config.get("filtering") or agent_cfg.get("filtering") or "recall"
         config["filtering"] = resolved_filtering
-        # Query Agent search compute effort ("low" | "medium" | "high"). Eval-level
+        # Query Agent search compute effort ("medium" | "high" | "ultrahigh"). Eval-level
         # config takes precedence, then the agent default; when unset the agents
         # server applies its own default.
         resolved_effort = config.get("effort") or agent_cfg.get("effort")
@@ -485,12 +485,12 @@ def run_search_eval(
             generate multiple Weaviate queries spanning different filters and
             interpretations) or "precision" (generate a single query targeting the
             most likely interpretation). Only applies to "query-agent-search-mode".
-        effort: Query Agent search compute effort: "low", "medium", or "high".
+        effort: Query Agent search compute effort: "medium", "high", or "ultrahigh".
             Controls how much compute search mode spends per query. When None,
             the agents server applies its own default. Only applies to
             "query-agent-search-mode".
         effort_sweep: When True, run the benchmark once per effort level
-            ("low", "medium", "high") and print a side-by-side comparison. Any
+            ("medium", "high", "ultrahigh") and print a side-by-side comparison. Any
             single ``effort`` value is ignored in this mode. Only meaningful for
             "query-agent-search-mode".
         effort_sweep_baselines: Baseline agent names to include in the effort
@@ -499,7 +499,7 @@ def run_search_eval(
             comparison. Defaults to ["hybrid-search"]; pass an empty list to
             sweep without baselines. Only used when ``effort_sweep`` is True.
         effort_sweep_overrides: Per-run config overrides applied during the
-            effort sweep, keyed by effort level ("low"/"medium"/"high") or
+            effort sweep, keyed by effort level ("medium"/"high"/"ultrahigh") or
             baseline agent name/label (e.g. "hybrid-search"). Values are dicts
             of config keys (e.g. ``{"max_concurrent": 2}``) applied to that run
             only. Only used when ``effort_sweep`` is True.
@@ -697,18 +697,18 @@ def run_search_evals(
         search_target_vector: Legacy vector-name key.
         filtering: Query Agent search filtering strategy, "recall" (default) or
             "precision". Only applies to "query-agent-search-mode".
-        effort: Query Agent search compute effort, "low", "medium", or "high".
+        effort: Query Agent search compute effort, "medium", "high", or "ultrahigh".
             When None, the agents server applies its own default. Only applies
             to "query-agent-search-mode".
-        effort_sweep: When True, sweep every effort level ("low", "medium",
-            "high") for each dataset and print a per-dataset comparison. Only
+        effort_sweep: When True, sweep every effort level ("medium", "high",
+            "ultrahigh") for each dataset and print a per-dataset comparison. Only
             meaningful for "query-agent-search-mode".
         effort_sweep_baselines: Baseline agent names to include in each
             dataset's effort sweep as reference points. Defaults to
             ["hybrid-search"]; pass an empty list to sweep without baselines.
             Only used when ``effort_sweep`` is True.
         effort_sweep_overrides: Per-run config overrides applied during the
-            effort sweep, keyed by effort level ("low"/"medium"/"high") or
+            effort sweep, keyed by effort level ("medium"/"high"/"ultrahigh") or
             baseline agent name/label. Only used when ``effort_sweep`` is True.
         **kwargs: Additional config overrides.
 

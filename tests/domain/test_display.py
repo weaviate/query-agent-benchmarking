@@ -16,8 +16,8 @@ def test_effort_suite_skips_failed_dataset(capsys):
     suite = {
         "bright/biology": {"error": "connection refused"},
         "beir/scifact": {
-            "low": _entry({"avg_recall_at_5_mean": 0.5, "avg_recall_at_5_std": 0.1}),
-            "high": _entry({"avg_recall_at_5_mean": 0.6, "avg_recall_at_5_std": 0.1}),
+            "medium": _entry({"avg_recall_at_5_mean": 0.5, "avg_recall_at_5_std": 0.1}),
+            "ultrahigh": _entry({"avg_recall_at_5_mean": 0.6, "avg_recall_at_5_std": 0.1}),
         },
     }
 
@@ -31,7 +31,7 @@ def test_effort_suite_skips_failed_dataset(capsys):
 
 def test_effort_comparison_shows_zero_std(capsys):
     print_effort_comparison(
-        {"low": _entry({"avg_recall_at_5_mean": 0.5, "avg_recall_at_5_std": 0.0})}
+        {"medium": _entry({"avg_recall_at_5_mean": 0.5, "avg_recall_at_5_std": 0.0})}
     )
 
     out = capsys.readouterr().out
@@ -40,7 +40,7 @@ def test_effort_comparison_shows_zero_std(capsys):
 
 def test_effort_comparison_all_failed(capsys):
     print_effort_comparison(
-        {"low": _entry({}, error="boom"), "high": _entry({}, error="bang")}
+        {"medium": _entry({}, error="boom"), "ultrahigh": _entry({}, error="bang")}
     )
 
     out = capsys.readouterr().out

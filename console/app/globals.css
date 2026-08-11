@@ -21,8 +21,13 @@
   --color-sky: #7AD6EB;
   --color-lavender: #A590DD;
 
-  /* ── Sweep baseline (e.g. hybrid search): white on dark, blue on light ── */
-  --color-baseline: #ffffff;
+  /* ── Sweep baseline (e.g. hybrid search): navy in both themes — lighter
+     here so the bar stays visible on dark panels ──────────────────────── */
+  --color-baseline: #4A6BB5;
+
+  /* ── effort=ultrahigh chart fill: raw sky in both themes — a bar fill,
+     not text, so it skips the light theme's deepened hues ─────────────── */
+  --color-effort-ultrahigh: #7AD6EB;
 
   /* ── Functional colors (status states; not part of the brand palette) ── */
   --color-coral: #FF4F5E;
@@ -63,7 +68,7 @@
   --color-green: #00A854;
   --color-sky: #2E7D96;
   --color-lavender: #6A4FB6;
-  --color-baseline: #2563eb;
+  --color-baseline: #2F5DA8;
   --color-coral: #D93440;
   --color-warn: #8A7500;
 

@@ -46,8 +46,25 @@ const DATASET_FAMILY_NAMES: Record<string, string> = {
   freshstack: "FreshStack",
 };
 
+/** Bespoke titles for datasets without a family/subset slash. */
+const DATASET_TITLES: Record<string, string> = {
+  irpapers: "IRPAPERS",
+  "irpapers-text-only": "IRPAPERS (Text Only)",
+  wixqa: "WixQA",
+};
+
 /** "bright/biology" -> "BRIGHT Biology"; "bright/earth_science" -> "BRIGHT Earth Science". */
 function datasetTitle(dataset: string): string {
+  const bespoke = DATASET_TITLES[dataset.toLowerCase()];
+  if (bespoke) return bespoke;
+  // "obliq-bench-congress" -> "OBLIQ-Bench (Congress)" (wildcard family).
+  if (dataset.toLowerCase().startsWith("obliq-bench-")) {
+    const subset = dataset
+      .slice("obliq-bench-".length)
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+    return `OBLIQ-Bench (${subset})`;
+  }
   const [family, ...rest] = dataset.split("/");
   const familyName = DATASET_FAMILY_NAMES[family.toLowerCase()] ?? family;
   const subset = rest
@@ -77,7 +94,7 @@ function shortSubsetLabel(label: string): string {
   return SUBSET_ABBREV[first.toLowerCase()] ?? first.slice(0, 6);
 }
 
-/** Chart title for an aggregate view: "BRIGHT — Average of 5 Subsets". */
+/** Chart title for an aggregate view: "BRIGHT: Average of 5 Subsets". */
 function aggregateTitle(experiments: CompareExperiment[]): string {
   const datasets = new Set(
     experiments.flatMap((e) => (e.constituents ?? []).map((c) => c.dataset))
@@ -86,13 +103,16 @@ function aggregateTitle(experiments: CompareExperiment[]): string {
   const n = datasets.size;
   if (families.size === 1) {
     const family = DATASET_FAMILY_NAMES[[...families][0]] ?? [...families][0];
-    return `${family} — Average of ${n} Subset${n !== 1 ? "s" : ""}`;
+    return `${family}: Average of ${n} Subset${n !== 1 ? "s" : ""}`;
   }
   return `Average of ${n} Dataset${n !== 1 ? "s" : ""}`;
 }
 
 function formatMetricName(key: string): string {
   let name = key.replace("avg_", "").replace("_mean", "");
+  // The @1 metric is stored under a recall_at_1 key but is computed as
+  // Success@1 (binary hit), so it's displayed under that name.
+  name = name.replace(/recall_at_1(?!\d)/g, "success_at_1");
   name = name.replace(/recall_at_(\d+)/g, "Recall@$1");
   name = name.replace(/nDCG_at_(\d+)/g, "nDCG@$1");
   name = name.replace("nDCG_at_k", "nDCG@10");
@@ -111,7 +131,7 @@ function isTimeMetric(key: string): boolean {
 }
 
 /** True effort levels; other effort tags (hybrid/vector/bm25) are sweep baselines. */
-const CORE_EFFORTS = new Set(["low", "medium", "high"]);
+const CORE_EFFORTS = new Set(["medium", "high", "ultrahigh"]);
 
 /** Friendly names for baseline tags. */
 const BASELINE_LABELS: Record<string, string> = {
@@ -120,7 +140,7 @@ const BASELINE_LABELS: Record<string, string> = {
   bm25: "BM25 Search",
 };
 
-/** "low" -> "effort=low"; baseline tags get their friendly name ("Hybrid Search"). */
+/** "medium" -> "effort=medium"; baseline tags get their friendly name ("Hybrid Search"). */
 function effortDisplay(effort: string | null | undefined): string {
   if (!effort) return "";
   if (CORE_EFFORTS.has(effort)) return `effort=${effort}`;
@@ -235,13 +255,13 @@ function buildMarkdownReport(
     L();
   } else {
     const twoWay = experiments.length === 2;
-    // For a sweep, delta anchors on the actual low/high entries — baselines
-    // (e.g. hybrid) sit before "low" in column order.
-    const iLow = experiments.findIndex((e) => e.effort === "low");
-    const iHigh = experiments.findIndex((e) => e.effort === "high");
+    // For a sweep, delta anchors on the actual medium/ultrahigh entries —
+    // baselines (e.g. hybrid) sit before "medium" in column order.
+    const iLow = experiments.findIndex((e) => e.effort === "medium");
+    const iHigh = experiments.findIndex((e) => e.effort === "ultrahigh");
     const sweepDelta = data.isEffortSweep && iLow !== -1 && iHigh !== -1;
     const showDelta = twoWay || sweepDelta;
-    const deltaLabel = sweepDelta ? "Δ (high − low)" : "Delta";
+    const deltaLabel = sweepDelta ? "Δ (ultrahigh − medium)" : "Delta";
     const header = ["Metric", ...experiments.map((e, i) => reportColLabel(e, i))];
     if (showDelta) header.push(deltaLabel);
     L(`| ${header.join(" | ")} |`);
@@ -283,7 +303,7 @@ function buildMarkdownReport(
     }
     L();
     const deltaNote = sweepDelta
-      ? "Δ = effort high − effort low (▲ improvement, ▼ regression). Values are mean ± std across trials."
+      ? "Δ = effort ultrahigh − effort medium (▲ improvement, ▼ regression). Values are mean ± std across trials."
       : twoWay
         ? "Delta = [2] − [1] (▲ improvement, ▼ regression)."
         : "";
@@ -306,10 +326,10 @@ function buildMarkdownReport(
     });
     L();
 
-    // Speed comparison — 2-way, or low-vs-high effort within a sweep
+    // Speed comparison — 2-way, or medium-vs-ultrahigh effort within a sweep
     // (mirrors the on-page Speed card's delta anchors).
-    const iLowT = experiments.findIndex((e) => e.effort === "low");
-    const iHighT = experiments.findIndex((e) => e.effort === "high");
+    const iLowT = experiments.findIndex((e) => e.effort === "medium");
+    const iHighT = experiments.findIndex((e) => e.effort === "ultrahigh");
     const sweepSpeed = data.isEffortSweep && iLowT !== -1 && iHighT !== -1;
     if (experiments.length === 2 || sweepSpeed) {
       const iA = sweepSpeed ? iLowT : 0;
@@ -523,18 +543,37 @@ interface ChartBar {
   color: string;
 }
 
-/* Effort levels map onto the agent spectrum: low (cyan) → high (green).
-   Baselines (e.g. hybrid) sit outside the sweep, so they take the baseline
-   color: white on dark, blue on light. */
+/* Effort levels: medium (cyan) → high (blue-green) → ultrahigh (sky, raw in
+   both themes). Baselines (e.g. hybrid) sit outside the sweep, so they take
+   the navy baseline color. */
 function effortColor(effort: string | null): string {
-  if (effort === "high") return "var(--color-green)";
-  if (effort === "medium") return "var(--color-blue-green)";
-  if (effort === "low") return "var(--color-cyan)";
+  if (effort === "ultrahigh") return "var(--color-effort-ultrahigh)";
+  if (effort === "high") return "var(--color-blue-green)";
+  if (effort === "medium") return "var(--color-cyan)";
   return "var(--color-baseline)";
 }
 
 function chartSlug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+/** Pseudo-tier key for the chart background in the color pickers. */
+const BG_KEY = "__background__";
+
+/** Resolve a CSS color (hex, rgb, or var()) to "#rrggbb" for the native color
+ *  input, which only accepts hex. Resolution happens inside `scope` so
+ *  theme-scoped variables (e.g. light charts) evaluate correctly. */
+function cssColorToHex(color: string, scope?: HTMLElement | null): string {
+  if (/^#[0-9a-f]{6}$/i.test(color)) return color;
+  if (typeof window === "undefined") return "#888888";
+  const probe = document.createElement("span");
+  probe.style.color = color;
+  (scope ?? document.body).appendChild(probe);
+  const rgb = window.getComputedStyle(probe).color;
+  probe.remove();
+  const m = rgb.match(/\d+/g);
+  if (!m || m.length < 3) return "#888888";
+  return "#" + m.slice(0, 3).map((n) => Number(n).toString(16).padStart(2, "0")).join("");
 }
 
 /** Rasterize a chart card's SVG to a PNG download. Computed styles are inlined
@@ -587,7 +626,9 @@ function exportChartPng(card: HTMLDivElement, svg: SVGSVGElement, title: string)
     if (!ctx) return;
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, width, height);
-    const label = title.toUpperCase();
+    // Eyebrow titles are CSS-uppercased on screen; gradient titles render
+    // their own casing (e.g. "IRPAPERS (Text Only)").
+    const label = gradientTitleFont ? title : title.toUpperCase();
     if (gradientTitleFont) {
       // Mirror the on-screen gradient title: centered, display font, with a
       // left-to-right cyan → green gradient spanning the text.
@@ -629,11 +670,13 @@ function BarChart({
   bars,
   isTime,
   yMax,
+  onBarClick,
 }: {
   title: string;
   bars: ChartBar[];
   isTime: boolean;
   yMax: number;
+  onBarClick?: (index: number) => void;
 }) {
   const W = 280;
   const H = 210;
@@ -708,7 +751,18 @@ function BarChart({
           const whiskerBot = y(Math.max(b.value - std, 0));
           return (
             <g key={i}>
-              <rect x={cx - barW / 2} y={top} width={barW} height={y(0) - top} rx={3} fill={b.color} opacity={0.85} />
+              <rect
+                x={cx - barW / 2}
+                y={top}
+                width={barW}
+                height={y(0) - top}
+                rx={3}
+                fill={b.color}
+                onClick={() => onBarClick?.(i)}
+                style={onBarClick ? { cursor: "pointer" } : undefined}
+              >
+                {onBarClick && <title>Click to change color</title>}
+              </rect>
               {std > 0 && (
                 <g stroke="var(--text-secondary)" strokeWidth={1.2}>
                   <line x1={cx} x2={cx} y1={whiskerTop} y2={whiskerBot} />
@@ -757,6 +811,8 @@ function GroupedBarChart({
   onToggle,
   onReorder,
   experiments,
+  colorFor,
+  onPickColor,
 }: {
   title: string;
   metricKeys: string[];
@@ -764,6 +820,8 @@ function GroupedBarChart({
   onToggle: (key: string) => void;
   onReorder: (keys: string[]) => void;
   experiments: CompareExperiment[];
+  colorFor: (key: string) => string;
+  onPickColor?: (key: string) => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -797,8 +855,9 @@ function GroupedBarChart({
 
   // Legend inside the SVG so PNG export includes it.
   const legendItems = experiments.map((e) => ({
+    key: e.effort ?? e.agent_name,
     label: effortDisplay(e.effort) || e.agent_name,
-    color: effortColor(e.effort),
+    color: colorFor(e.effort ?? e.agent_name),
   }));
   let legendX = M.left;
 
@@ -808,7 +867,7 @@ function GroupedBarChart({
           gradient token) so light mode gets its deepened, legible hues. */}
       <div
         data-chart-title
-        className="text-center text-lg font-bold uppercase mb-2"
+        className="text-center text-lg font-bold mb-2"
         style={{
           fontFamily: "var(--font-display)",
           letterSpacing: "0.08em",
@@ -892,8 +951,13 @@ function GroupedBarChart({
           const x = legendX;
           legendX += item.label.length * 5.4 + 26;
           return (
-            <g key={i}>
-              <rect x={x} y={6} width={9} height={9} rx={2} fill={item.color} opacity={0.85} />
+            <g
+              key={i}
+              onClick={() => onPickColor?.(item.key)}
+              style={onPickColor ? { cursor: "pointer" } : undefined}
+            >
+              {onPickColor && <title>Click to change color</title>}
+              <rect x={x} y={6} width={9} height={9} rx={2} fill={item.color} />
               <text x={x + 13} y={14} fontSize={9} fill="var(--text-secondary)" fontFamily="var(--font-mono)">
                 {item.label}
               </text>
@@ -950,8 +1014,17 @@ function GroupedBarChart({
                 const whiskerBot = y(Math.max(v - std, 0));
                 return (
                   <g key={e.id}>
-                    <rect x={cx - barW / 2} y={top} width={barW} height={y(0) - top} rx={3} fill={effortColor(e.effort)} opacity={0.85}>
-                      <title>{`${effortDisplay(e.effort) || e.agent_name} — ${formatMetricName(k)}: ${(v * 100).toFixed(1)}%${std > 0 ? ` ±${(std * 100).toFixed(1)}%` : ""}`}</title>
+                    <rect
+                      x={cx - barW / 2}
+                      y={top}
+                      width={barW}
+                      height={y(0) - top}
+                      rx={3}
+                      fill={colorFor(e.effort ?? e.agent_name)}
+                      onClick={() => onPickColor?.(e.effort ?? e.agent_name)}
+                      style={onPickColor ? { cursor: "pointer" } : undefined}
+                    >
+                      <title>{`${effortDisplay(e.effort) || e.agent_name} — ${formatMetricName(k)}: ${(v * 100).toFixed(1)}%${std > 0 ? ` ±${(std * 100).toFixed(1)}%` : ""}${onPickColor ? " · click to change color" : ""}`}</title>
                     </rect>
                     {std > 0 && (
                       <g stroke="var(--text-secondary)" strokeWidth={1.2}>
@@ -1002,6 +1075,98 @@ function EffortChartsSection({ data }: { data: CompareData }) {
       else next.add(k);
       return next;
     });
+  // Renders the charts on the light theme regardless of the site theme by
+  // scoping the `.light` variable overrides to the chart container. PNG export
+  // reads computed styles, so downloads pick up the light palette too.
+  const [lightCharts, setLightCharts] = useState<boolean>(
+    () => typeof window !== "undefined" && localStorage.getItem("chartTheme") === "light"
+  );
+  const toggleLightCharts = () =>
+    setLightCharts((prev) => {
+      const next = !prev;
+      try {
+        if (next) localStorage.setItem("chartTheme", "light");
+        else localStorage.removeItem("chartTheme");
+      } catch {
+        // persistence is best-effort
+      }
+      return next;
+    });
+
+  // Custom colors: per-tier overrides (keyed by effort tag or agent name) and
+  // an optional chart background. Both persist in localStorage; PNG exports
+  // pick them up automatically since export reads computed styles.
+  const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      return JSON.parse(localStorage.getItem("chartColorOverrides") ?? "{}");
+    } catch {
+      return {};
+    }
+  });
+  const [bgOverride, setBgOverride] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("chartBgOverride") : null
+  );
+  useEffect(() => {
+    try {
+      localStorage.setItem("chartColorOverrides", JSON.stringify(colorOverrides));
+    } catch {
+      // persistence is best-effort
+    }
+  }, [colorOverrides]);
+  useEffect(() => {
+    try {
+      if (bgOverride) localStorage.setItem("chartBgOverride", bgOverride);
+      else localStorage.removeItem("chartBgOverride");
+    } catch {
+      // persistence is best-effort
+    }
+  }, [bgOverride]);
+
+  const chartAreaRef = useRef<HTMLDivElement>(null);
+  const pickerRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const colorKey = (e: CompareExperiment) => e.effort ?? e.agent_name;
+  const colorFor = (key: string) => colorOverrides[key] ?? effortColor(key);
+  const tierKeys = [...new Set(experiments.map(colorKey))];
+  const tierLabel = (key: string) => {
+    const exp = experiments.find((e) => colorKey(e) === key);
+    return exp ? effortDisplay(exp.effort) || exp.agent_name : key;
+  };
+
+  // Hex form of every tier's current color (and the background). Defaults are
+  // CSS variables, so they only resolve to hex against the live DOM — after
+  // mount and again whenever the palette or chart theme changes.
+  const [hexByKey, setHexByKey] = useState<Record<string, string>>({});
+  const tierKeysSig = tierKeys.join("|");
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    for (const key of tierKeysSig.split("|")) {
+      if (key) next[key] = cssColorToHex(colorOverrides[key] ?? effortColor(key), chartAreaRef.current);
+    }
+    next[BG_KEY] = cssColorToHex(bgOverride ?? "var(--bg-card)", chartAreaRef.current);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hex values are measured from the live DOM (CSS variables), which only exists post-render
+    setHexByKey(next);
+  }, [tierKeysSig, colorOverrides, bgOverride, lightCharts]);
+
+  /** Open the native color picker for a tier key (or BG_KEY), seeded with the
+   *  currently rendered color in hex. */
+  const openPicker = (key: string) => {
+    const input = pickerRefs.current[key];
+    if (!input) return;
+    const current = key === BG_KEY ? bgOverride ?? "var(--bg-card)" : colorFor(key);
+    input.value = hexByKey[key] ?? cssColorToHex(current, chartAreaRef.current);
+    input.click();
+  };
+  const setColor = (key: string, value: string) => {
+    if (key === BG_KEY) setBgOverride(value);
+    else setColorOverrides((prev) => ({ ...prev, [key]: value }));
+  };
+  const hasCustomColors = Object.keys(colorOverrides).length > 0 || bgOverride !== null;
+  const resetColors = () => {
+    setColorOverrides({});
+    setBgOverride(null);
+  };
 
   if (!metricKey) return null;
   const isTime = isTimeMetric(metricKey);
@@ -1010,7 +1175,7 @@ function EffortChartsSection({ data }: { data: CompareData }) {
     label: e.effort ?? e.agent_name,
     value: e.metrics[metricKey],
     std: e.metricsStd?.[metricKey],
-    color: effortColor(e.effort),
+    color: colorFor(colorKey(e)),
   }));
 
   const trialCharts = experiments.map((e) => ({
@@ -1020,7 +1185,7 @@ function EffortChartsSection({ data }: { data: CompareData }) {
       .map((t) => ({
         label: t.label ? shortSubsetLabel(t.label) : `T${t.trial}`,
         value: t.value,
-        color: effortColor(e.effort),
+        color: colorFor(colorKey(e)),
       })) as ChartBar[],
   }));
 
@@ -1057,36 +1222,132 @@ function EffortChartsSection({ data }: { data: CompareData }) {
             </button>
           ))}
         </div>
+        <button
+          onClick={toggleLightCharts}
+          className="brand-btn-secondary ml-auto"
+          aria-pressed={lightCharts}
+          title="Render charts on a light background (PNG downloads follow)"
+          style={
+            lightCharts
+              ? { background: "var(--color-green)", color: "var(--color-navy)", borderColor: "var(--color-green)" }
+              : {}
+          }
+        >
+          ☀ Light charts
+        </button>
       </div>
-      {qualityMetricKeys.length > 1 && (
-        <div className="mb-4">
-          <GroupedBarChart
-            title={data.isAggregate ? aggregateTitle(experiments) : datasetTitle(experiments[0].dataset)}
-            metricKeys={groupedOrder}
-            selected={groupedMetrics}
-            onToggle={toggleGroupedMetric}
-            onReorder={setGroupedOrder}
-            experiments={experiments}
-          />
-        </div>
-      )}
-      <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
-        <BarChart
-          title={`${formatMetricName(metricKey)} — mean ± std`}
-          bars={meanBars}
-          isTime={isTime}
-          yMax={yMax}
-        />
-        {hasTrialCharts &&
-          trialCharts.map((c) => (
-            <BarChart
-              key={c.exp.id}
-              title={`${effortDisplay(c.exp.effort) || "?"} — ${data.isAggregate ? "per dataset" : "per trial"}`}
-              bars={c.bars}
-              isTime={isTime}
-              yMax={yMax}
+      {/* Color pickers: one swatch per tier plus the chart background. Bars and
+          legend entries in the charts below also open these on click. */}
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+          Colors:
+        </span>
+        {tierKeys.map((key) => (
+          <button
+            key={key}
+            onClick={() => openPicker(key)}
+            className="brand-btn-secondary flex items-center gap-1.5"
+            title={`Change the ${tierLabel(key)} bar color`}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 3,
+                background: colorFor(key),
+                display: "inline-block",
+              }}
             />
-          ))}
+            {tierLabel(key)}
+            {hexByKey[key] && (
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                {hexByKey[key]}
+              </span>
+            )}
+          </button>
+        ))}
+        <button
+          onClick={() => openPicker(BG_KEY)}
+          className="brand-btn-secondary flex items-center gap-1.5"
+          title="Change the chart background color"
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: 3,
+              background: bgOverride ?? "var(--bg-card)",
+              border: "1px solid var(--border-default)",
+              display: "inline-block",
+            }}
+          />
+          Background
+          {hexByKey[BG_KEY] && (
+            <span style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+              {hexByKey[BG_KEY]}
+            </span>
+          )}
+        </button>
+        {hasCustomColors && (
+          <button onClick={resetColors} className="brand-btn-secondary" title="Restore default colors">
+            ↺ Reset colors
+          </button>
+        )}
+        {[...tierKeys, BG_KEY].map((key) => (
+          <input
+            key={key}
+            ref={(el) => {
+              pickerRefs.current[key] = el;
+            }}
+            type="color"
+            onInput={(e) => setColor(key, e.currentTarget.value)}
+            aria-hidden
+            tabIndex={-1}
+            style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
+          />
+        ))}
+      </div>
+      <div
+        ref={chartAreaRef}
+        className={lightCharts ? "light" : undefined}
+        style={bgOverride ? ({ "--bg-card": bgOverride } as React.CSSProperties) : undefined}
+      >
+        {qualityMetricKeys.length > 1 && (
+          <div className="mb-4">
+            <GroupedBarChart
+              title={data.isAggregate ? aggregateTitle(experiments) : datasetTitle(experiments[0].dataset)}
+              metricKeys={groupedOrder}
+              selected={groupedMetrics}
+              onToggle={toggleGroupedMetric}
+              onReorder={setGroupedOrder}
+              experiments={experiments}
+              colorFor={colorFor}
+              onPickColor={openPicker}
+            />
+          </div>
+        )}
+        <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+          <BarChart
+            title={`${formatMetricName(metricKey)} — mean ± std`}
+            bars={meanBars}
+            isTime={isTime}
+            yMax={yMax}
+            onBarClick={(i) => openPicker(colorKey(experiments[i]))}
+          />
+          {hasTrialCharts &&
+            trialCharts.map((c) => (
+              <BarChart
+                key={c.exp.id}
+                title={`${effortDisplay(c.exp.effort) || "?"} — ${data.isAggregate ? "per dataset" : "per trial"}`}
+                bars={c.bars}
+                isTime={isTime}
+                yMax={yMax}
+                onBarClick={() => openPicker(colorKey(c.exp))}
+              />
+            ))}
+        </div>
       </div>
     </section>
   );
@@ -1233,10 +1494,10 @@ function ComparePageInner() {
 
   const { metricKeys, experiments } = data;
 
-  // Delta anchors: for a sweep, compare the actual low/high entries (baselines
-  // like hybrid sit before "low" in column order, so first ≠ low).
-  const iLow = experiments.findIndex((e) => e.effort === "low");
-  const iHigh = experiments.findIndex((e) => e.effort === "high");
+  // Delta anchors: for a sweep, compare the actual medium/ultrahigh entries
+  // (baselines like hybrid sit before "medium" in column order, so first ≠ medium).
+  const iLow = experiments.findIndex((e) => e.effort === "medium");
+  const iHigh = experiments.findIndex((e) => e.effort === "ultrahigh");
   const sweepDelta = data.isEffortSweep && iLow !== -1 && iHigh !== -1;
   const showDelta = experiments.length === 2 || sweepDelta;
   const iDeltaA = sweepDelta ? iLow : 0;
@@ -1582,7 +1843,7 @@ function ComparePageInner() {
             </div>
           </div>
 
-          {/* Speed comparison (2-way, or low-vs-high effort in a sweep) */}
+          {/* Speed comparison (2-way, or medium-vs-ultrahigh effort in a sweep) */}
           {showDelta &&
             (() => {
               const timeKey = metricKeys.find((k) => isTimeMetric(k));

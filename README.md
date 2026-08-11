@@ -132,7 +132,7 @@ run_search_eval(
         query_content_key="query",      # property with the search query
         gold_ids_key="gold_doc_ids",    # property with the gold document ids
     ),
-    effort_sweep=True,                  # compare low/medium/high effort + a hybrid-search baseline
+    effort_sweep=True,                  # compare medium/high/ultrahigh effort + a hybrid-search baseline
 )
 ```
 
