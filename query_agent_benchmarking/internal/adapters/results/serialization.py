@@ -64,15 +64,20 @@ def save_trial_results(
     base_path = _build_base_path(config)
     trial_output_path = RESULTS_DIR / f"{base_path}-trial-{trial_number}.json"
 
+    metadata = {
+        "dataset": config["dataset_identifier"],
+        "agent_name": config["agent_name"],
+        "trial_number": trial_number,
+        "total_queries": len(results),
+        "timestamp": datetime.now().isoformat(),
+        "mode": "search",
+    }
+    for key in ("effort", "filtering", "sweep_id"):
+        if config.get(key) is not None:
+            metadata[key] = config[key]
+
     trial_data = {
-        "metadata": {
-            "dataset": config["dataset_identifier"],
-            "agent_name": config["agent_name"],
-            "trial_number": trial_number,
-            "total_queries": len(results),
-            "timestamp": datetime.now().isoformat(),
-            "mode": "search",
-        },
+        "metadata": metadata,
         "queries": [
             _search_query_to_dict(idx, result)
             for idx, result in enumerate(results)
@@ -286,6 +291,12 @@ def save_aggregated_results(
         "batch_size": batch_size,
         "max_concurrent": max_concurrent,
     }
+    # Query Agent search-mode settings, when set. `sweep_id` ties the
+    # low/medium/high runs of one effort sweep together so the console can
+    # group them.
+    for key in ("effort", "filtering", "sweep_id"):
+        if config.get(key) is not None:
+            aggregated_metrics["config"][key] = config[key]
 
     with open(full_output_path, "w") as f:
         json.dump(aggregated_metrics, f, indent=2)

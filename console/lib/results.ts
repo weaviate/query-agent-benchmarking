@@ -14,6 +14,9 @@ export interface TrialMetadata {
   total_misaligned?: number;
   timestamp: string;
   mode: "search" | "ask";
+  effort?: string;
+  filtering?: string;
+  sweep_id?: string;
 }
 
 /**
@@ -103,6 +106,9 @@ export interface AggregatedResultFile {
     use_async: boolean;
     batch_size: number | null;
     max_concurrent: number | null;
+    effort?: string;
+    filtering?: string;
+    sweep_id?: string;
   };
   [key: string]: unknown;
 }
@@ -131,6 +137,12 @@ export interface Experiment {
   mode: "search" | "ask" | "unknown";
   num_trials: number;
   timestamp: string;
+  /** Query Agent search-mode compute effort ("medium" | "high" | "ultrahigh"), when known. */
+  effort: string | null;
+  /** Query Agent search filtering strategy ("recall" | "precision"), when known. */
+  filtering: string | null;
+  /** Shared id tying together the runs of one effort sweep. */
+  sweep_id: string | null;
   aggregated: AggregatedResultFile | null;
   trials: {
     trialNumber: number;
@@ -138,6 +150,15 @@ export interface Experiment {
     metrics: TrialMetricsFile | null;
   }[];
 }
+
+/** Canonical sweep column ordering: the hybrid-search baseline leads as the
+ *  reference point, then the effort levels read medium → ultrahigh. */
+export const EFFORT_RANK: Record<string, number> = {
+  hybrid: 0,
+  medium: 1,
+  high: 2,
+  ultrahigh: 3,
+};
 
 // ============================================================================
 // File loading
@@ -262,6 +283,21 @@ export function loadAllExperiments(): Experiment[] {
       timestamp = group.aggregated.timestamp;
     }
 
+    // Effort-sweep identity: prefer the persisted config/metadata, then fall
+    // back to parsing the run id baked into the filename (older result files
+    // from before effort/sweep_id were persisted).
+    const aggConfig = group.aggregated?.config;
+    let effort = aggConfig?.effort ?? firstTrial?.metadata?.effort ?? null;
+    let sweep_id = aggConfig?.sweep_id ?? firstTrial?.metadata?.sweep_id ?? null;
+    const filtering = aggConfig?.filtering ?? firstTrial?.metadata?.filtering ?? null;
+    if (!effort || !sweep_id) {
+      const m = baseName.match(/-(\d{8}-\d{6})-effort_(medium|high|ultrahigh|hybrid)-results$/);
+      if (m) {
+        sweep_id = sweep_id ?? m[1];
+        effort = effort ?? m[2];
+      }
+    }
+
     const trials = trialNums.map((num) => ({
       trialNumber: num,
       results: group.trialResults[num] || null,
@@ -275,6 +311,9 @@ export function loadAllExperiments(): Experiment[] {
       mode,
       num_trials: Math.max(trialNums.length, group.aggregated?.config?.num_trials || 0),
       timestamp,
+      effort,
+      filtering,
+      sweep_id,
       aggregated: group.aggregated || null,
       trials,
     });
@@ -333,6 +372,7 @@ export interface QueryComparisonExperiment {
   agent_name: string;
   dataset: string;
   mode: "search" | "ask" | "unknown";
+  effort: string | null;
   trialNumber: number | null;
 }
 
@@ -399,6 +439,14 @@ export function buildQueryComparison(ids: string[]): QueryComparison | null {
 
   if (matched.length < 2) return null;
 
+  // Match the compare API's column ordering: baseline first, then medium → ultrahigh.
+  if (
+    matched.every((e) => e.effort != null && e.effort in EFFORT_RANK) &&
+    new Set(matched.map((e) => e.effort)).size === matched.length
+  ) {
+    matched.sort((a, b) => EFFORT_RANK[a.effort!] - EFFORT_RANK[b.effort!]);
+  }
+
   const labels = loadLabels();
   const trials = matched.map(firstTrialWithResults);
 
@@ -408,6 +456,7 @@ export function buildQueryComparison(ids: string[]): QueryComparison | null {
     agent_name: exp.agent_name,
     dataset: exp.dataset,
     mode: exp.mode,
+    effort: exp.effort,
     trialNumber: trials[i]?.trialNumber ?? null,
   }));
 
@@ -574,6 +623,9 @@ export function saveLabel(id: string, label: string): void {
  */
 function formatMetricKey(key: string): string {
   let name = key.replace(/^avg_/, "").replace(/_mean$/, "");
+  // The @1 metric is stored under a recall_at_1 key but is computed as
+  // Success@1 (binary hit), so it's displayed under that name.
+  name = name.replace(/recall_at_1(?!\d)/g, "success_at_1");
   name = name.replace(/recall_at_(\d+)/g, "Recall@$1");
   name = name.replace(/nDCG_at_(\d+)/g, "nDCG@$1");
   name = name.replace(/success_at_(\d+)/g, "Success@$1");

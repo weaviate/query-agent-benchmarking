@@ -78,6 +78,9 @@ def _dispatch_search_loader(dataset_name: str):
         return huggingface_loader.load_reasonir_biology_subset()
     if dataset_name == "browsecomp-plus":
         return huggingface_loader.load_browsecomp_plus()
+    if dataset_name.startswith("obliq-bench-"):
+        subset = dataset_name.split("-", 2)[2]
+        return huggingface_loader.load_obliq_bench(subset=subset)
 
     return None
 

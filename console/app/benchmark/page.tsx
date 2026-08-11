@@ -133,7 +133,7 @@ export default function BenchmarkPage() {
       {status === "success" && (
         <div
           className="rounded-lg p-4 mb-6 flex items-center justify-between"
-          style={{ background: "rgba(97,189,115,0.12)", border: "1px solid var(--color-green)" }}
+          style={{ background: "rgba(1,245,122,0.12)", border: "1px solid var(--color-green)" }}
         >
           <span className="text-sm font-medium" style={{ color: "var(--color-green)" }}>
             Benchmark completed in {elapsed}s
@@ -147,7 +147,7 @@ export default function BenchmarkPage() {
       {status === "error" && (
         <div
           className="rounded-lg p-4 mb-6"
-          style={{ background: "rgba(244,64,78,0.08)", border: "1px solid var(--color-coral)" }}
+          style={{ background: "rgba(255,79,94,0.08)", border: "1px solid var(--color-coral)" }}
         >
           <p className="text-sm font-medium mb-1" style={{ color: "var(--color-coral)" }}>
             Benchmark failed

@@ -211,7 +211,7 @@ function buildExperimentReport(
     L(`| Metric | Value |`);
     L(`| :--- | ---: |`);
     for (const { key, value } of exp.metricEntries) {
-      L(`| ${escPipe(key.replace(/_/g, " "))} | ${escPipe(value)} |`);
+      L(`| ${escPipe(key.replace(/recall_at_1(?!\d)/g, "success_at_1").replace(/_/g, " "))} | ${escPipe(value)} |`);
     }
     L();
   }
@@ -375,7 +375,7 @@ export default function ExperimentDetailPage({
                 Agent: <code style={{ fontFamily: "var(--font-mono)" }}>{experiment.agent_name}</code>
               </span>
               <span className="brand-badge" style={{
-                background: experiment.mode === "search" ? "rgba(122,199,192,0.25)" : "rgba(165,144,221,0.25)",
+                background: experiment.mode === "search" ? "rgba(1,198,201,0.25)" : "rgba(165,144,221,0.25)",
                 color: "#fff",
               }}>
                 {experiment.mode}
@@ -416,7 +416,9 @@ export default function ExperimentDetailPage({
               return (
                 <div key={key} className="brand-card p-4">
                   <div className="eyebrow mb-2">
-                    {key.replace(/_/g, " ")}
+                    {/* recall_at_1 is stored under that key but computed as
+                        Success@1 (binary hit), so it's displayed as success. */}
+                    {key.replace(/recall_at_1(?!\d)/g, "success_at_1").replace(/_/g, " ")}
                   </div>
                   <div className="text-xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
                     {value}
@@ -427,7 +429,7 @@ export default function ExperimentDetailPage({
                         className="h-1.5 rounded-full transition-all"
                         style={{
                           width: `${Math.min(num * 100, 100)}%`,
-                          background: num >= 0.8 ? "var(--color-green)" : num >= 0.5 ? "var(--color-teal)" : "var(--color-coral)",
+                          background: num >= 0.8 ? "var(--color-green)" : num >= 0.5 ? "var(--color-cyan)" : "var(--color-coral)",
                         }}
                       />
                     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, Suspense, useEffect, useState, useMemo } from "react";
+import { Fragment, Suspense, useEffect, useState, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import type {
   QueryComparison,
@@ -9,6 +9,7 @@ import type {
   ComparisonOutcome,
 } from "@/lib/results";
 import { SearchPlan } from "@/app/components/SearchPlan";
+import { EffortBadge } from "@/app/components/EffortBadge";
 
 interface CompareExperiment {
   id: string;
@@ -18,20 +19,104 @@ interface CompareExperiment {
   mode: string;
   num_trials: number;
   timestamp: string;
+  effort: string | null;
   metrics: Record<string, number | null>;
+  metricsStd: Record<string, number | null>;
+  // In aggregate mode each "trial" is one constituent dataset (label set).
+  metricsTrials: Record<string, { trial: number; label?: string; value: number | null }[]>;
+  // Aggregate mode only: the experiments averaged into this group.
+  constituents?: { id: string; dataset: string; label: string }[];
 }
 
 interface CompareData {
   metricKeys: string[];
   experiments: CompareExperiment[];
+  isEffortSweep: boolean;
+  // True when experiments are per-effort averages across datasets.
+  isAggregate?: boolean;
+  // Aggregate mode only: set when the groups don't cover identical dataset sets.
+  warning?: string;
+}
+
+/** Dataset family names with canonical casing for display titles. */
+const DATASET_FAMILY_NAMES: Record<string, string> = {
+  bright: "BRIGHT",
+  beir: "BEIR",
+  lotte: "LoTTe",
+  freshstack: "FreshStack",
+};
+
+/** Bespoke titles for datasets without a family/subset slash. */
+const DATASET_TITLES: Record<string, string> = {
+  irpapers: "IRPAPERS",
+  "irpapers-text-only": "IRPAPERS (Text Only)",
+  wixqa: "WixQA",
+};
+
+/** "bright/biology" -> "BRIGHT Biology"; "bright/earth_science" -> "BRIGHT Earth Science". */
+function datasetTitle(dataset: string): string {
+  const bespoke = DATASET_TITLES[dataset.toLowerCase()];
+  if (bespoke) return bespoke;
+  // "obliq-bench-congress" -> "OBLIQ-Bench (Congress)" (wildcard family).
+  if (dataset.toLowerCase().startsWith("obliq-bench-")) {
+    const subset = dataset
+      .slice("obliq-bench-".length)
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+    return `OBLIQ-Bench (${subset})`;
+  }
+  const [family, ...rest] = dataset.split("/");
+  const familyName = DATASET_FAMILY_NAMES[family.toLowerCase()] ?? family;
+  const subset = rest
+    .join(" ")
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return subset ? `${familyName} ${subset}` : familyName;
+}
+
+/** Compact subset abbreviations that fit under narrow chart bars. */
+const SUBSET_ABBREV: Record<string, string> = {
+  biology: "Bio",
+  earth: "Earth",
+  economics: "Econ",
+  psychology: "Psych",
+  robotics: "Rob",
+  stackoverflow: "SO",
+  sustainable: "Sust",
+  leetcode: "Leet",
+  aops: "AoPS",
+  theoremqa: "ThmQA",
+};
+
+/** "Earth Science" -> "Earth"; unknown names fall back to the first word. */
+function shortSubsetLabel(label: string): string {
+  const first = label.split(/\s+/)[0];
+  return SUBSET_ABBREV[first.toLowerCase()] ?? first.slice(0, 6);
+}
+
+/** Chart title for an aggregate view: "BRIGHT: Average of 5 Subsets". */
+function aggregateTitle(experiments: CompareExperiment[]): string {
+  const datasets = new Set(
+    experiments.flatMap((e) => (e.constituents ?? []).map((c) => c.dataset))
+  );
+  const families = new Set([...datasets].map((d) => d.split("/")[0].toLowerCase()));
+  const n = datasets.size;
+  if (families.size === 1) {
+    const family = DATASET_FAMILY_NAMES[[...families][0]] ?? [...families][0];
+    return `${family}: Average of ${n} Subset${n !== 1 ? "s" : ""}`;
+  }
+  return `Average of ${n} Dataset${n !== 1 ? "s" : ""}`;
 }
 
 function formatMetricName(key: string): string {
   let name = key.replace("avg_", "").replace("_mean", "");
+  // The @1 metric is stored under a recall_at_1 key but is computed as
+  // Success@1 (binary hit), so it's displayed under that name.
+  name = name.replace(/recall_at_1(?!\d)/g, "success_at_1");
   name = name.replace(/recall_at_(\d+)/g, "Recall@$1");
   name = name.replace(/nDCG_at_(\d+)/g, "nDCG@$1");
   name = name.replace("nDCG_at_k", "nDCG@10");
-  name = name.replace(/alpha_nDCG_at_(\d+)/g, "alpha-nDCG@$1");
+  name = name.replace(/alpha_ndcg_at_(\d+)/gi, "alpha-nDCG@$1");
   name = name.replace(/coverage_at_(\d+)/g, "Coverage@$1");
   name = name.replace(/success_at_(\d+)/g, "Success@$1");
   name = name.replace("alignment_score", "Alignment");
@@ -45,17 +130,37 @@ function isTimeMetric(key: string): boolean {
   return key.toLowerCase().includes("time");
 }
 
+/** True effort levels; other effort tags (hybrid/vector/bm25) are sweep baselines. */
+const CORE_EFFORTS = new Set(["medium", "high", "ultrahigh"]);
+
+/** Friendly names for baseline tags. */
+const BASELINE_LABELS: Record<string, string> = {
+  hybrid: "Hybrid Search",
+  vector: "Vector Search",
+  bm25: "BM25 Search",
+};
+
+/** "medium" -> "effort=medium"; baseline tags get their friendly name ("Hybrid Search"). */
+function effortDisplay(effort: string | null | undefined): string {
+  if (!effort) return "";
+  if (CORE_EFFORTS.has(effort)) return `effort=${effort}`;
+  return BASELINE_LABELS[effort] ?? effort;
+}
+
 function displayName(exp: CompareExperiment): string {
-  return exp.label || `${exp.dataset} / ${exp.agent_name}`;
+  if (exp.label) return exp.label;
+  // In an effort sweep all runs share dataset + agent; effort is the differentiator.
+  if (exp.effort) return effortDisplay(exp.effort);
+  return `${exp.dataset} / ${exp.agent_name}`;
 }
 
 /* Brand-aligned experiment colors using secondary palette */
 const EXP_COLORS = [
-  { fg: "var(--color-teal)", bg: "rgba(122,199,192,0.12)" },
+  { fg: "var(--color-cyan)", bg: "rgba(1,198,201,0.12)" },
   { fg: "var(--color-lavender)", bg: "rgba(165,144,221,0.12)" },
   { fg: "var(--color-sky)", bg: "rgba(122,214,235,0.12)" },
-  { fg: "var(--color-mint)", bg: "rgba(188,240,167,0.15)" },
-  { fg: "var(--color-periwinkle)", bg: "rgba(185,200,222,0.15)" },
+  { fg: "var(--color-blue-green)", bg: "rgba(1,222,160,0.15)" },
+  { fg: "var(--text-muted)", bg: "rgba(221,235,242,0.15)" },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -75,14 +180,22 @@ function escPipe(s: string): string {
   return s.replace(/\|/g, "\\|");
 }
 
-function formatMetricValue(key: string, val: number | null): string {
+function formatMetricValue(key: string, val: number | null, std?: number | null): string {
   if (val === null) return "—";
-  return isTimeMetric(key) ? `${val.toFixed(2)}s` : `${(val * 100).toFixed(2)}%`;
+  const base = isTimeMetric(key) ? `${val.toFixed(2)}s` : `${(val * 100).toFixed(2)}%`;
+  if (std != null && std > 0) {
+    return `${base} ±${isTimeMetric(key) ? `${std.toFixed(2)}s` : `${(std * 100).toFixed(2)}%`}`;
+  }
+  return base;
 }
 
 /** Short column header for an experiment in the report (label preferred). */
-function reportColLabel(exp: { label: string; agent_name: string }, i: number): string {
-  return `[${i + 1}] ${escPipe(exp.label || exp.agent_name)}`;
+function reportColLabel(
+  exp: { label: string; agent_name: string; effort?: string | null },
+  i: number
+): string {
+  const name = exp.label || (exp.effort ? effortDisplay(exp.effort) : exp.agent_name);
+  return `[${i + 1}] ${escPipe(name)}`;
 }
 
 /**
@@ -104,17 +217,30 @@ function buildMarkdownReport(
   L();
   L(`_Generated ${generatedAt} · comparing ${experiments.length} experiments_`);
   L();
+  if (data.isAggregate) {
+    L(`_Metrics are macro-averaged across datasets; ± values show the std of the cross-dataset average across trials._`);
+    L();
+    if (data.warning) {
+      L(`> **Warning:** ${data.warning}`);
+      L();
+    }
+  }
 
   // ── Experiments ──────────────────────────────────────────────────────────
   L(`## Experiments`);
   L();
   experiments.forEach((exp, i) => {
-    L(`### [${i + 1}] ${exp.label || `${exp.dataset} / ${exp.agent_name}`}`);
+    L(`### [${i + 1}] ${exp.label || (exp.constituents && exp.effort ? effortDisplay(exp.effort) : `${exp.dataset} / ${exp.agent_name}`)}`);
     L();
     L(`- **Label:** ${exp.label ? exp.label : "_(none assigned)_"}`);
-    L(`- **Dataset:** ${exp.dataset}`);
+    if (exp.constituents) {
+      L(`- **Datasets (${exp.constituents.length}):** ${exp.constituents.map((c) => c.dataset).join(", ")}`);
+    } else {
+      L(`- **Dataset:** ${exp.dataset}`);
+    }
     L(`- **Agent:** \`${exp.agent_name}\``);
     L(`- **Mode:** ${exp.mode}`);
+    if (exp.effort) L(`- **Effort:** ${exp.effort}`);
     L(`- **Trials:** ${exp.num_trials}`);
     L(`- **Timestamp:** ${exp.timestamp ? new Date(exp.timestamp).toLocaleString() : "—"}`);
     L(`- **ID:** \`${decodeURIComponent(exp.id)}\``);
@@ -129,8 +255,15 @@ function buildMarkdownReport(
     L();
   } else {
     const twoWay = experiments.length === 2;
+    // For a sweep, delta anchors on the actual medium/ultrahigh entries —
+    // baselines (e.g. hybrid) sit before "medium" in column order.
+    const iLow = experiments.findIndex((e) => e.effort === "medium");
+    const iHigh = experiments.findIndex((e) => e.effort === "ultrahigh");
+    const sweepDelta = data.isEffortSweep && iLow !== -1 && iHigh !== -1;
+    const showDelta = twoWay || sweepDelta;
+    const deltaLabel = sweepDelta ? "Δ (ultrahigh − medium)" : "Delta";
     const header = ["Metric", ...experiments.map((e, i) => reportColLabel(e, i))];
-    if (twoWay) header.push("Delta");
+    if (showDelta) header.push(deltaLabel);
     L(`| ${header.join(" | ")} |`);
     L(`| ${header.map((_, i) => (i === 0 ? ":---" : "---:")).join(" | ")} |`);
 
@@ -141,14 +274,14 @@ function buildMarkdownReport(
 
       experiments.forEach((exp, i) => {
         const val = exp.metrics[key];
-        let cell = formatMetricValue(key, val);
+        let cell = formatMetricValue(key, val, exp.metricsStd?.[key]);
         if (val !== null && i === best && experiments.length > 1) cell = `**${cell}** ⭐`;
         cells.push(cell);
       });
 
-      if (twoWay) {
-        const v0 = experiments[0].metrics[key];
-        const v1 = experiments[1].metrics[key];
+      if (showDelta) {
+        const v0 = experiments[sweepDelta ? iLow : 0].metrics[key];
+        const v1 = experiments[sweepDelta ? iHigh : 1].metrics[key];
         if (v0 === null || v1 === null) {
           cells.push("—");
         } else {
@@ -169,7 +302,12 @@ function buildMarkdownReport(
       L(`| ${cells.join(" | ")} |`);
     }
     L();
-    L(`⭐ marks the best value for each metric. ${twoWay ? "Delta = [2] − [1] (▲ improvement, ▼ regression)." : ""}`);
+    const deltaNote = sweepDelta
+      ? "Δ = effort ultrahigh − effort medium (▲ improvement, ▼ regression). Values are mean ± std across trials."
+      : twoWay
+        ? "Delta = [2] − [1] (▲ improvement, ▼ regression)."
+        : "";
+    L(`⭐ marks the best value for each metric. ${deltaNote}`);
     L();
   }
 
@@ -188,14 +326,20 @@ function buildMarkdownReport(
     });
     L();
 
-    // Speed comparison (only meaningful for a 2-way comparison).
-    if (experiments.length === 2) {
+    // Speed comparison — 2-way, or medium-vs-ultrahigh effort within a sweep
+    // (mirrors the on-page Speed card's delta anchors).
+    const iLowT = experiments.findIndex((e) => e.effort === "medium");
+    const iHighT = experiments.findIndex((e) => e.effort === "ultrahigh");
+    const sweepSpeed = data.isEffortSweep && iLowT !== -1 && iHighT !== -1;
+    if (experiments.length === 2 || sweepSpeed) {
+      const iA = sweepSpeed ? iLowT : 0;
+      const iB = sweepSpeed ? iHighT : 1;
       const timeKey = metricKeys.find((k) => isTimeMetric(k));
-      const t0 = timeKey ? experiments[0].metrics[timeKey] : null;
-      const t1 = timeKey ? experiments[1].metrics[timeKey] : null;
-      if (t0 !== null && t1 !== null) {
-        const faster = t0 < t1 ? 0 : 1;
-        const slower = 1 - faster;
+      const t0 = timeKey ? experiments[iA].metrics[timeKey] : null;
+      const t1 = timeKey ? experiments[iB].metrics[timeKey] : null;
+      if (timeKey && t0 != null && t1 != null) {
+        const faster = t0 < t1 ? iA : iB;
+        const slower = faster === iA ? iB : iA;
         const speedup = ((Math.max(t0, t1) - Math.min(t0, t1)) / Math.max(t0, t1)) * 100;
         if (speedup >= 0.1) {
           L(`### Speed`);
@@ -206,6 +350,15 @@ function buildMarkdownReport(
               `(${Math.min(t0, t1).toFixed(2)}s vs ${Math.max(t0, t1).toFixed(2)}s).`,
           );
           L();
+          // Sweeps with 3+ columns: list every column's timing so baselines and
+          // mid-tier efforts aren't dropped from the report.
+          if (experiments.length > 2) {
+            experiments.forEach((exp, i) => {
+              const t = exp.metrics[timeKey];
+              L(`- ${reportColLabel(exp, i)}: ${t != null ? `${t.toFixed(2)}s` : "—"}`);
+            });
+            L();
+          }
         }
       }
     }
@@ -379,6 +532,827 @@ function downloadMarkdown(content: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Effort sweep bar charts — hand-rolled SVG, no chart dependency.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+interface ChartBar {
+  label: string;
+  value: number | null;
+  std?: number | null;
+  color: string;
+}
+
+/* Effort levels: medium (cyan) → high (blue-green) → ultrahigh (sky, raw in
+   both themes). Baselines (e.g. hybrid) sit outside the sweep, so they take
+   the navy baseline color. */
+function effortColor(effort: string | null): string {
+  if (effort === "ultrahigh") return "var(--color-effort-ultrahigh)";
+  if (effort === "high") return "var(--color-blue-green)";
+  if (effort === "medium") return "var(--color-cyan)";
+  return "var(--color-baseline)";
+}
+
+function chartSlug(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+/** Pseudo-tier key for the chart background in the color pickers. */
+const BG_KEY = "__background__";
+
+/** Resolve a CSS color (hex, rgb, or var()) to "#rrggbb" for the native color
+ *  input, which only accepts hex. Resolution happens inside `scope` so
+ *  theme-scoped variables (e.g. light charts) evaluate correctly. */
+function cssColorToHex(color: string, scope?: HTMLElement | null): string {
+  if (/^#[0-9a-f]{6}$/i.test(color)) return color;
+  if (typeof window === "undefined") return "#888888";
+  const probe = document.createElement("span");
+  probe.style.color = color;
+  (scope ?? document.body).appendChild(probe);
+  const rgb = window.getComputedStyle(probe).color;
+  probe.remove();
+  const m = rgb.match(/\d+/g);
+  if (!m || m.length < 3) return "#888888";
+  return "#" + m.slice(0, 3).map((n) => Number(n).toString(16).padStart(2, "0")).join("");
+}
+
+/** Rasterize a chart card's SVG to a PNG download. Computed styles are inlined
+ *  onto a clone first — the SVG relies on CSS variables that don't resolve
+ *  outside the page, so a naive serialization would export black-on-black. */
+function exportChartPng(card: HTMLDivElement, svg: SVGSVGElement, title: string) {
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+
+  const srcEls = [svg as SVGElement, ...Array.from(svg.querySelectorAll<SVGElement>("*"))];
+  const dstEls = [clone as SVGElement, ...Array.from(clone.querySelectorAll<SVGElement>("*"))];
+  srcEls.forEach((el, i) => {
+    const cs = window.getComputedStyle(el);
+    const d = dstEls[i];
+    if (el.hasAttribute("fill")) d.setAttribute("fill", cs.fill);
+    if (el.hasAttribute("stroke")) d.setAttribute("stroke", cs.stroke);
+    if (el.tagName === "text") {
+      d.setAttribute("font-family", cs.fontFamily);
+      d.setAttribute("font-size", cs.fontSize);
+      d.setAttribute("font-weight", cs.fontWeight);
+    }
+  });
+
+  const vb = svg.viewBox.baseVal;
+  const scale = 4;
+  const pad = 12;
+  const titleH = 24;
+  const width = (vb.width + pad * 2) * scale;
+  const height = (vb.height + pad * 2 + titleH) * scale;
+
+  const bg = window.getComputedStyle(card).backgroundColor;
+  const eyebrow = card.querySelector(".eyebrow");
+  const titleColor = eyebrow ? window.getComputedStyle(eyebrow).color : "#8896ab";
+  // Cards with a gradient title (marked data-chart-title) get a matching
+  // canvas gradient in the export; CSS background-clip text can't rasterize.
+  const gradientTitleEl = card.querySelector<HTMLElement>("[data-chart-title]");
+  const gradientTitleFont = gradientTitleEl
+    ? window.getComputedStyle(gradientTitleEl).fontFamily
+    : null;
+  const cardStyles = window.getComputedStyle(card);
+  const gradFrom = cardStyles.getPropertyValue("--color-cyan").trim() || "#01C6C9";
+  const gradTo = cardStyles.getPropertyValue("--color-green").trim() || "#01F57A";
+
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, width, height);
+    // Eyebrow titles are CSS-uppercased on screen; gradient titles render
+    // their own casing (e.g. "IRPAPERS (Text Only)").
+    const label = gradientTitleFont ? title : title.toUpperCase();
+    if (gradientTitleFont) {
+      // Mirror the on-screen gradient title: centered, display font, with a
+      // left-to-right cyan → green gradient spanning the text.
+      ctx.font = `700 ${13 * scale}px ${gradientTitleFont}`;
+      const cx = width / 2;
+      const textW = ctx.measureText(label).width;
+      const grad = ctx.createLinearGradient(cx - textW / 2, 0, cx + textW / 2, 0);
+      grad.addColorStop(0, gradFrom);
+      grad.addColorStop(1, gradTo);
+      ctx.fillStyle = grad;
+      ctx.textAlign = "center";
+      ctx.fillText(label, cx, (pad + 11) * scale);
+      ctx.textAlign = "left";
+    } else {
+      ctx.fillStyle = titleColor;
+      ctx.font = `600 ${10 * scale}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+      ctx.fillText(label, pad * scale, (pad + 10) * scale);
+    }
+    ctx.drawImage(img, pad * scale, (pad + titleH) * scale, vb.width * scale, vb.height * scale);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${chartSlug(title)}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  };
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+}
+
+/** One bar chart with optional ± std error whiskers. `yMax` is passed in so
+ *  sibling charts share a y-scale and stay visually comparable. */
+function BarChart({
+  title,
+  bars,
+  isTime,
+  yMax,
+  onBarClick,
+}: {
+  title: string;
+  bars: ChartBar[];
+  isTime: boolean;
+  yMax: number;
+  onBarClick?: (index: number) => void;
+}) {
+  const W = 280;
+  const H = 210;
+  const M = { top: 30, right: 10, bottom: 26, left: 46 };
+  const innerW = W - M.left - M.right;
+  const innerH = H - M.top - M.bottom;
+
+  const y = (v: number) => M.top + innerH - Math.min(Math.max(v, 0) / yMax, 1) * innerH;
+  const slot = innerW / Math.max(bars.length, 1);
+  const barW = Math.min(slot * 0.55, 44);
+
+  const fmtTick = (v: number) => (isTime ? `${v.toFixed(1)}s` : `${(v * 100).toFixed(0)}%`);
+  const fmtVal = (v: number) => (isTime ? `${v.toFixed(2)}s` : `${(v * 100).toFixed(1)}%`);
+
+  const cardRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  return (
+    <div ref={cardRef} className="brand-card p-4">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="eyebrow">{title}</div>
+        <button
+          onClick={() =>
+            cardRef.current && svgRef.current && exportChartPng(cardRef.current, svgRef.current, title)
+          }
+          className="cursor-pointer shrink-0 transition-colors"
+          title="Download chart as PNG"
+          aria-label={`Download ${title} chart as PNG`}
+          style={{ color: "var(--text-muted)", lineHeight: 0, padding: "2px" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-green)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3v12m0 0l-4-4m4 4l4-4" />
+            <path d="M4 21h16" />
+          </svg>
+        </button>
+      </div>
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto" }}>
+        {[0.25, 0.5, 0.75, 1].map((f) => {
+          const v = f * yMax;
+          return (
+            <g key={f}>
+              <line x1={M.left} x2={W - M.right} y1={y(v)} y2={y(v)} stroke="var(--border-subtle)" strokeWidth={1} />
+              <text
+                x={M.left - 6}
+                y={y(v) + 3}
+                textAnchor="end"
+                fontSize={9}
+                fill="var(--text-muted)"
+                fontFamily="var(--font-mono)"
+              >
+                {fmtTick(v)}
+              </text>
+            </g>
+          );
+        })}
+        <line x1={M.left} x2={W - M.right} y1={y(0)} y2={y(0)} stroke="var(--border-default)" strokeWidth={1} />
+
+        {bars.map((b, i) => {
+          const cx = M.left + slot * i + slot / 2;
+          if (b.value == null) {
+            return (
+              <text key={i} x={cx} y={y(0) - 6} textAnchor="middle" fontSize={10} fill="var(--text-muted)">
+                --
+              </text>
+            );
+          }
+          const std = b.std ?? 0;
+          const top = y(b.value);
+          const whiskerTop = y(b.value + std);
+          const whiskerBot = y(Math.max(b.value - std, 0));
+          return (
+            <g key={i}>
+              <rect
+                x={cx - barW / 2}
+                y={top}
+                width={barW}
+                height={y(0) - top}
+                rx={3}
+                fill={b.color}
+                onClick={() => onBarClick?.(i)}
+                style={onBarClick ? { cursor: "pointer" } : undefined}
+              >
+                {onBarClick && <title>Click to change color</title>}
+              </rect>
+              {std > 0 && (
+                <g stroke="var(--text-secondary)" strokeWidth={1.2}>
+                  <line x1={cx} x2={cx} y1={whiskerTop} y2={whiskerBot} />
+                  <line x1={cx - 5} x2={cx + 5} y1={whiskerTop} y2={whiskerTop} />
+                  <line x1={cx - 5} x2={cx + 5} y1={whiskerBot} y2={whiskerBot} />
+                </g>
+              )}
+              <text
+                x={cx}
+                y={Math.min(top, whiskerTop) - 6}
+                textAnchor="middle"
+                fontSize={9.5}
+                fontWeight={600}
+                fill="var(--text-primary)"
+                fontFamily="var(--font-mono)"
+              >
+                {fmtVal(b.value)}
+              </text>
+              <text x={cx} y={H - 8} textAnchor="middle" fontSize={10} fill="var(--text-secondary)">
+                {b.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+/** Move one element of `arr` from index `from` to index `to`. */
+function moveItem<T>(arr: T[], from: number, to: number): T[] {
+  const next = [...arr];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
+
+/** All quality metrics in one plot: metric groups on the x-axis, one bar per
+ *  experiment (colored by effort tier) within each group. Time metrics are
+ *  excluded — they'd need a second axis. Chips in the header toggle which
+ *  metrics are plotted; drag a chip to reorder the groups left-to-right. */
+function GroupedBarChart({
+  title,
+  metricKeys,
+  selected,
+  onToggle,
+  onReorder,
+  experiments,
+  colorFor,
+  onPickColor,
+}: {
+  title: string;
+  metricKeys: string[];
+  selected: Set<string>;
+  onToggle: (key: string) => void;
+  onReorder: (keys: string[]) => void;
+  experiments: CompareExperiment[];
+  colorFor: (key: string) => string;
+  onPickColor?: (key: string) => void;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  // Index of the chip being dragged; live-reordered on drag-enter so the
+  // chart previews the new order mid-drag.
+  const dragIdx = useRef<number | null>(null);
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
+
+  const activeKeys = metricKeys.filter((k) => selected.has(k));
+
+  const barW = 22;
+  const barGap = 5;
+  const groupPad = 22;
+  const groupW = experiments.length * (barW + barGap) - barGap + groupPad;
+  const M = { top: 40, right: 12, bottom: 26, left: 46 };
+  const W = M.left + M.right + activeKeys.length * groupW;
+  const H = 250;
+  const innerH = H - M.top - M.bottom;
+
+  const allValues = activeKeys.flatMap((k) =>
+    experiments.flatMap((e) => {
+      const v = e.metrics[k];
+      return v !== null && v !== undefined ? [v + (e.metricsStd?.[k] ?? 0)] : [];
+    })
+  );
+  const hasData = allValues.length > 0 && Math.max(...allValues) > 0;
+  // Fixed 0–100% axis so effort sweeps are comparable across charts and runs.
+  const yMax = 1;
+
+  const y = (v: number) => M.top + innerH - Math.min(Math.max(v, 0) / yMax, 1) * innerH;
+
+  // Legend inside the SVG so PNG export includes it.
+  const legendItems = experiments.map((e) => ({
+    key: e.effort ?? e.agent_name,
+    label: effortDisplay(e.effort) || e.agent_name,
+    color: colorFor(e.effort ?? e.agent_name),
+  }));
+  let legendX = M.left;
+
+  return (
+    <div ref={cardRef} className="brand-card p-4" style={{ gridColumn: "1 / -1" }}>
+      {/* Centered gradient title. Built from the theme color vars (not the raw
+          gradient token) so light mode gets its deepened, legible hues. */}
+      <div
+        data-chart-title
+        className="text-center text-lg font-bold mb-2"
+        style={{
+          fontFamily: "var(--font-display)",
+          letterSpacing: "0.08em",
+          background: "linear-gradient(45deg, var(--color-cyan), var(--color-green))",
+          WebkitBackgroundClip: "text",
+          backgroundClip: "text",
+          color: "transparent",
+        }}
+      >
+        {title}
+      </div>
+      <div className="flex items-center justify-center gap-2 mb-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex gap-1 flex-wrap">
+            {metricKeys.map((k, i) => {
+              const active = selected.has(k);
+              return (
+                <button
+                  key={k}
+                  onClick={() => onToggle(k)}
+                  className="brand-btn-secondary"
+                  title={`${active ? `Remove ${formatMetricName(k)} from chart` : `Add ${formatMetricName(k)} to chart`} · drag to reorder`}
+                  aria-pressed={active}
+                  draggable
+                  onDragStart={(e) => {
+                    dragIdx.current = i;
+                    setDraggingKey(k);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDragEnter={() => {
+                    const from = dragIdx.current;
+                    if (from !== null && from !== i) {
+                      onReorder(moveItem(metricKeys, from, i));
+                      dragIdx.current = i;
+                    }
+                  }}
+                  onDragEnd={() => {
+                    dragIdx.current = null;
+                    setDraggingKey(null);
+                  }}
+                  style={{
+                    cursor: draggingKey === k ? "grabbing" : "grab",
+                    ...(active
+                      ? { background: "var(--color-green)", color: "var(--color-navy)", borderColor: "var(--color-green)" }
+                      : { opacity: 0.6 }),
+                    ...(draggingKey === k ? { opacity: 0.4 } : {}),
+                  }}
+                >
+                  {formatMetricName(k)}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={() =>
+              cardRef.current && svgRef.current && exportChartPng(cardRef.current, svgRef.current, title)
+            }
+            className="cursor-pointer shrink-0 transition-colors"
+            title="Download chart as PNG"
+            aria-label={`Download ${title} chart as PNG`}
+            style={{ color: "var(--text-muted)", lineHeight: 0, padding: "2px" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--color-green)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3v12m0 0l-4-4m4 4l4-4" />
+              <path d="M4 21h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      {!hasData && (
+        <div className="py-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+          Select at least one metric to plot.
+        </div>
+      )}
+      {hasData && (
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", maxWidth: W * 2 }}>
+        {legendItems.map((item, i) => {
+          const x = legendX;
+          legendX += item.label.length * 5.4 + 26;
+          return (
+            <g
+              key={i}
+              onClick={() => onPickColor?.(item.key)}
+              style={onPickColor ? { cursor: "pointer" } : undefined}
+            >
+              {onPickColor && <title>Click to change color</title>}
+              <rect x={x} y={6} width={9} height={9} rx={2} fill={item.color} />
+              <text x={x + 13} y={14} fontSize={9} fill="var(--text-secondary)" fontFamily="var(--font-mono)">
+                {item.label}
+              </text>
+            </g>
+          );
+        })}
+
+        {[0.25, 0.5, 0.75, 1].map((f) => {
+          const v = f * yMax;
+          return (
+            <g key={f}>
+              <line x1={M.left} x2={W - M.right} y1={y(v)} y2={y(v)} stroke="var(--border-subtle)" strokeWidth={1} />
+              <text
+                x={M.left - 6}
+                y={y(v) + 3}
+                textAnchor="end"
+                fontSize={9}
+                fill="var(--text-muted)"
+                fontFamily="var(--font-mono)"
+              >
+                {`${(v * 100).toFixed(0)}%`}
+              </text>
+            </g>
+          );
+        })}
+        <line x1={M.left} x2={W - M.right} y1={y(0)} y2={y(0)} stroke="var(--border-default)" strokeWidth={1} />
+
+        {activeKeys.map((k, gi) => {
+          const groupX = M.left + groupW * gi + groupPad / 2;
+          return (
+            <g key={k}>
+              <text
+                x={groupX + (groupW - groupPad) / 2}
+                y={H - 8}
+                textAnchor="middle"
+                fontSize={10}
+                fill="var(--text-secondary)"
+              >
+                {formatMetricName(k)}
+              </text>
+              {experiments.map((e, bi) => {
+                const v = e.metrics[k];
+                const cx = groupX + bi * (barW + barGap) + barW / 2;
+                if (v === null || v === undefined) {
+                  return (
+                    <text key={e.id} x={cx} y={y(0) - 6} textAnchor="middle" fontSize={9} fill="var(--text-muted)">
+                      --
+                    </text>
+                  );
+                }
+                const std = e.metricsStd?.[k] ?? 0;
+                const top = y(v);
+                const whiskerTop = y(v + std);
+                const whiskerBot = y(Math.max(v - std, 0));
+                return (
+                  <g key={e.id}>
+                    <rect
+                      x={cx - barW / 2}
+                      y={top}
+                      width={barW}
+                      height={y(0) - top}
+                      rx={3}
+                      fill={colorFor(e.effort ?? e.agent_name)}
+                      onClick={() => onPickColor?.(e.effort ?? e.agent_name)}
+                      style={onPickColor ? { cursor: "pointer" } : undefined}
+                    >
+                      <title>{`${effortDisplay(e.effort) || e.agent_name} — ${formatMetricName(k)}: ${(v * 100).toFixed(1)}%${std > 0 ? ` ±${(std * 100).toFixed(1)}%` : ""}${onPickColor ? " · click to change color" : ""}`}</title>
+                    </rect>
+                    {std > 0 && (
+                      <g stroke="var(--text-secondary)" strokeWidth={1.2}>
+                        <line x1={cx} x2={cx} y1={whiskerTop} y2={whiskerBot} />
+                        <line x1={cx - 4} x2={cx + 4} y1={whiskerTop} y2={whiskerTop} />
+                        <line x1={cx - 4} x2={cx + 4} y1={whiskerBot} y2={whiskerBot} />
+                      </g>
+                    )}
+                    <text
+                      x={cx}
+                      y={Math.min(top, whiskerTop) - 5}
+                      textAnchor="middle"
+                      fontSize={8}
+                      fontWeight={600}
+                      fill="var(--text-primary)"
+                      fontFamily="var(--font-mono)"
+                    >
+                      {(v * 100).toFixed(1)}
+                    </text>
+                  </g>
+                );
+              })}
+            </g>
+          );
+        })}
+      </svg>
+      )}
+    </div>
+  );
+}
+
+function EffortChartsSection({ data }: { data: CompareData }) {
+  const { metricKeys, experiments } = data;
+  const qualityMetricKeys = metricKeys.filter((k) => !isTimeMetric(k));
+  const [metricKey, setMetricKey] = useState<string>(
+    () => metricKeys.find((k) => !isTimeMetric(k)) ?? metricKeys[0] ?? ""
+  );
+  // Metrics included in the grouped "all metrics" chart (all quality metrics by default).
+  const [groupedMetrics, setGroupedMetrics] = useState<Set<string>>(
+    () => new Set(qualityMetricKeys)
+  );
+  // Left-to-right order of metric groups in the grouped chart (drag chips to change).
+  const [groupedOrder, setGroupedOrder] = useState<string[]>(() => [...qualityMetricKeys]);
+  const toggleGroupedMetric = (k: string) =>
+    setGroupedMetrics((prev) => {
+      const next = new Set(prev);
+      if (next.has(k)) next.delete(k);
+      else next.add(k);
+      return next;
+    });
+  // Renders the charts on the light theme regardless of the site theme by
+  // scoping the `.light` variable overrides to the chart container. PNG export
+  // reads computed styles, so downloads pick up the light palette too.
+  const [lightCharts, setLightCharts] = useState<boolean>(
+    () => typeof window !== "undefined" && localStorage.getItem("chartTheme") === "light"
+  );
+  const toggleLightCharts = () =>
+    setLightCharts((prev) => {
+      const next = !prev;
+      try {
+        if (next) localStorage.setItem("chartTheme", "light");
+        else localStorage.removeItem("chartTheme");
+      } catch {
+        // persistence is best-effort
+      }
+      return next;
+    });
+
+  // Custom colors: per-tier overrides (keyed by effort tag or agent name) and
+  // an optional chart background. Both persist in localStorage; PNG exports
+  // pick them up automatically since export reads computed styles.
+  const [colorOverrides, setColorOverrides] = useState<Record<string, string>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      return JSON.parse(localStorage.getItem("chartColorOverrides") ?? "{}");
+    } catch {
+      return {};
+    }
+  });
+  const [bgOverride, setBgOverride] = useState<string | null>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("chartBgOverride") : null
+  );
+  useEffect(() => {
+    try {
+      localStorage.setItem("chartColorOverrides", JSON.stringify(colorOverrides));
+    } catch {
+      // persistence is best-effort
+    }
+  }, [colorOverrides]);
+  useEffect(() => {
+    try {
+      if (bgOverride) localStorage.setItem("chartBgOverride", bgOverride);
+      else localStorage.removeItem("chartBgOverride");
+    } catch {
+      // persistence is best-effort
+    }
+  }, [bgOverride]);
+
+  const chartAreaRef = useRef<HTMLDivElement>(null);
+  const pickerRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const colorKey = (e: CompareExperiment) => e.effort ?? e.agent_name;
+  const colorFor = (key: string) => colorOverrides[key] ?? effortColor(key);
+  const tierKeys = [...new Set(experiments.map(colorKey))];
+  const tierLabel = (key: string) => {
+    const exp = experiments.find((e) => colorKey(e) === key);
+    return exp ? effortDisplay(exp.effort) || exp.agent_name : key;
+  };
+
+  // Hex form of every tier's current color (and the background). Defaults are
+  // CSS variables, so they only resolve to hex against the live DOM — after
+  // mount and again whenever the palette or chart theme changes.
+  const [hexByKey, setHexByKey] = useState<Record<string, string>>({});
+  const tierKeysSig = tierKeys.join("|");
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    for (const key of tierKeysSig.split("|")) {
+      if (key) next[key] = cssColorToHex(colorOverrides[key] ?? effortColor(key), chartAreaRef.current);
+    }
+    next[BG_KEY] = cssColorToHex(bgOverride ?? "var(--bg-card)", chartAreaRef.current);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hex values are measured from the live DOM (CSS variables), which only exists post-render
+    setHexByKey(next);
+  }, [tierKeysSig, colorOverrides, bgOverride, lightCharts]);
+
+  /** Open the native color picker for a tier key (or BG_KEY), seeded with the
+   *  currently rendered color in hex. */
+  const openPicker = (key: string) => {
+    const input = pickerRefs.current[key];
+    if (!input) return;
+    const current = key === BG_KEY ? bgOverride ?? "var(--bg-card)" : colorFor(key);
+    input.value = hexByKey[key] ?? cssColorToHex(current, chartAreaRef.current);
+    input.click();
+  };
+  const setColor = (key: string, value: string) => {
+    if (key === BG_KEY) setBgOverride(value);
+    else setColorOverrides((prev) => ({ ...prev, [key]: value }));
+  };
+  const hasCustomColors = Object.keys(colorOverrides).length > 0 || bgOverride !== null;
+  const resetColors = () => {
+    setColorOverrides({});
+    setBgOverride(null);
+  };
+
+  if (!metricKey) return null;
+  const isTime = isTimeMetric(metricKey);
+
+  const meanBars: ChartBar[] = experiments.map((e) => ({
+    label: e.effort ?? e.agent_name,
+    value: e.metrics[metricKey],
+    std: e.metricsStd?.[metricKey],
+    color: colorFor(colorKey(e)),
+  }));
+
+  const trialCharts = experiments.map((e) => ({
+    exp: e,
+    bars: (e.metricsTrials?.[metricKey] ?? [])
+      .filter((t) => t.value !== null)
+      .map((t) => ({
+        label: t.label ? shortSubsetLabel(t.label) : `T${t.trial}`,
+        value: t.value,
+        color: colorFor(colorKey(e)),
+      })) as ChartBar[],
+  }));
+
+  // Percent metrics use a fixed 0–100% axis so charts are comparable across
+  // metrics and runs; time metrics have no natural ceiling, so they scale.
+  const allValues = [
+    ...meanBars.flatMap((b) => (b.value !== null ? [b.value + (b.std ?? 0)] : [])),
+    ...trialCharts.flatMap((c) => c.bars.map((b) => b.value ?? 0)),
+  ];
+  if (allValues.length === 0 || Math.max(...allValues) <= 0) return null;
+  const yMax = isTime ? Math.max(...allValues) * 1.15 : 1;
+
+  const hasTrialCharts = trialCharts.some((c) => c.bars.length > 1);
+
+  return (
+    <section className="mb-10">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <h2 className="text-lg font-bold" style={{ fontFamily: "var(--font-display)" }}>
+          Charts
+        </h2>
+        <div className="flex gap-1 flex-wrap">
+          {metricKeys.map((k) => (
+            <button
+              key={k}
+              onClick={() => setMetricKey(k)}
+              className="brand-btn-secondary"
+              style={
+                metricKey === k
+                  ? { background: "var(--color-green)", color: "var(--color-navy)", borderColor: "var(--color-green)" }
+                  : {}
+              }
+            >
+              {formatMetricName(k)}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={toggleLightCharts}
+          className="brand-btn-secondary ml-auto"
+          aria-pressed={lightCharts}
+          title="Render charts on a light background (PNG downloads follow)"
+          style={
+            lightCharts
+              ? { background: "var(--color-green)", color: "var(--color-navy)", borderColor: "var(--color-green)" }
+              : {}
+          }
+        >
+          ☀ Light charts
+        </button>
+      </div>
+      {/* Color pickers: one swatch per tier plus the chart background. Bars and
+          legend entries in the charts below also open these on click. */}
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+          Colors:
+        </span>
+        {tierKeys.map((key) => (
+          <button
+            key={key}
+            onClick={() => openPicker(key)}
+            className="brand-btn-secondary flex items-center gap-1.5"
+            title={`Change the ${tierLabel(key)} bar color`}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 3,
+                background: colorFor(key),
+                display: "inline-block",
+              }}
+            />
+            {tierLabel(key)}
+            {hexByKey[key] && (
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+                {hexByKey[key]}
+              </span>
+            )}
+          </button>
+        ))}
+        <button
+          onClick={() => openPicker(BG_KEY)}
+          className="brand-btn-secondary flex items-center gap-1.5"
+          title="Change the chart background color"
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: 3,
+              background: bgOverride ?? "var(--bg-card)",
+              border: "1px solid var(--border-default)",
+              display: "inline-block",
+            }}
+          />
+          Background
+          {hexByKey[BG_KEY] && (
+            <span style={{ fontFamily: "var(--font-mono)", color: "var(--text-muted)" }}>
+              {hexByKey[BG_KEY]}
+            </span>
+          )}
+        </button>
+        {hasCustomColors && (
+          <button onClick={resetColors} className="brand-btn-secondary" title="Restore default colors">
+            ↺ Reset colors
+          </button>
+        )}
+        {[...tierKeys, BG_KEY].map((key) => (
+          <input
+            key={key}
+            ref={(el) => {
+              pickerRefs.current[key] = el;
+            }}
+            type="color"
+            onInput={(e) => setColor(key, e.currentTarget.value)}
+            aria-hidden
+            tabIndex={-1}
+            style={{ position: "absolute", width: 0, height: 0, opacity: 0, pointerEvents: "none" }}
+          />
+        ))}
+      </div>
+      <div
+        ref={chartAreaRef}
+        className={lightCharts ? "light" : undefined}
+        style={bgOverride ? ({ "--bg-card": bgOverride } as React.CSSProperties) : undefined}
+      >
+        {qualityMetricKeys.length > 1 && (
+          <div className="mb-4">
+            <GroupedBarChart
+              title={data.isAggregate ? aggregateTitle(experiments) : datasetTitle(experiments[0].dataset)}
+              metricKeys={groupedOrder}
+              selected={groupedMetrics}
+              onToggle={toggleGroupedMetric}
+              onReorder={setGroupedOrder}
+              experiments={experiments}
+              colorFor={colorFor}
+              onPickColor={openPicker}
+            />
+          </div>
+        )}
+        <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+          <BarChart
+            title={`${formatMetricName(metricKey)} — mean ± std`}
+            bars={meanBars}
+            isTime={isTime}
+            yMax={yMax}
+            onBarClick={(i) => openPicker(colorKey(experiments[i]))}
+          />
+          {hasTrialCharts &&
+            trialCharts.map((c) => (
+              <BarChart
+                key={c.exp.id}
+                title={`${effortDisplay(c.exp.effort) || "?"} — ${data.isAggregate ? "per dataset" : "per trial"}`}
+                bars={c.bars}
+                isTime={isTime}
+                yMax={yMax}
+                onBarClick={() => openPicker(colorKey(c.exp))}
+              />
+            ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function ComparePage() {
   return (
     <Suspense
@@ -394,10 +1368,21 @@ export default function ComparePage() {
 function ComparePageInner() {
   const searchParams = useSearchParams();
   const ids = searchParams.get("ids") ?? "";
+  const aggregate = searchParams.get("aggregate") === "1";
   const [data, setData] = useState<CompareData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  // Metric rows expanded to show their per-trial breakdown.
+  const [expandedMetrics, setExpandedMetrics] = useState<Set<string>>(new Set());
+
+  const toggleMetric = (key: string) =>
+    setExpandedMetrics((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   useEffect(() => {
     if (!ids) {
@@ -405,14 +1390,14 @@ function ComparePageInner() {
       setLoading(false);
       return;
     }
-    fetch(`/api/compare?ids=${ids}`)
+    fetch(`/api/compare?ids=${ids}${aggregate ? "&aggregate=1" : ""}`)
       .then((r) => {
         if (!r.ok) throw new Error("Failed to load comparison data");
         return r.json();
       })
       .then((d) => { setData(d); setLoading(false); })
       .catch((e) => { setError(e.message); setLoading(false); });
-  }, [ids]);
+  }, [ids, aggregate]);
 
   const analysis = useMemo(() => {
     if (!data) return null;
@@ -460,17 +1445,28 @@ function ComparePageInner() {
       // the user expanded the per-query section. It's optional — if it fails
       // we still export the metrics + analysis.
       let queries: QueryComparison | null = null;
-      try {
-        const r = await fetch(`/api/compare/queries?ids=${ids}`);
-        if (r.ok) queries = (await r.json()) as QueryComparison;
-      } catch {
-        // per-query analysis is best-effort
+      if (!data.isAggregate) {
+        try {
+          const r = await fetch(`/api/compare/queries?ids=${ids}`);
+          if (r.ok) queries = (await r.json()) as QueryComparison;
+        } catch {
+          // per-query analysis is best-effort
+        }
       }
 
       const now = new Date();
       const md = buildMarkdownReport(data, analysis, queries, now.toLocaleString());
-      const stamp = now.toISOString().slice(0, 10);
-      downloadMarkdown(md, `experiment-comparison-${stamp}.md`);
+      // Unique filename: report kind + dataset (when shared) + date-and-time
+      // stamp so multiple exports on the same day don't collide.
+      const stamp = now.toISOString().slice(0, 19).replace(/[T:]/g, "-");
+      const kind = data.isEffortSweep ? "effort-sweep" : "experiment-comparison";
+      const datasets = new Set(data.experiments.map((e) => e.dataset));
+      const scope = data.isAggregate
+        ? "averaged"
+        : datasets.size === 1
+          ? chartSlug(data.experiments[0].dataset)
+          : "";
+      downloadMarkdown(md, [kind, scope, stamp].filter(Boolean).join("-") + ".md");
     } finally {
       setExporting(false);
     }
@@ -498,6 +1494,15 @@ function ComparePageInner() {
 
   const { metricKeys, experiments } = data;
 
+  // Delta anchors: for a sweep, compare the actual medium/ultrahigh entries
+  // (baselines like hybrid sit before "medium" in column order, so first ≠ medium).
+  const iLow = experiments.findIndex((e) => e.effort === "medium");
+  const iHigh = experiments.findIndex((e) => e.effort === "ultrahigh");
+  const sweepDelta = data.isEffortSweep && iLow !== -1 && iHigh !== -1;
+  const showDelta = experiments.length === 2 || sweepDelta;
+  const iDeltaA = sweepDelta ? iLow : 0;
+  const iDeltaB = sweepDelta ? iHigh : 1;
+
   return (
     <div>
       {/* ── Breadcrumb ───────────────────────────────────────────────────── */}
@@ -510,9 +1515,29 @@ function ComparePageInner() {
       </nav>
 
       <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
-          Compare Experiments
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-display)" }}>
+            {data.isAggregate
+              ? data.isEffortSweep
+                ? "Effort Sweep — Averaged"
+                : "Averaged Comparison"
+              : data.isEffortSweep
+                ? "Effort Sweep"
+                : "Compare Experiments"}
+          </h1>
+          {data.isAggregate && (
+            <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+              Metrics macro-averaged across{" "}
+              {new Set(experiments.flatMap((e) => (e.constituents ?? []).map((c) => c.dataset))).size}{" "}
+              datasets · error bars show std across trials
+            </p>
+          )}
+          {!data.isAggregate && data.isEffortSweep && (
+            <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+              Same benchmark at increasing search-mode compute effort ({experiments.map((e) => e.effort).join(" → ")})
+            </p>
+          )}
+        </div>
         <button
           onClick={handleExport}
           disabled={exporting}
@@ -523,6 +1548,16 @@ function ComparePageInner() {
           {exporting ? "Exporting…" : "↓ Export Report"}
         </button>
       </div>
+
+      {/* ── Unbalanced-aggregate warning ──────────────────────────────────── */}
+      {data.isAggregate && data.warning && (
+        <div
+          className="brand-card p-4 mb-6 text-sm"
+          style={{ color: "var(--color-warn)", background: "rgba(255,199,44,0.08)" }}
+        >
+          {data.warning}
+        </div>
+      )}
 
       {/* ── Experiment legend ─────────────────────────────────────────────── */}
       <div
@@ -535,7 +1570,7 @@ function ComparePageInner() {
             <div
               key={exp.id}
               className="brand-card p-5"
-              style={{ borderLeft: `3px solid ${c.fg.replace("var(", "").replace(")", "")}` }}
+              style={{ borderLeft: `3px solid ${c.fg}` }}
             >
               <div className="flex items-center gap-2 mb-2">
                 <span
@@ -547,22 +1582,37 @@ function ComparePageInner() {
                 <span className="font-semibold text-sm" style={{ fontFamily: "var(--font-display)" }}>
                   {displayName(exp)}
                 </span>
+                <EffortBadge effort={exp.effort} />
               </div>
-              {exp.label && (
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  {exp.dataset} &middot;{" "}
-                  <span style={{ fontFamily: "var(--font-mono)" }}>{exp.agent_name}</span>
-                </p>
+              {exp.constituents ? (
+                <>
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    Average of {exp.constituents.length} experiments &middot;{" "}
+                    <span style={{ fontFamily: "var(--font-mono)" }}>{exp.agent_name}</span>
+                  </p>
+                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                    {exp.constituents.map((c) => datasetTitle(c.dataset)).join(" · ")}
+                  </p>
+                </>
+              ) : (
+                <>
+                  {exp.label && (
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      {exp.dataset} &middot;{" "}
+                      <span style={{ fontFamily: "var(--font-mono)" }}>{exp.agent_name}</span>
+                    </p>
+                  )}
+                  {!exp.label && (
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      Agent: <span style={{ fontFamily: "var(--font-mono)" }}>{exp.agent_name}</span>
+                    </p>
+                  )}
+                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                    {exp.num_trials} trials &middot;{" "}
+                    {exp.timestamp ? new Date(exp.timestamp).toLocaleString() : "--"}
+                  </p>
+                </>
               )}
-              {!exp.label && (
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  Agent: <span style={{ fontFamily: "var(--font-mono)" }}>{exp.agent_name}</span>
-                </p>
-              )}
-              <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                {exp.num_trials} trials &middot;{" "}
-                {exp.timestamp ? new Date(exp.timestamp).toLocaleString() : "--"}
-              </p>
             </div>
           );
         })}
@@ -585,21 +1635,51 @@ function ComparePageInner() {
                       <span className="brand-badge mr-1" style={{ background: c.bg, color: c.fg, fontWeight: 700 }}>
                         {i + 1}
                       </span>
-                      {exp.label || exp.agent_name}
+                      {data.isEffortSweep ? (
+                        <EffortBadge effort={exp.effort} />
+                      ) : (
+                        exp.label || exp.agent_name
+                      )}
                     </th>
                   );
                 })}
-                {experiments.length === 2 && <th className="text-right">Delta</th>}
+                {showDelta && (
+                  <th className="text-right">{sweepDelta ? "Δ high−low" : "Delta"}</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {metricKeys.map((key) => {
                 const isTime = isTimeMetric(key);
                 const best = analysis?.metricAnalysis[key].bestIdx ?? null;
+                const hasTrials = experiments.some(
+                  (e) => (e.metricsTrials?.[key] ?? []).filter((t) => t.value !== null).length > 1
+                );
+                const open = expandedMetrics.has(key);
 
                 return (
-                  <tr key={key}>
-                    <td className="font-semibold">{formatMetricName(key)}</td>
+                  <Fragment key={key}>
+                  <tr
+                    onClick={hasTrials ? () => toggleMetric(key) : undefined}
+                    style={hasTrials ? { cursor: "pointer" } : undefined}
+                    title={hasTrials ? "Click to show per-trial results" : undefined}
+                  >
+                    <td className="font-semibold">
+                      {hasTrials && (
+                        <span
+                          className="mr-1.5 inline-block"
+                          style={{
+                            transition: "transform 0.15s",
+                            transform: open ? "rotate(90deg)" : "none",
+                            color: "var(--text-muted)",
+                            fontSize: "0.6rem",
+                          }}
+                        >
+                          ▶
+                        </span>
+                      )}
+                      {formatMetricName(key)}
+                    </td>
                     {experiments.map((exp, i) => {
                       const val = exp.metrics[key];
                       if (val === null) {
@@ -611,6 +1691,7 @@ function ComparePageInner() {
                       }
                       const isBest = i === best && experiments.length > 1;
                       const formatted = isTime ? val.toFixed(2) : (val * 100).toFixed(2) + "%";
+                      const std = exp.metricsStd?.[key];
                       return (
                         <td
                           key={i}
@@ -622,13 +1703,18 @@ function ComparePageInner() {
                           }}
                         >
                           {formatted}
+                          {std != null && std > 0 && (
+                            <span style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: "0.7rem" }}>
+                              {" "}±{isTime ? std.toFixed(2) : (std * 100).toFixed(1) + "%"}
+                            </span>
+                          )}
                         </td>
                       );
                     })}
-                    {experiments.length === 2 &&
+                    {showDelta &&
                       (() => {
-                        const v0 = experiments[0].metrics[key];
-                        const v1 = experiments[1].metrics[key];
+                        const v0 = experiments[iDeltaA].metrics[key];
+                        const v1 = experiments[iDeltaB].metrics[key];
                         if (v0 === null || v1 === null) {
                           return (
                             <td className="text-right" style={{ color: "var(--text-muted)" }}>
@@ -666,12 +1752,52 @@ function ComparePageInner() {
                         );
                       })()}
                   </tr>
+                  {open && (
+                    <tr style={{ background: "var(--bg-surface)" }}>
+                      <td className="text-xs align-top" style={{ color: "var(--text-muted)" }}>
+                        {data.isAggregate ? "per-dataset" : "per-trial"}
+                      </td>
+                      {experiments.map((exp, i) => {
+                        const trials = (exp.metricsTrials?.[key] ?? []).filter(
+                          (t) => t.value !== null
+                        );
+                        return (
+                          <td key={i} className="text-right align-top">
+                            {trials.length === 0 ? (
+                              <span style={{ color: "var(--text-muted)" }}>--</span>
+                            ) : (
+                              <div className="space-y-0.5 py-1">
+                                {trials.map((t) => (
+                                  <div
+                                    key={t.trial}
+                                    className="text-xs"
+                                    style={{ fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}
+                                  >
+                                    <span style={{ color: "var(--text-muted)" }}>{t.label ?? `T${t.trial}`}</span>{" "}
+                                    {isTime ? `${t.value!.toFixed(2)}s` : `${(t.value! * 100).toFixed(2)}%`}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })}
+                      {showDelta && <td />}
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
             </tbody>
           </table>
         </div>
       </section>
+
+      {/* ── Effort sweep charts. Keyed by the experiment set so metric-selection
+          state resets when navigation swaps in different data. ─────────────── */}
+      {data.isEffortSweep && (
+        <EffortChartsSection key={experiments.map((e) => e.id).join("|")} data={data} />
+      )}
 
       {/* ── Analysis section ──────────────────────────────────────────────── */}
       {analysis && (
@@ -717,17 +1843,17 @@ function ComparePageInner() {
             </div>
           </div>
 
-          {/* Speed comparison */}
-          {experiments.length === 2 &&
+          {/* Speed comparison (2-way, or medium-vs-ultrahigh effort in a sweep) */}
+          {showDelta &&
             (() => {
               const timeKey = metricKeys.find((k) => isTimeMetric(k));
               if (!timeKey) return null;
-              const t0 = experiments[0].metrics[timeKey];
-              const t1 = experiments[1].metrics[timeKey];
+              const t0 = experiments[iDeltaA].metrics[timeKey];
+              const t1 = experiments[iDeltaB].metrics[timeKey];
               if (t0 === null || t1 === null) return null;
 
-              const faster = t0 < t1 ? 0 : 1;
-              const slower = 1 - faster;
+              const faster = t0 < t1 ? iDeltaA : iDeltaB;
+              const slower = faster === iDeltaA ? iDeltaB : iDeltaA;
               const speedup =
                 ((Math.max(t0, t1) - Math.min(t0, t1)) / Math.max(t0, t1)) * 100;
 
@@ -784,7 +1910,7 @@ function ComparePageInner() {
                           className="h-2 rounded-full"
                           style={{
                             width: `${Math.min((d.spread! / 0.5) * 100, 100)}%`,
-                            background: "var(--gradient-teal-green)",
+                            background: "var(--gradient-agent)",
                           }}
                         />
                       </div>
@@ -803,8 +1929,8 @@ function ComparePageInner() {
         </section>
       )}
 
-      {/* ── Per-query analysis ────────────────────────────────────────────── */}
-      <PerQuerySection ids={ids} />
+      {/* ── Per-query analysis (skipped for aggregates: queries differ per dataset) ── */}
+      {!data.isAggregate && <PerQuerySection ids={ids} />}
     </div>
   );
 }
@@ -820,9 +1946,9 @@ const OUTCOME_META: Record<
   ComparisonOutcome,
   { label: string; fg: string; bg: string }
 > = {
-  mixed: { label: "Disagreement", fg: "var(--color-coral)", bg: "rgba(244,64,78,0.12)" },
-  all_correct: { label: "All correct", fg: "var(--color-green)", bg: "rgba(97,189,115,0.15)" },
-  all_wrong: { label: "All wrong", fg: "#b8a900", bg: "rgba(249,241,93,0.15)" },
+  mixed: { label: "Disagreement", fg: "var(--color-coral)", bg: "rgba(255,79,94,0.12)" },
+  all_correct: { label: "All correct", fg: "var(--color-green)", bg: "rgba(1,245,122,0.15)" },
+  all_wrong: { label: "All wrong", fg: "var(--color-warn)", bg: "rgba(255,199,44,0.15)" },
 };
 
 function PerQuerySection({ ids }: { ids: string }) {
@@ -903,7 +2029,7 @@ function PerQuerySection({ ids }: { ids: string }) {
       {data && data.warning && (
         <div
           className="brand-card p-4 mb-4 text-sm"
-          style={{ color: "#b8a900", background: "rgba(249,241,93,0.08)" }}
+          style={{ color: "var(--color-warn)", background: "rgba(255,199,44,0.08)" }}
         >
           {data.warning}
         </div>
@@ -949,7 +2075,7 @@ function PerQueryBody({
   const summary: { key: QueryFilter; label: string; value: number; fg: string }[] = [
     { key: "mixed", label: "Disagreements", value: counts.mixed, fg: "var(--color-coral)" },
     { key: "all_correct", label: "All correct", value: counts.allCorrect, fg: "var(--color-green)" },
-    { key: "all_wrong", label: "All wrong", value: counts.allWrong, fg: "#b8a900" },
+    { key: "all_wrong", label: "All wrong", value: counts.allWrong, fg: "var(--color-warn)" },
   ];
 
   return (
@@ -1038,15 +2164,15 @@ function PerQueryBody({
                     <span className="brand-badge mr-1" style={{ background: c.bg, color: c.fg, fontWeight: 700 }}>
                       {i + 1}
                     </span>
-                    {exp.label || exp.agent_name}
+                    {exp.label || (exp.effort ? effortDisplay(exp.effort) : exp.agent_name)}
                   </th>
                 );
               })}
             </tr>
           </thead>
           <tbody>
-            {filteredRows.map((row, ri) => (
-              <ComparisonRowView key={ri} row={row} mode={mode} experiments={experiments} />
+            {filteredRows.map((row) => (
+              <ComparisonRowView key={row.question} row={row} mode={mode} experiments={experiments} />
             ))}
           </tbody>
         </table>
@@ -1074,7 +2200,7 @@ function ComparisonRowView({
         onClick={() => setOpen((v) => !v)}
         style={{
           cursor: "pointer",
-          background: row.outcome === "mixed" ? "rgba(244,64,78,0.05)" : undefined,
+          background: row.outcome === "mixed" ? "rgba(255,79,94,0.05)" : undefined,
         }}
       >
         <td style={{ textAlign: "center", color: "var(--text-muted)" }}>
@@ -1131,7 +2257,7 @@ function CellBadge({ cell, mode }: { cell: ComparisonCell | null; mode: QueryCom
   const ok = cell.correct === true;
   const unknown = cell.correct === null;
   const fg = unknown ? "var(--text-muted)" : ok ? "var(--color-green)" : "var(--color-coral)";
-  const bg = unknown ? "var(--border-subtle)" : ok ? "rgba(97,189,115,0.15)" : "rgba(244,64,78,0.12)";
+  const bg = unknown ? "var(--border-subtle)" : ok ? "rgba(1,245,122,0.15)" : "rgba(255,79,94,0.12)";
 
   let label: string;
   if (mode === "search") {
@@ -1194,7 +2320,8 @@ function RowDetail({
                   {i + 1}
                 </span>
                 <span className="text-xs font-semibold" style={{ fontFamily: "var(--font-display)" }}>
-                  {experiments[i]?.label || experiments[i]?.agent_name}
+                  {experiments[i]?.label ||
+                    (experiments[i]?.effort ? effortDisplay(experiments[i].effort) : experiments[i]?.agent_name)}
                 </span>
                 {cell ? (
                   <CellBadge cell={cell} mode={mode} />
@@ -1266,9 +2393,9 @@ function CellDetail({
                 key={i}
                 className="inline-flex items-center rounded px-1.5 py-0.5"
                 style={{
-                  background: hit ? "rgba(97,189,115,0.18)" : "var(--bg-card)",
+                  background: hit ? "rgba(1,245,122,0.18)" : "var(--bg-card)",
                   color: hit ? "var(--color-green)" : "var(--text-muted)",
-                  border: `1px solid ${hit ? "rgba(97,189,115,0.4)" : "var(--border-subtle)"}`,
+                  border: `1px solid ${hit ? "rgba(1,245,122,0.4)" : "var(--border-subtle)"}`,
                   fontFamily: "var(--font-mono)",
                   fontSize: "0.65rem",
                 }}

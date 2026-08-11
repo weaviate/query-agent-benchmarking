@@ -129,6 +129,13 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_text2vec()
         .build()),
 
+    (DatasetSpecBuilder("obliq-bench-*")
+        .with_prefix_name("ObliqBench", split_char="-", split_index=2)
+        .with_text_property("content", source_field="text")
+        .with_dataset_id()
+        .with_text2vec()
+        .build()),
+
 ]
 
 

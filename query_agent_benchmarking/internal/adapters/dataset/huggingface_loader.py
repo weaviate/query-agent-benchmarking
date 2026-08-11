@@ -1,7 +1,8 @@
 """Dataset loaders using the HuggingFace Hub datasets library.
 
 Handles: enron, wixqa, freshstack, irpapers, vidore, bright,
-multihoprag, longmemeval, reasonir-biology-subset, browsecomp-plus.
+multihoprag, longmemeval, reasonir-biology-subset, browsecomp-plus,
+obliq-bench.
 """
 
 import base64
@@ -228,6 +229,37 @@ def load_vidore():
             questions.append(
                 InMemoryQuery(
                     question=item["query"],
+                    query_id=query_id,
+                    dataset_ids=qrels[query_id],
+                )
+            )
+
+    print(f"Loaded {len(docs)} documents and {len(questions)} questions")
+    return docs, questions
+
+
+def load_obliq_bench(subset: str):
+    print(f"Loading OBLIQ-Bench dataset (subset: {subset})...")
+    ds = load_dataset("dianetc/OBLIQ-Bench", subset)
+
+    docs = []
+    for item in ds["corpus"]:
+        docs.append({"text": item["text"], "dataset_id": str(item["_id"])})
+
+    raw_qrels = load_dataset(f"weaviate/OBLIQ-Bench-{subset}-qrels")["train"]
+    qrels: dict[str, list[str]] = {}
+    for item in raw_qrels:
+        if item["score"] > 0:
+            query_id = str(item["query-id"])
+            qrels.setdefault(query_id, []).append(str(item["corpus-id"]))
+
+    questions = []
+    for item in ds["queries"]:
+        query_id = str(item["_id"])
+        if query_id in qrels:
+            questions.append(
+                InMemoryQuery(
+                    question=item["text"],
                     query_id=query_id,
                     dataset_ids=qrels[query_id],
                 )

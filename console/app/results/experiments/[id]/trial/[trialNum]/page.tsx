@@ -173,18 +173,18 @@ export default function TrialQueriesPage({
         <div className="flex items-center gap-4 flex-wrap text-sm" style={{ color: "var(--text-secondary)" }}>
           <span>{data.metadata.total_queries} queries</span>
           <span className="brand-badge" style={{
-            background: mode === "search" ? "rgba(122,199,192,0.18)" : "rgba(165,144,221,0.18)",
-            color: mode === "search" ? "var(--color-teal)" : "var(--color-lavender)",
+            background: mode === "search" ? "rgba(1,198,201,0.18)" : "rgba(165,144,221,0.18)",
+            color: mode === "search" ? "var(--color-cyan)" : "var(--color-lavender)",
           }}>
             {mode}
           </span>
           {data.metadata.total_errors != null && data.metadata.total_errors > 0 && (
-            <span className="brand-badge" style={{ background: "rgba(244,64,78,0.12)", color: "var(--color-coral)" }}>
+            <span className="brand-badge" style={{ background: "rgba(255,79,94,0.12)", color: "var(--color-coral)" }}>
               {data.metadata.total_errors} errors
             </span>
           )}
           {data.metadata.total_misaligned != null && data.metadata.total_misaligned > 0 && (
-            <span className="brand-badge" style={{ background: "rgba(249,241,93,0.15)", color: "#b8a900" }}>
+            <span className="brand-badge" style={{ background: "rgba(255,199,44,0.15)", color: "var(--color-warn)" }}>
               {data.metadata.total_misaligned} misaligned
             </span>
           )}
@@ -195,7 +195,7 @@ export default function TrialQueriesPage({
           </p>
         )}
         {data.misaligned_query_ids && data.misaligned_query_ids.length > 0 && (
-          <p className="text-xs mt-1" style={{ color: "#b8a900", fontFamily: "var(--font-mono)" }}>
+          <p className="text-xs mt-1" style={{ color: "var(--color-warn)", fontFamily: "var(--font-mono)" }}>
             Misaligned IDs: {data.misaligned_query_ids.join(", ")}
           </p>
         )}
@@ -319,14 +319,14 @@ function RetrievedContextPanel({ context }: { context: Record<string, unknown> }
     <details className="mt-3">
       <summary
         className="text-xs cursor-pointer inline-flex items-center gap-1.5"
-        style={{ color: "var(--color-teal)", fontFamily: "var(--font-mono)" }}
+        style={{ color: "var(--color-cyan)", fontFamily: "var(--font-mono)" }}
       >
         <svg width="14" height="14" viewBox="0 0 32 32" fill="none" className="shrink-0">
           <path d="M16 2L28 9V23L16 30L4 23V9L16 2Z" stroke="currentColor" strokeWidth="1.5" fill="none" />
         </svg>
         Retrieved Context
         {typeof context.n_memories_retrieved === "number" && (
-          <span className="brand-badge ml-1" style={{ background: "rgba(122,199,192,0.15)", color: "var(--color-teal)" }}>
+          <span className="brand-badge ml-1" style={{ background: "rgba(1,198,201,0.15)", color: "var(--color-cyan)" }}>
             {context.n_memories_retrieved}
           </span>
         )}
@@ -396,10 +396,10 @@ function AskQueriesView({ queries }: { queries: AskQuery[] }) {
 
         const statusLabel = isError ? "Error" : isCorrect ? "Correct" : q.score === 0 ? "Incorrect" : undefined;
         const statusBg = isError
-          ? "rgba(244,64,78,0.12)"
+          ? "rgba(255,79,94,0.12)"
           : isCorrect
-            ? "rgba(97,189,115,0.15)"
-            : "rgba(244,64,78,0.12)";
+            ? "rgba(1,245,122,0.15)"
+            : "rgba(255,79,94,0.12)";
         const statusFg = isError
           ? "var(--color-coral)"
           : isCorrect
@@ -428,7 +428,7 @@ function AskQueriesView({ queries }: { queries: AskQuery[] }) {
                 {q.question_type && (
                   <span
                     className="brand-badge"
-                    style={{ background: "rgba(122,199,192,0.12)", color: "var(--color-teal)", fontSize: "0.6875rem" }}
+                    style={{ background: "rgba(1,198,201,0.12)", color: "var(--color-cyan)", fontSize: "0.6875rem" }}
                   >
                     {q.question_type}
                   </span>
@@ -569,7 +569,7 @@ function SearchQueriesView({ queries }: { queries: SearchQuery[] }) {
                     <span
                       className="ml-1 brand-badge"
                       style={{
-                        background: hasOverlap ? "rgba(97,189,115,0.15)" : "rgba(244,64,78,0.12)",
+                        background: hasOverlap ? "rgba(1,245,122,0.15)" : "rgba(255,79,94,0.12)",
                         color: hasOverlap ? "var(--color-green)" : "var(--color-coral)",
                       }}
                     >

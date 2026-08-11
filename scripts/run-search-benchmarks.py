@@ -1,3 +1,0 @@
-import query_agent_benchmarking
-
-query_agent_benchmarking.run_search_evals()

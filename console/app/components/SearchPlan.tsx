@@ -52,9 +52,9 @@ function FilterChip({ node }: { node: Exclude<FilterNode, FilterGroup> }) {
     <span
       className="inline-flex items-center rounded-md px-2 py-0.5"
       style={{
-        background: "rgba(122,199,192,0.12)",
-        border: "1px solid rgba(122,199,192,0.3)",
-        color: "var(--color-teal)",
+        background: "rgba(1,198,201,0.12)",
+        border: "1px solid rgba(1,198,201,0.3)",
+        color: "var(--color-cyan)",
         fontFamily: "var(--font-mono)",
         fontSize: "0.7rem",
       }}
@@ -125,7 +125,7 @@ export function SearchPlan({ searches }: { searches: AgentSearch[] }) {
             {s.uuid_value && (
               <span
                 className="brand-badge"
-                style={{ background: "rgba(122,199,192,0.12)", color: "var(--color-teal)", fontSize: "0.65rem" }}
+                style={{ background: "rgba(1,198,201,0.12)", color: "var(--color-cyan)", fontSize: "0.65rem" }}
                 title="Direct UUID lookup"
               >
                 uuid: {s.uuid_value.slice(0, 8)}…

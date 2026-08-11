@@ -24,6 +24,7 @@ from query_agent_benchmarking.internal.adapters.clients.provider_headers import 
 )
 
 Filtering = Literal["recall", "precision"]
+Effort = Literal["medium", "high", "ultrahigh"]
 
 
 def _validate_filtering(filtering: Optional[str]) -> Filtering:
@@ -40,6 +41,22 @@ def _validate_filtering(filtering: Optional[str]) -> Filtering:
             f"filtering must be 'recall' or 'precision'; got {filtering!r}."
         )
     return filtering
+
+
+def _validate_effort(effort: Optional[str]) -> Optional[Effort]:
+    """Normalize and validate the search-mode compute effort level.
+
+    "medium" | "high" | "ultrahigh" controls how much compute search mode spends
+    on a query. Returns ``None`` when unset, in which case ``effort`` is omitted from
+    the request entirely and the agents server applies its own default.
+    """
+    if effort is None:
+        return None
+    if effort not in ("medium", "high", "ultrahigh"):
+        raise ValueError(
+            f"effort must be 'medium', 'high', or 'ultrahigh'; got {effort!r}."
+        )
+    return effort
 
 
 def _dump_optional(value: Any) -> Optional[Any]:
@@ -90,12 +107,14 @@ class WeaviateQueryAgentSearch:
         image_embedding_model: Optional[str] = None,
         embedding_providers: Optional[Sequence[str]] = None,
         filtering: Optional[str] = None,
+        effort: Optional[str] = None,
     ):
         info = resolve_collection_info(dataset_name, docs_collection)
         self.collection = info["collection"]
         self.id_property = info["id_property"]
         self.agents_host = agents_host or "https://api.agents.weaviate.io"
         self.filtering: Filtering = _validate_filtering(filtering)
+        self.effort: Optional[Effort] = _validate_effort(effort)
         self.headers = resolve_headers_for_models(
             embedding_model=embedding_model,
             text_embedding_model=text_embedding_model,
@@ -155,14 +174,23 @@ class WeaviateQueryAgentSearch:
             searches=_extract_searches(response),
         )
 
+    def _search_kwargs(self) -> dict:
+        # `effort` is only forwarded when set: omitting it lets the agents
+        # server apply its own default, and keeps clients that don't accept
+        # the argument yet working.
+        kwargs = {"limit": 20, "filtering": self.filtering}
+        if self.effort is not None:
+            kwargs["effort"] = self.effort
+        return kwargs
+
     def run(self, query: str, tenant: Optional[str] = None) -> SearchAgentResponse:
         if self._agent is None:
             self.initialize_sync()
-        response = self._agent.search(query, limit=20, filtering=self.filtering)
+        response = self._agent.search(query, **self._search_kwargs())
         return self._build_response(response)
 
     async def run_async(self, query: str, tenant: Optional[str] = None) -> SearchAgentResponse:
-        response = await self._agent.search(query, limit=20, filtering=self.filtering)
+        response = await self._agent.search(query, **self._search_kwargs())
         return self._build_response(response)
 
     async def close_async(self):

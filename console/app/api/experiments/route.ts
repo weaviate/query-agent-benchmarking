@@ -16,6 +16,9 @@ export function GET() {
       mode: exp.mode,
       num_trials: exp.num_trials,
       timestamp: exp.timestamp,
+      effort: exp.effort,
+      filtering: exp.filtering,
+      sweep_id: exp.sweep_id,
       keyMetric: metric,
       aggregated: exp.aggregated,
       trials: exp.trials.map((t) => ({

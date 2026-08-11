@@ -36,6 +36,7 @@ DATABASE_DATASETS = [
     "multihoprag",
     "longmemeval-s",
     "lotte/lifestyle/test/search",
+    "obliq-bench-congress",
     # Excluded:
     #   officeqa       — requires local PDF files
     #   vidore_v3_hr   — very large image downloads

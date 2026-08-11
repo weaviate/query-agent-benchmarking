@@ -26,6 +26,31 @@ from query_agent_benchmarking.internal.core.domain.models import (
 # Search Mode Query Execution
 # ============================================================================
 
+# No tokenizer dependency in the domain layer, so token counts are approximated
+# at ~4 characters per token (a common heuristic for English text).
+_CHARS_PER_TOKEN = 4
+
+
+def truncate_long_queries(
+    queries: list[InMemoryQuery],
+    max_query_tokens: int,
+) -> list[InMemoryQuery]:
+    """Truncate query text exceeding ~``max_query_tokens`` tokens, in place.
+
+    Safeguard against very long queries (e.g. BRIGHT) blowing through
+    embedding-provider tokens-per-minute rate limits. Cuts at a word boundary.
+    """
+    max_chars = max_query_tokens * _CHARS_PER_TOKEN
+    truncated = 0
+    for query in queries:
+        if len(query.question) > max_chars:
+            query.question = query.question[:max_chars].rsplit(" ", 1)[0]
+            truncated += 1
+    if truncated:
+        print(f"\033[93mTruncated {truncated}/{len(queries)} queries to "
+              f"~{max_query_tokens} tokens ({max_chars} chars).\033[0m")
+    return queries
+
 def _unpack_search_response(
     response: object,
 ) -> tuple[list[ObjectID], Optional[list[AgentSearch]]]:
@@ -43,11 +68,14 @@ def _unpack_search_response(
 def run_search_queries(
     queries: list[InMemoryQuery],
     query_agent: Any,
+    sleep_between_requests: float = 0.0,
 ) -> list[QueryResult]:
     """Synchronous search query execution."""
     results = []
     start = time.time()
     for i, query in enumerate(tqdm(queries, desc="Running search queries")):
+        if sleep_between_requests > 0 and i > 0:
+            time.sleep(sleep_between_requests)
         query_start_time = time.time()
         stringified_ids = [str(dataset_id) for dataset_id in query.dataset_ids]
         response = query_agent.run(query.question, tenant=query.tenant_id)
@@ -78,8 +106,14 @@ async def run_search_queries_async(
     query_agent: Any,
     batch_size: int = 10,
     max_concurrent: int = 3,
+    sleep_between_requests: float = 0.0,
 ) -> list[QueryResult]:
-    """Asynchronous search query execution with batching and concurrency control."""
+    """Asynchronous search query execution with batching and concurrency control.
+
+    ``sleep_between_requests`` is applied while holding a concurrency slot, so
+    each of the ``max_concurrent`` workers waits that long before issuing its
+    next query — useful for staying under provider rate limits.
+    """
     results = []
     start = time.time()
     semaphore = asyncio.Semaphore(max_concurrent)
@@ -94,7 +128,7 @@ async def run_search_queries_async(
                     print(f"\nRetrying query {index} (attempt {retry_count + 1}) after {delay}s delay...")
                     await asyncio.sleep(delay)
                 elif index > 0:
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(max(sleep_between_requests, 0.1))
 
                 print(f"Running search query {index}: {query.question}")
                 response = await query_agent.run_async(query.question, tenant=query.tenant_id)

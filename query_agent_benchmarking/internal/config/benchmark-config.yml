@@ -1,10 +1,48 @@
 # =============================================================================
 # Search Mode Settings
 # =============================================================================
-search_agent_name: "external_service"
-search_dataset: filtered-cars
+search_agent_name: "query-agent-search-mode"
 
-# See `named_vectors.md` for supported target vectors.
+# Single dataset — used by run-search-benchmark.py.
+search_dataset: obliq-bench-congress
+
+# Multiple datasets — used by run_search_evals (scripts/run-search-benchmark-multi.py).
+# Same "list in config" idea as `dataset_names` in database_loader_config.yml.
+search_datasets:
+  - irpapers-text-only
+#  - bright/earth_science
+#  - bright/economics
+#  - bright/psychology
+#  - bright/robotics
+
+# Sweep search-mode compute effort across "medium", "high", and "ultrahigh"
+# and print a side-by-side comparison instead of a single run. Applies to both
+# run-search-benchmark.py and run-search-benchmark-multi.py. Set to false for a
+# single run at the `effort` configured in agent-config.yml.
+effort_sweep: true
+
+# Baseline agents to include in the effort sweep as reference points. Each runs
+# once per sweep (same trials/queries) and appears alongside
+# medium/high/ultrahigh in the comparison. Supports "hybrid-search". Defaults
+# to hybrid-search when unset; set to an empty list ([]) to sweep without
+# baselines.
+effort_sweep_baselines:
+  - hybrid-search
+
+# Per-run config overrides applied during the effort sweep. Keys are effort
+# levels ("medium"/"high"/"ultrahigh") or baseline agent names (e.g.
+# "hybrid-search"); values override the shared settings (e.g. max_concurrent,
+# sleep_between_requests) for that run only. Runs without an entry use the
+# shared settings below.
+effort_sweep_overrides:
+  hybrid-search: {max_concurrent: 5, sleep_between_requests: 0}
+  medium: {max_concurrent: 5, sleep_between_requests: 0}
+  high: {max_concurrent: 1, sleep_between_requests: 5}
+  ultrahigh: {max_concurrent: 1, sleep_between_requests: 5}
+
+# See `named_vectors.md` for supported target vectors. Only applies to datasets
+# with named vectors (e.g. multimodal `irpapers`); ignored for datasets with a
+# single unnamed vector like `irpapers-text-only` and BRIGHT.
 search_target: "text_content_weaviate"
 
 # =============================================================================
@@ -29,13 +67,23 @@ external_providers:
 #  - voyageai
 
 use_async: True
+# Turn down (e.g. max_concurrent: 2, sleep_between_requests: 2) for BRIGHT
+# robotics: large documents push embedding traffic toward Voyage's 4M
+# tokens/minute rate limit.
 max_concurrent: 5
 sleep_between_requests: 0
+
+# Safeguard: truncate search query text longer than this many tokens
+# (approximated at ~4 chars/token — no tokenizer dependency) before sending to
+# the agent. Unset or 0 disables truncation. Off by default — truncation
+# changes benchmark semantics; enable per run (e.g. 200 for BRIGHT, whose long
+# queries can blow through embedding-provider tokens-per-minute rate limits).
+max_query_tokens: 0
 
 use_subset: False
 num_samples: 100
 
-num_trials: 1
+num_trials: 3
 batch_size: 5
 
 # =============================================================================

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { EffortBadge } from "@/app/components/EffortBadge";
 
 interface ExperimentSummary {
   id: string;
@@ -11,8 +12,12 @@ interface ExperimentSummary {
   mode: "search" | "ask" | "unknown";
   num_trials: number;
   timestamp: string;
+  effort: string | null;
+  sweep_id: string | null;
   keyMetric: { name: string; value: number | null };
 }
+
+const EFFORT_ORDER: Record<string, number> = { hybrid: 0, medium: 1, high: 2, ultrahigh: 3 };
 
 const POLL_INTERVAL_MS = 5_000;
 
@@ -22,15 +27,15 @@ function ScoreBadge({ value }: { value: number | null }) {
   const pct = value * 100;
   const bg =
     pct >= 80
-      ? "rgba(97,189,115,0.15)"
+      ? "rgba(1,245,122,0.15)"
       : pct >= 50
-        ? "rgba(249,241,93,0.2)"
-        : "rgba(244,64,78,0.12)";
+        ? "rgba(255,199,44,0.2)"
+        : "rgba(255,79,94,0.12)";
   const fg =
     pct >= 80
       ? "var(--color-green)"
       : pct >= 50
-        ? "#b8a900"
+        ? "var(--color-warn)"
         : "var(--color-coral)";
   return (
     <span
@@ -45,7 +50,7 @@ function ScoreBadge({ value }: { value: number | null }) {
 /* ── Mode badge ─────────────────────────────────────────────────────────── */
 function ModeBadge({ mode }: { mode: string }) {
   const styles: Record<string, { bg: string; fg: string }> = {
-    search: { bg: "rgba(122,199,192,0.18)", fg: "var(--color-teal)" },
+    search: { bg: "rgba(1,198,201,0.18)", fg: "var(--color-cyan)" },
     ask: { bg: "rgba(165,144,221,0.18)", fg: "var(--color-lavender)" },
   };
   const s = styles[mode] || { bg: "rgba(136,150,171,0.15)", fg: "var(--text-muted)" };
@@ -113,7 +118,7 @@ function InlineLabel({
       <button
         onClick={() => setEditing(true)}
         className="brand-badge cursor-pointer"
-        style={{ background: "rgba(97,189,115,0.12)", color: "var(--color-green)" }}
+        style={{ background: "rgba(1,245,122,0.12)", color: "var(--color-green)" }}
         title="Click to edit label"
       >
         {initialLabel}
@@ -176,6 +181,21 @@ export default function Dashboard() {
     router.push(`/results/compare?ids=${[...selected].join(",")}`);
   }, [selected, router]);
 
+  const handleAverage = useCallback(() => {
+    if (selected.size < 2) return;
+    router.push(`/results/compare?ids=${[...selected].join(",")}&aggregate=1`);
+  }, [selected, router]);
+
+  // Sweep cards selected for cross-dataset averaging, keyed by their first run's id.
+  const [selectedSweeps, setSelectedSweeps] = useState<Set<string>>(new Set());
+  const toggleSweep = useCallback((key: string) => {
+    setSelectedSweeps((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+
   const handleLabelSaved = useCallback((id: string, label: string) => {
     setExperiments((prev) =>
       prev?.map((e) => (e.id === id ? { ...e, label } : e)) ?? null
@@ -199,6 +219,25 @@ export default function Dashboard() {
     if (!datasetFilter) return experiments;
     return experiments.filter((e) => e.dataset === datasetFilter);
   }, [experiments, datasetFilter]);
+
+  // Effort sweeps: runs of the same dataset sharing a sweep_id, one per level.
+  const sweeps = useMemo(() => {
+    const groups = new Map<string, ExperimentSummary[]>();
+    for (const e of filtered) {
+      if (!e.sweep_id || !e.effort) continue;
+      const key = `${e.dataset}|${e.sweep_id}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(e);
+    }
+    return [...groups.values()]
+      .filter((runs) => runs.length >= 2)
+      .map((runs) =>
+        [...runs].sort(
+          (a, b) => (EFFORT_ORDER[a.effort!] ?? 99) - (EFFORT_ORDER[b.effort!] ?? 99)
+        )
+      )
+      .sort((a, b) => b[0].timestamp.localeCompare(a[0].timestamp));
+  }, [filtered]);
 
   /* ── Loading / empty states ──────────────────────────────────────────── */
   if (experiments === null) {
@@ -248,9 +287,18 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           {selected.size >= 2 && (
-            <button onClick={handleCompare} className="brand-btn-primary">
-              Compare {selected.size} experiments
-            </button>
+            <>
+              <button onClick={handleCompare} className="brand-btn-primary">
+                Compare {selected.size} experiments
+              </button>
+              <button
+                onClick={handleAverage}
+                className="brand-btn-secondary"
+                title="Group the selected experiments by effort level and average each group's metrics across datasets"
+              >
+                Average across datasets
+              </button>
+            </>
           )}
           {selected.size === 1 && (
             <span className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -283,6 +331,92 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      {/* ── Effort sweeps ────────────────────────────────────────────────── */}
+      {sweeps.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="eyebrow">Effort Sweeps</span>
+            {(() => {
+              // Only count selections still visible under the current filter.
+              const chosen = sweeps.filter((runs) => selectedSweeps.has(runs[0].id));
+              if (chosen.length >= 2) {
+                const ids = chosen.flatMap((runs) => runs.map((r) => r.id));
+                return (
+                  <button
+                    onClick={() => router.push(`/results/compare?ids=${ids.join(",")}&aggregate=1`)}
+                    className="brand-btn-primary"
+                    style={{ padding: "2px 10px", fontSize: "0.7rem" }}
+                    title="Average each effort level across the selected sweeps"
+                  >
+                    Average {chosen.length} sweeps
+                  </button>
+                );
+              }
+              if (chosen.length === 1) {
+                return (
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    Select one more sweep to average
+                  </span>
+                );
+              }
+              return (
+                <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  Select sweeps to average their effort levels across datasets
+                </span>
+              );
+            })()}
+          </div>
+          <div className="grid gap-3 mt-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))" }}>
+            {sweeps.map((runs) => {
+              const isSweepSelected = selectedSweeps.has(runs[0].id);
+              return (
+              <div
+                key={runs[0].id}
+                className="brand-card p-4"
+                style={isSweepSelected ? { background: "rgba(1,245,122,0.06)", borderColor: "var(--color-green)" } : {}}
+              >
+                <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isSweepSelected}
+                      onChange={() => toggleSweep(runs[0].id)}
+                      className="w-4 h-4 rounded cursor-pointer accent-[#01F57A]"
+                      title="Select this sweep for cross-dataset averaging"
+                    />
+                    <span className="font-semibold text-sm">{runs[0].dataset}</span>
+                  </label>
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {runs[0].timestamp ? new Date(runs[0].timestamp).toLocaleString() : "--"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  {runs.map((r) => (
+                    <span key={r.id} className="flex items-center gap-1">
+                      <EffortBadge effort={r.effort} />
+                      <span className="text-xs" style={{ fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>
+                        {r.keyMetric.value !== null ? `${(r.keyMetric.value * 100).toFixed(1)}%` : "--"}
+                      </span>
+                    </span>
+                  ))}
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {runs[0].keyMetric.name} &middot; {runs[0].num_trials} trial{runs[0].num_trials !== 1 ? "s" : ""} each
+                  </span>
+                </div>
+                <button
+                  onClick={() => router.push(`/results/compare?ids=${runs.map((r) => r.id).join(",")}`)}
+                  className="brand-btn-primary"
+                  style={{ padding: "4px 12px", fontSize: "0.75rem" }}
+                >
+                  Compare effort levels
+                </button>
+              </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Content area ─────────────────────────────────────────────────── */}
       <TableView
@@ -373,14 +507,14 @@ function TableView({
             return (
               <tr
                 key={exp.id}
-                style={isSelected ? { background: "rgba(97,189,115,0.06)" } : {}}
+                style={isSelected ? { background: "rgba(1,245,122,0.06)" } : {}}
               >
                 <td>
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleSelect(exp.id)}
-                    className="w-4 h-4 rounded cursor-pointer accent-[#61BD73]"
+                    className="w-4 h-4 rounded cursor-pointer accent-[#01F57A]"
                   />
                 </td>
                 <td>
@@ -388,7 +522,12 @@ function TableView({
                 </td>
                 <td className="font-semibold">{exp.dataset}</td>
                 <td style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem" }}>{exp.agent_name}</td>
-                <td><ModeBadge mode={exp.mode} /></td>
+                <td>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <ModeBadge mode={exp.mode} />
+                    <EffortBadge effort={exp.effort} />
+                  </div>
+                </td>
                 <td>
                   <div className="flex items-center gap-2">
                     <ScoreBadge value={exp.keyMetric.value} />
