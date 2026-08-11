@@ -1,0 +1,69 @@
+{
+  "num_trials": 3,
+  "trials": [
+    {
+      "trial": 1,
+      "avg_query_time": 11.42177511718538,
+      "avg_recall_at_1": 0.5888888888888889,
+      "avg_recall_at_5": 0.8277777777777777,
+      "avg_recall_at_20": 0.9166666666666666,
+      "avg_recall_at_50": 0.9166666666666666,
+      "avg_recall_at_100": 0.9166666666666666
+    },
+    {
+      "trial": 2,
+      "avg_query_time": 11.642244862185585,
+      "avg_recall_at_1": 0.5833333333333334,
+      "avg_recall_at_5": 0.8333333333333334,
+      "avg_recall_at_20": 0.9166666666666666,
+      "avg_recall_at_50": 0.9166666666666666,
+      "avg_recall_at_100": 0.9166666666666666
+    },
+    {
+      "trial": 3,
+      "avg_query_time": 11.465921420521207,
+      "avg_recall_at_1": 0.5833333333333334,
+      "avg_recall_at_5": 0.8166666666666667,
+      "avg_recall_at_20": 0.9111111111111111,
+      "avg_recall_at_50": 0.9111111111111111,
+      "avg_recall_at_100": 0.9111111111111111
+    }
+  ],
+  "avg_query_time_mean": 11.509980466630724,
+  "avg_query_time_std": 0.09524574101825331,
+  "avg_query_time_min": 11.42177511718538,
+  "avg_query_time_max": 11.642244862185585,
+  "avg_recall_at_1_mean": 0.5851851851851851,
+  "avg_recall_at_1_std": 0.0026189140043946114,
+  "avg_recall_at_1_min": 0.5833333333333334,
+  "avg_recall_at_1_max": 0.5888888888888889,
+  "avg_recall_at_5_mean": 0.825925925925926,
+  "avg_recall_at_5_std": 0.006928995160692499,
+  "avg_recall_at_5_min": 0.8166666666666667,
+  "avg_recall_at_5_max": 0.8333333333333334,
+  "avg_recall_at_20_mean": 0.9148148148148149,
+  "avg_recall_at_20_std": 0.002618914004394611,
+  "avg_recall_at_20_min": 0.9111111111111111,
+  "avg_recall_at_20_max": 0.9166666666666666,
+  "avg_recall_at_50_mean": 0.9148148148148149,
+  "avg_recall_at_50_std": 0.002618914004394611,
+  "avg_recall_at_50_min": 0.9111111111111111,
+  "avg_recall_at_50_max": 0.9166666666666666,
+  "avg_recall_at_100_mean": 0.9148148148148149,
+  "avg_recall_at_100_std": 0.002618914004394611,
+  "avg_recall_at_100_min": 0.9111111111111111,
+  "avg_recall_at_100_max": 0.9166666666666666,
+  "timestamp": "2026-07-20T12:04:13.599631",
+  "key_metric": "avg_recall_at_5_mean",
+  "config": {
+    "dataset": "irpapers-text-only",
+    "agent_name": "query-agent-search-mode",
+    "num_trials": 3,
+    "use_async": true,
+    "batch_size": 5,
+    "max_concurrent": 2,
+    "effort": "medium",
+    "filtering": "recall",
+    "sweep_id": "20260720-110210"
+  }
+}

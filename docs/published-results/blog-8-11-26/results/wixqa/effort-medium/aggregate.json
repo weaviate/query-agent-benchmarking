@@ -1,0 +1,69 @@
+{
+  "num_trials": 3,
+  "trials": [
+    {
+      "trial": 1,
+      "avg_query_time": 6.7468058717250825,
+      "avg_recall_at_1": 0.665,
+      "avg_recall_at_5": 0.8666666666666667,
+      "avg_recall_at_20": 0.9616666666666666,
+      "avg_recall_at_50": 0.9616666666666666,
+      "avg_recall_at_100": 0.9616666666666666
+    },
+    {
+      "trial": 2,
+      "avg_query_time": 6.9750543570518495,
+      "avg_recall_at_1": 0.65,
+      "avg_recall_at_5": 0.855,
+      "avg_recall_at_20": 0.9508333333333334,
+      "avg_recall_at_50": 0.9508333333333334,
+      "avg_recall_at_100": 0.9508333333333334
+    },
+    {
+      "trial": 3,
+      "avg_query_time": 6.898193551301956,
+      "avg_recall_at_1": 0.665,
+      "avg_recall_at_5": 0.8633333333333333,
+      "avg_recall_at_20": 0.9616666666666667,
+      "avg_recall_at_50": 0.9616666666666667,
+      "avg_recall_at_100": 0.9616666666666667
+    }
+  ],
+  "avg_query_time_mean": 6.873351260026297,
+  "avg_query_time_std": 0.09482333517427517,
+  "avg_query_time_min": 6.7468058717250825,
+  "avg_query_time_max": 6.9750543570518495,
+  "avg_recall_at_1_mean": 0.66,
+  "avg_recall_at_1_std": 0.007071067811865481,
+  "avg_recall_at_1_min": 0.65,
+  "avg_recall_at_1_max": 0.665,
+  "avg_recall_at_5_mean": 0.8616666666666667,
+  "avg_recall_at_5_std": 0.004906533814626594,
+  "avg_recall_at_5_min": 0.855,
+  "avg_recall_at_5_max": 0.8666666666666667,
+  "avg_recall_at_20_mean": 0.9580555555555555,
+  "avg_recall_at_20_std": 0.005106882308569445,
+  "avg_recall_at_20_min": 0.9508333333333334,
+  "avg_recall_at_20_max": 0.9616666666666667,
+  "avg_recall_at_50_mean": 0.9580555555555555,
+  "avg_recall_at_50_std": 0.005106882308569445,
+  "avg_recall_at_50_min": 0.9508333333333334,
+  "avg_recall_at_50_max": 0.9616666666666667,
+  "avg_recall_at_100_mean": 0.9580555555555555,
+  "avg_recall_at_100_std": 0.005106882308569445,
+  "avg_recall_at_100_min": 0.9508333333333334,
+  "avg_recall_at_100_max": 0.9616666666666667,
+  "timestamp": "2026-07-23T17:56:41.797337",
+  "key_metric": "avg_recall_at_5_mean",
+  "config": {
+    "dataset": "wixqa",
+    "agent_name": "query-agent-search-mode",
+    "num_trials": 3,
+    "use_async": true,
+    "batch_size": 5,
+    "max_concurrent": 5,
+    "effort": "medium",
+    "filtering": "recall",
+    "sweep_id": "20260723-173813"
+  }
+}

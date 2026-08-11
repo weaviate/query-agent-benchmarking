@@ -1,0 +1,69 @@
+{
+  "num_trials": 3,
+  "trials": [
+    {
+      "trial": 1,
+      "avg_query_time": 10.882560213804245,
+      "avg_recall_at_1": 0.66,
+      "avg_recall_at_5": 0.8525,
+      "avg_recall_at_20": 0.9733333333333333,
+      "avg_recall_at_50": 0.9733333333333333,
+      "avg_recall_at_100": 0.9733333333333333
+    },
+    {
+      "trial": 2,
+      "avg_query_time": 10.865134675502777,
+      "avg_recall_at_1": 0.665,
+      "avg_recall_at_5": 0.8575,
+      "avg_recall_at_20": 0.9758333333333333,
+      "avg_recall_at_50": 0.9758333333333333,
+      "avg_recall_at_100": 0.9758333333333333
+    },
+    {
+      "trial": 3,
+      "avg_query_time": 10.966011903285981,
+      "avg_recall_at_1": 0.665,
+      "avg_recall_at_5": 0.8575,
+      "avg_recall_at_20": 0.9758333333333333,
+      "avg_recall_at_50": 0.9758333333333333,
+      "avg_recall_at_100": 0.9758333333333333
+    }
+  ],
+  "avg_query_time_mean": 10.904568930864334,
+  "avg_query_time_std": 0.04402530705007004,
+  "avg_query_time_min": 10.865134675502777,
+  "avg_query_time_max": 10.966011903285981,
+  "avg_recall_at_1_mean": 0.6633333333333334,
+  "avg_recall_at_1_std": 0.0023570226039551605,
+  "avg_recall_at_1_min": 0.66,
+  "avg_recall_at_1_max": 0.665,
+  "avg_recall_at_5_mean": 0.8558333333333333,
+  "avg_recall_at_5_std": 0.0023570226039551605,
+  "avg_recall_at_5_min": 0.8525,
+  "avg_recall_at_5_max": 0.8575,
+  "avg_recall_at_20_mean": 0.975,
+  "avg_recall_at_20_std": 0.0011785113019776065,
+  "avg_recall_at_20_min": 0.9733333333333333,
+  "avg_recall_at_20_max": 0.9758333333333333,
+  "avg_recall_at_50_mean": 0.975,
+  "avg_recall_at_50_std": 0.0011785113019776065,
+  "avg_recall_at_50_min": 0.9733333333333333,
+  "avg_recall_at_50_max": 0.9758333333333333,
+  "avg_recall_at_100_mean": 0.975,
+  "avg_recall_at_100_std": 0.0011785113019776065,
+  "avg_recall_at_100_min": 0.9733333333333333,
+  "avg_recall_at_100_max": 0.9758333333333333,
+  "timestamp": "2026-07-23T19:02:31.247712",
+  "key_metric": "avg_recall_at_5_mean",
+  "config": {
+    "dataset": "wixqa",
+    "agent_name": "query-agent-search-mode",
+    "num_trials": 3,
+    "use_async": true,
+    "batch_size": 5,
+    "max_concurrent": 2,
+    "effort": "high",
+    "filtering": "recall",
+    "sweep_id": "20260723-173813"
+  }
+}
