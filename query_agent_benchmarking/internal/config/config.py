@@ -23,6 +23,7 @@ supported_search_datasets = (
     "freshstack-yolo",
     "irpapers",
     "irpapers-text-only",
+    "irpapers-image-only",
     "longmemeval-m",
     "longmemeval-s",
     "lotte/lifestyle/test/forum",
@@ -54,6 +55,7 @@ supported_embedding_models = (
 
 _NAMED_VECTOR_DATASET_SEEDS = (
     "irpapers",
+    "irpapers-image-only",
     "vidore_v3_hr",
 )
 

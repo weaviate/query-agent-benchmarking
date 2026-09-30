@@ -60,6 +60,10 @@ DEFAULT_SEARCH_AGENT = "query-agent-search-mode"
 # is not configured. Pass an empty list to sweep without baselines.
 DEFAULT_EFFORT_SWEEP_BASELINES = ["hybrid-search"]
 
+# Built-in Weaviate search agents are deterministic, so repeated trials only
+# re-run identical queries; they are always evaluated with a single trial.
+DETERMINISTIC_SEARCH_AGENTS = {"hybrid-search", "vector-search", "bm25-search"}
+
 
 def _load_agent_config(agent_name: str, agent_config_path: Optional[Path] = None) -> dict[str, Any]:
     """Load agent-specific parameters from agent-config.yml."""
@@ -362,6 +366,11 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
         )
 
     num_trials = config.get("num_trials", 1)
+    if user_provided_agent is None and parse_agent_name(agent_name)[0] in DETERMINISTIC_SEARCH_AGENTS:
+        if num_trials != 1:
+            print(f"\033[93m{agent_name} is deterministic; running 1 trial instead of {num_trials}\033[0m")
+        num_trials = 1
+        config["num_trials"] = 1
     metrics_across_trials = []
 
     metrics_calculator = IRMetricsCalculator(

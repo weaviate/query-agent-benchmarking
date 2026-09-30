@@ -60,7 +60,7 @@ def _dispatch_search_loader(dataset_name: str):
         return huggingface_loader.load_enron()
     if dataset_name == "wixqa":
         return huggingface_loader.load_wixqa()
-    if dataset_name in ("irpapers", "irpapers-text-only"):
+    if dataset_name in ("irpapers", "irpapers-text-only", "irpapers-image-only"):
         return huggingface_loader.load_irpapers()
     if dataset_name == "filtered-cars":
         return huggingface_loader.load_filtered_cars()
