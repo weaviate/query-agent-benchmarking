@@ -32,6 +32,7 @@ DATABASE_DATASETS = [
     "wixqa",
     "irpapers",
     "irpapers-text-only",
+    "irpapers-image-only",
     "filtered-cars",
     "multihoprag",
     "longmemeval-s",

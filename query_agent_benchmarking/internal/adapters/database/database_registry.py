@@ -63,6 +63,15 @@ BenchmarkRegistry: list[DatasetSpec] = [
         .with_text2vec()
         .build()),
 
+    (DatasetSpecBuilder("irpapers-image-only")
+        .with_static_name("IRPapersImageOnly")
+        # Stored for inspecting results only; not indexed so retrieval is image-vector only.
+        .with_text_property("content", source_field="transcription", searchable=False, filterable=False)
+        .with_blob_property("image", source_field="base64_str")
+        .with_dataset_id()
+        .with_multi2vec(image_field="image", name="image_content", name_by_provider=True)
+        .build()),
+
     (DatasetSpecBuilder("filtered-cars")
         .with_static_name("FilteredCars")
         .with_text_property("make")

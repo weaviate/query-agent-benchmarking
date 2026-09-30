@@ -1,10 +1,10 @@
 # =============================================================================
 # Search Mode Settings
 # =============================================================================
-search_agent_name: "query-agent-search-mode"
+search_agent_name: "vector-search"
 
 # Single dataset — used by run-search-benchmark.py.
-search_dataset: obliq-bench-congress
+search_dataset: irpapers-image-only
 
 # Multiple datasets — used by run_search_evals (scripts/run-search-benchmark-multi.py).
 # Same "list in config" idea as `dataset_names` in database_loader_config.yml.
@@ -19,7 +19,7 @@ search_datasets:
 # and print a side-by-side comparison instead of a single run. Applies to both
 # run-search-benchmark.py and run-search-benchmark-multi.py. Set to false for a
 # single run at the `effort` configured in agent-config.yml.
-effort_sweep: true
+effort_sweep: false
 
 # Baseline agents to include in the effort sweep as reference points. Each runs
 # once per sweep (same trials/queries) and appears alongside
@@ -43,7 +43,7 @@ effort_sweep_overrides:
 # See `named_vectors.md` for supported target vectors. Only applies to datasets
 # with named vectors (e.g. multimodal `irpapers`); ignored for datasets with a
 # single unnamed vector like `irpapers-text-only` and BRIGHT.
-search_target: "text_content_weaviate"
+search_target: "image_content_cohere"
 
 # =============================================================================
 # Ask Mode Settings
@@ -64,7 +64,7 @@ longmemeval_subset:
 # Shared Settings
 # =============================================================================
 external_providers:
-#  - voyageai
+  - cohere
 
 use_async: True
 # Turn down (e.g. max_concurrent: 2, sleep_between_requests: 2) for BRIGHT

@@ -1,4 +1,4 @@
-dataset_name: filtered-cars
+dataset_name: irpapers-image-only
 
 # Multiple datasets — used by populate_db_multi
 dataset_names:
@@ -19,7 +19,7 @@ database_target: weaviate
 # `text_content_weaviate`, `text_content_cohere`.
 text_embedding_model: "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
 
-image_embedding_model: "weaviate/ModernVBERT/colmodernvbert"
+image_embedding_model: "cohere/embed-v5.0-pro"
 
 # MUVERA+HNSW parameters
 use_MUVERA_encoding: False

@@ -189,3 +189,40 @@ class TestSearchAgentBYOR:
             mock_factory.assert_not_called()
 
         assert result["avg_recall_at_20_mean"] == pytest.approx(1.0)
+
+
+class TestDeterministicAgentTrials:
+    """Built-in Weaviate search agents always run a single trial."""
+
+    @pytest.mark.parametrize("agent_name", ["vector-search", "hybrid-search", "bm25-search"])
+    def test_deterministic_agents_run_one_trial(self, mock_agent, agent_name):
+        config = {
+            "search_dataset": "beir/scifact/test",
+            "search_agent_name": agent_name,
+            "use_async": False,
+            "num_trials": 3,
+        }
+
+        with patch(_LOADER_PATH, side_effect=_mock_dataset_loader), \
+             patch(_REPO_PATH, MockResultRepository), \
+             patch(_FACTORY_PATH, return_value=mock_agent):
+            result = asyncio.run(_run_search_eval(config))
+
+        assert result["num_trials"] == 1
+        assert mock_agent.call_count == 2
+
+    def test_query_agent_keeps_configured_trials(self, mock_agent):
+        config = {
+            "search_dataset": "beir/scifact/test",
+            "search_agent_name": "query-agent-search-mode",
+            "use_async": False,
+            "num_trials": 3,
+        }
+
+        with patch(_LOADER_PATH, side_effect=_mock_dataset_loader), \
+             patch(_REPO_PATH, MockResultRepository), \
+             patch(_FACTORY_PATH, return_value=mock_agent):
+            result = asyncio.run(_run_search_eval(config))
+
+        assert result["num_trials"] == 3
+        assert mock_agent.call_count == 2 * 3

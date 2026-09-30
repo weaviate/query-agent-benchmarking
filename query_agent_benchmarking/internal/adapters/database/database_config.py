@@ -23,6 +23,7 @@ supported_database_datasets = (
     "freshstack-yolo",
     "irpapers",
     "irpapers-text-only",
+    "irpapers-image-only",
     "longmemeval-m",
     "longmemeval-s",
     "lotte/lifestyle/test/forum",
