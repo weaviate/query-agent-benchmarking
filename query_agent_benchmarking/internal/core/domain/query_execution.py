@@ -222,6 +222,8 @@ def run_ask_queries(
                 system_answer=response.final_answer,
                 time_taken=query_time_taken,
                 retrieved_context=response.raw_response,
+                searches=getattr(response, "searches", None),
+                aggregations=getattr(response, "aggregations", None),
             ))
         except Exception as e:
             query_time_taken = time.time() - query_start_time
@@ -274,6 +276,8 @@ async def run_ask_queries_async(
                     system_answer=response.final_answer,
                     time_taken=query_time_taken,
                     retrieved_context=response.raw_response,
+                    searches=getattr(response, "searches", None),
+                    aggregations=getattr(response, "aggregations", None),
                 )
             except Exception as e:
                 query_time_taken = time.time() - query_start_time

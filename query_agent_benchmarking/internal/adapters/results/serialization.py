@@ -119,6 +119,7 @@ def save_ask_trial_results(
     trial_number: int,
     alignment_scores: list[int] | None = None,
     judge_reasonings: list[str | None] | None = None,
+    per_query_details: list[dict | None] | None = None,
 ) -> None:
     """
     Save raw query results for a single ask trial.
@@ -129,6 +130,7 @@ def save_ask_trial_results(
         trial_number: Current trial number (1-indexed)
         alignment_scores: Optional list of per-query scores (1=correct, 0=incorrect)
         judge_reasonings: Optional list of per-query judge reasoning strings
+        per_query_details: Optional list of per-query metric details merged into each entry
     """
     _ensure_results_dir()
     base_path = _build_base_path(config)
@@ -156,6 +158,16 @@ def save_ask_trial_results(
             query_data["tenant_id"] = result.query.tenant_id
         if result.query.question_type:
             query_data["question_type"] = result.query.question_type
+        if result.query.query_id:
+            query_data["dataset_query_id"] = result.query.query_id
+        if result.query.metadata:
+            query_data["metadata"] = result.query.metadata
+        if result.searches is not None:
+            query_data["searches"] = [s.model_dump(mode="json") for s in result.searches]
+        if result.aggregations is not None:
+            query_data["aggregations"] = [a.model_dump(mode="json") for a in result.aggregations]
+        if per_query_details and idx < len(per_query_details) and per_query_details[idx]:
+            query_data.update(per_query_details[idx])
         if alignment_scores and idx < len(alignment_scores) and alignment_scores[idx] is not None:
             query_data["score"] = alignment_scores[idx]
             if not is_error and alignment_scores[idx] == 0:

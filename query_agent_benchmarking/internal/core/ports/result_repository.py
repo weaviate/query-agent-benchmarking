@@ -25,6 +25,7 @@ class ResultRepository(Protocol):
         trial_number: int,
         alignment_scores: list[int] | None = None,
         judge_reasonings: list[str | None] | None = None,
+        per_query_details: list[dict | None] | None = None,
     ) -> None:
         """Save raw ask query results for a single trial."""
         ...

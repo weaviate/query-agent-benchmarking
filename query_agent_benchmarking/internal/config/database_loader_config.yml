@@ -1,4 +1,6 @@
 dataset_name: irpapers-image-only
+# QueryAgentGym environments, e.g. query-agent-gym/surf-schools, create one
+# collection per collection in the dataset's own schema.json.
 
 # Multiple datasets — used by populate_db_multi
 dataset_names:

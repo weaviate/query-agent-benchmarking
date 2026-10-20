@@ -9,6 +9,8 @@ from pathlib import Path
 
 from query_agent_benchmarking.internal.adapters.database.database_config import validate_database_dataset
 from query_agent_benchmarking.internal.adapters.database.database_registry import resolve_spec
+from query_agent_benchmarking.internal.adapters.database.query_agent_gym import build_query_agent_gym_specs
+from query_agent_benchmarking.internal.adapters.database.spec import DatasetSpec
 from query_agent_benchmarking.internal.adapters.database.engram_loader import engram_ingest_all_tenants
 from query_agent_benchmarking.internal.adapters.results.engram_manifest import save_engram_manifest
 from query_agent_benchmarking.internal.adapters.database.database_loader import (
@@ -20,6 +22,11 @@ from query_agent_benchmarking.internal.adapters.database.database_loader import 
 )
 from query_agent_benchmarking.internal.adapters.database.naming import add_tag_to_name
 from query_agent_benchmarking.internal.adapters.dataset import load_longmemeval_docs_by_tenant
+from query_agent_benchmarking.internal.adapters.dataset.query_agent_gym_loader import (
+    is_query_agent_gym,
+    load_query_agent_gym_objects,
+    parse_environment,
+)
 from query_agent_benchmarking.internal.adapters.clients.weaviate_client import get_weaviate_client
 from query_agent_benchmarking.internal.config.loader import load_config
 from query_agent_benchmarking.internal.core.domain.display import pretty_print_in_memory_document
@@ -98,47 +105,79 @@ def _run_weaviate_loader(
     client = get_weaviate_client(headers=headers)
 
     try:
-        objects = _load_documents(dataset_name)
-
-        print("\033[92mFirst Document:\033[0m")
-        pretty_print_in_memory_document(objects[0])
-
-        spec = resolve_spec(dataset_name)
-        alias_collection_name = spec.name_fn(dataset_name)
-        collection_name = add_tag_to_name(alias_collection_name, tag)
-
-        print(f"\n\033[96mCreating collection '{collection_name}'...\033[0m")
-        _drop_and_create_collection(
-            client,
-            collection_name,
-            properties=spec.properties,
-            vector_config=spec.vector_config,
-            recreate=recreate,
-            multi_tenancy_config=spec.multi_tenancy_config,
-        )
-
-        # Manage alias
-        alias_info = client.alias.get(alias_name=alias_collection_name)
-        if alias_info is None:
-            client.alias.create(
-                alias_name=alias_collection_name,
-                target_collection=collection_name,
-            )
-        else:
-            client.alias.update(
-                alias_name=alias_collection_name,
-                new_target_collection=collection_name,
-            )
-
-        _batch_insert(
-            client,
-            collection=collection_name,
-            items=objects,
-            item_to_props=spec.item_to_props,
-            tenant_id_field=spec.tenant_id_field,
-        )
+        _load_dataset_into_weaviate(client, dataset_name, recreate=recreate, tag=tag)
     finally:
         client.close()
+
+
+def _load_dataset_into_weaviate(
+    client,
+    dataset_name: str,
+    recreate: bool = True,
+    tag: str = "Default",
+) -> None:
+    """Load one dataset into its Weaviate collection(s).
+
+    QueryAgentGym environments span several collections whose schemas come
+    from the dataset itself; every other dataset maps to a single registry spec.
+    """
+    if is_query_agent_gym(dataset_name):
+        objects_by_collection = load_query_agent_gym_objects(parse_environment(dataset_name))
+        for spec in build_query_agent_gym_specs(dataset_name):
+            objects = objects_by_collection[spec.name_fn(dataset_name)]
+            _populate_collection(client, spec, dataset_name, objects, recreate=recreate, tag=tag)
+        return
+
+    objects = _load_documents(dataset_name)
+    _populate_collection(client, resolve_spec(dataset_name), dataset_name, objects, recreate=recreate, tag=tag)
+
+
+def _populate_collection(
+    client,
+    spec: DatasetSpec,
+    dataset_name: str,
+    objects,
+    recreate: bool = True,
+    tag: str = "Default",
+) -> None:
+    """Create a tagged collection for ``spec``, point its alias at it, and insert ``objects``."""
+    print("\033[92mFirst Document:\033[0m")
+    pretty_print_in_memory_document(objects[0])
+
+    alias_collection_name = spec.name_fn(dataset_name)
+    collection_name = add_tag_to_name(alias_collection_name, tag)
+
+    print(f"\n\033[96mCreating collection '{collection_name}'...\033[0m")
+    _drop_and_create_collection(
+        client,
+        collection_name,
+        properties=spec.properties,
+        vector_config=spec.vector_config,
+        recreate=recreate,
+        multi_tenancy_config=spec.multi_tenancy_config,
+        description=spec.description,
+    )
+
+    alias_info = client.alias.get(alias_name=alias_collection_name)
+    if alias_info is None:
+        client.alias.create(
+            alias_name=alias_collection_name,
+            target_collection=collection_name,
+        )
+    else:
+        client.alias.update(
+            alias_name=alias_collection_name,
+            new_target_collection=collection_name,
+        )
+
+    _batch_insert(
+        client,
+        collection=collection_name,
+        items=objects,
+        item_to_props=spec.item_to_props,
+        tenant_id_field=spec.tenant_id_field,
+        uuid_field=spec.uuid_field,
+    )
 
 
 def populate_db_multi(
@@ -196,44 +235,7 @@ def populate_db_multi(
                 _run_engram_loader(config, dataset_name)
                 continue
 
-            objects = _load_documents(dataset_name)
-
-            print("\033[92mFirst Document:\033[0m")
-            pretty_print_in_memory_document(objects[0])
-
-            spec = resolve_spec(dataset_name)
-            alias_collection_name = spec.name_fn(dataset_name)
-            collection_name = add_tag_to_name(alias_collection_name, tag)
-
-            print(f"\n\033[96mCreating collection '{collection_name}'...\033[0m")
-            _drop_and_create_collection(
-                client,
-                collection_name,
-                properties=spec.properties,
-                vector_config=spec.vector_config,
-                recreate=recreate,
-                multi_tenancy_config=spec.multi_tenancy_config,
-            )
-
-            alias_info = client.alias.get(alias_name=alias_collection_name)
-            if alias_info is None:
-                client.alias.create(
-                    alias_name=alias_collection_name,
-                    target_collection=collection_name,
-                )
-            else:
-                client.alias.update(
-                    alias_name=alias_collection_name,
-                    new_target_collection=collection_name,
-                )
-
-            _batch_insert(
-                client,
-                collection=collection_name,
-                items=objects,
-                item_to_props=spec.item_to_props,
-                tenant_id_field=spec.tenant_id_field,
-            )
+            _load_dataset_into_weaviate(client, dataset_name, recreate=recreate, tag=tag)
 
         print(f"\n\033[92mDone! Populated {len(datasets)} datasets.\033[0m")
     finally:
