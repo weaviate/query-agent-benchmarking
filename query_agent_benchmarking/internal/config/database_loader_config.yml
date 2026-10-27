@@ -1,4 +1,4 @@
-dataset_name: irpapers-image-only
+dataset_name: browsecomp-plus
 # QueryAgentGym environments, e.g. query-agent-gym/surf-schools, create one
 # collection per collection in the dataset's own schema.json.
 
@@ -21,7 +21,8 @@ database_target: weaviate
 # `text_content_weaviate`, `text_content_cohere`.
 text_embedding_model: "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
 
-image_embedding_model: "cohere/embed-v5.0-pro"
+# Only needed for image datasets (irpapers, officeqa, vidore); requires COHERE_API_KEY.
+# image_embedding_model: "cohere/embed-v5.0-pro"
 
 # MUVERA+HNSW parameters
 use_MUVERA_encoding: False
