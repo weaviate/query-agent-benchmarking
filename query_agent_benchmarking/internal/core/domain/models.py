@@ -46,6 +46,10 @@ class InMemoryAskQuery(BaseModel):
     oracle_context_id: Optional[str] = None  # Optional: for oracle/hard-negative experiments
     tenant_id: Optional[str] = None  # Optional: for multi-tenant datasets (e.g., LongMemEval)
     question_type: Optional[str] = None  # Optional: for type-specific evaluation (e.g., LongMemEval)
+    query_id: Optional[str] = None
+    # Optional: exact ground-truth database queries (e.g., QueryAgentGym ``query_database`` arguments)
+    ground_truth_queries: Optional[list[dict[str, Any]]] = None
+    metadata: Optional[dict[str, Any]] = None  # Optional: dataset-specific labels (e.g., operator classes)
 
 
 # ============================================================================
@@ -73,6 +77,21 @@ class AgentSearch(BaseModel):
     filters: Optional[Any] = None
     sort_property: Optional[Any] = None
     uuid_value: Optional[str] = None
+
+
+class AgentAggregation(BaseModel):
+    """A single aggregation an agent issued under the hood.
+
+    Infrastructure-agnostic mirror of the Weaviate SDK's
+    ``AggregationResultWithCollectionNormalized``: one aggregation (property +
+    metric) per entry, with its own optional filter tree and group-by property.
+    ``aggregation`` and ``filters`` are stored as JSON-serializable values,
+    like ``AgentSearch.filters``.
+    """
+    collection: str
+    aggregation: Any
+    filters: Optional[Any] = None
+    groupby_property: Optional[str] = None
 
 
 class QueryResult(BaseModel):
@@ -118,6 +137,9 @@ class AskResult(BaseModel):
     input_tokens: Optional[int] = None
     output_tokens: Optional[int] = None
     retrieved_context: Optional[Any] = None  # Raw context from the agent (e.g. memories)
+    # Optional: the database queries the agent issued (None = agent doesn't report them)
+    searches: Optional[list[AgentSearch]] = None
+    aggregations: Optional[list[AgentAggregation]] = None
 
 
 # ============================================================================

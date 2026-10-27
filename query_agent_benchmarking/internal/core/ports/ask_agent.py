@@ -3,12 +3,20 @@
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol, runtime_checkable
 
+from query_agent_benchmarking.internal.core.domain.models import AgentAggregation, AgentSearch
+
 
 @dataclass
 class AskResponse:
-    """Response from an ask agent."""
+    """Response from an ask agent.
+
+    ``searches`` / ``aggregations`` are the database queries the agent issued;
+    leave them ``None`` when the agent does not report them.
+    """
     final_answer: str
     raw_response: Any = field(default=None, repr=False)
+    searches: Optional[list[AgentSearch]] = None
+    aggregations: Optional[list[AgentAggregation]] = None
 
 
 @runtime_checkable

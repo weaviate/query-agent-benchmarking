@@ -13,6 +13,7 @@ from weaviate.config import AdditionalConfig, Timeout
 from weaviate.agents.query import QueryAgent, AsyncQueryAgent
 
 from query_agent_benchmarking.internal.core.domain.models import (
+    AgentAggregation,
     AgentSearch,
     ObjectID,
     SearchAgentResponse,
@@ -92,6 +93,20 @@ def _extract_searches(response: Any) -> list[AgentSearch]:
             )
         )
     return searches
+
+
+def _extract_aggregations(response: Any) -> list[AgentAggregation]:
+    """Convert an AskModeResponse's ``aggregations`` into domain ``AgentAggregation``."""
+    raw_aggregations = getattr(response, "aggregations", None) or []
+    return [
+        AgentAggregation(
+            collection=getattr(a, "collection", ""),
+            aggregation=_dump_optional(getattr(a, "aggregation", None)),
+            filters=_dump_optional(getattr(a, "filters", None)),
+            groupby_property=getattr(a, "groupby_property", None),
+        )
+        for a in raw_aggregations
+    ]
 
 
 class WeaviateQueryAgentSearch:
@@ -215,10 +230,14 @@ class WeaviateQueryAgentAsk:
         image_embedding_model: Optional[str] = None,
         embedding_providers: Optional[Sequence[str]] = None,
         system_prompt: Optional[str] = None,
+        collections: Optional[Sequence[str]] = None,
     ):
-        info = resolve_collection_info(dataset_name, docs_collection)
-        self.collection = info["collection"]
-        self.id_property = info["id_property"]
+        if collections:
+            # Multi-collection datasets (e.g. QueryAgentGym) name their collections directly.
+            self.collections = list(collections)
+        else:
+            info = resolve_collection_info(dataset_name, docs_collection)
+            self.collections = [info["collection"]]
         self.agents_host = agents_host or "https://api.agents.weaviate.io"
         self.system_prompt = system_prompt
         self.headers = resolve_headers_for_models(
@@ -250,7 +269,7 @@ class WeaviateQueryAgentAsk:
     def _agent_kwargs(self):
         kwargs = dict(
             client=self._client,
-            collections=[self.collection],
+            collections=self.collections,
             agents_host=self.agents_host,
         )
         if self.system_prompt:
@@ -275,7 +294,7 @@ class WeaviateQueryAgentAsk:
         if self._agent is None:
             self.initialize_sync()
         response = self._agent.ask(query)
-        return AskResponse(final_answer=response.final_answer, raw_response=response)
+        return self._build_response(response)
 
     async def run_async(
         self,
@@ -284,7 +303,18 @@ class WeaviateQueryAgentAsk:
         tenant_id: Optional[str] = None,
     ) -> AskResponse:
         response = await self._agent.ask(query)
-        return AskResponse(final_answer=response.final_answer, raw_response=response)
+        return self._build_response(response)
+
+    @staticmethod
+    def _build_response(response: Any) -> AskResponse:
+        """Map a Weaviate ``AskModeResponse`` to the domain response, keeping
+        the searches and aggregations the agent issued."""
+        return AskResponse(
+            final_answer=response.final_answer,
+            raw_response=response,
+            searches=_extract_searches(response),
+            aggregations=_extract_aggregations(response),
+        )
 
     async def close_async(self):
         if self._client:

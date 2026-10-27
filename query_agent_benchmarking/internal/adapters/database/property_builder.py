@@ -39,6 +39,8 @@ class DatasetSpecBuilder:
         self._custom_mapper: Optional[Callable[[Mapping[str, Any]], dict[str, Any]]] = None
         self._multi_tenancy_config: Any = None
         self._tenant_id_field: Optional[str] = None
+        self._description: Optional[str] = None
+        self._uuid_field: Optional[str] = None
         self._config: dict[str, Any] = self._load_config(config_path)
 
     def _load_config(self, path: Optional[str | Path] = None) -> dict[str, Any]:
@@ -119,6 +121,26 @@ class DatasetSpecBuilder:
             wvcc.Property(name=name, data_type=INT, index_filterable=filterable)
         )
         self._field_mappings[name] = source_field or name
+        return self
+
+    def with_property(
+        self,
+        prop: wvcc.Property,
+        source_field: Optional[str] = None,
+    ) -> "DatasetSpecBuilder":
+        """Add a fully specified property (any data type, description, tokenization)."""
+        self._properties.append(prop)
+        self._field_mappings[prop.name] = source_field or prop.name
+        return self
+
+    def with_description(self, description: str) -> "DatasetSpecBuilder":
+        """Set the collection description (visible to agents reading the schema)."""
+        self._description = description
+        return self
+
+    def with_uuid_field(self, source_field: str = "uuid") -> "DatasetSpecBuilder":
+        """Insert each object under the UUID found in ``source_field``."""
+        self._uuid_field = source_field
         return self
 
     def with_dataset_id(self, source_field: str = "dataset_id") -> "DatasetSpecBuilder":
@@ -671,6 +693,8 @@ class DatasetSpecBuilder:
             item_to_props=item_to_props,
             multi_tenancy_config=self._multi_tenancy_config,
             tenant_id_field=self._tenant_id_field,
+            description=self._description,
+            uuid_field=self._uuid_field,
         )
 
     def _build_mapper(self) -> Callable[[Mapping[str, Any]], dict[str, Any]]:

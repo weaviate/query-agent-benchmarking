@@ -51,6 +51,12 @@ search_target: "image_content_cohere"
 ask_agent_name: "engram"
 queries: "longmemeval-s"
 
+# QueryAgentGym (scored by exact match of the agent's issued queries), e.g.:
+#   ask_agent_name: "query-agent-ask-mode"
+#   queries: "query-agent-gym/surf-schools"
+# Also report the LLM-as-judge alignment score on QueryAgentGym's final answers.
+use_lm_judge: False
+
 # LLM Judge configuration
 judge_model: "openai/gpt-5.4"
 ensemble_k: 3

@@ -44,6 +44,12 @@ supported_ask_datasets = (
     "multihoprag",  # Uses MultiHopRAG_Default collection
     "officeqa",  # Uses OfficeQA_Default collection (local PDFs)
     "browsecomp-plus",  # Uses BrowseCompPlus_Default collection
+    # QueryAgentGym: one environment per eval, schemas come from the dataset
+    "query-agent-gym/public-transit",
+    "query-agent-gym/tattoo-studios",
+    "query-agent-gym/nonprofits",
+    "query-agent-gym/surf-schools",
+    "query-agent-gym/childcare",
 )
 
 supported_embedding_models = (

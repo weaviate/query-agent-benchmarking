@@ -127,7 +127,12 @@ def load_ask_dataset(
     if dataset_name == "browsecomp-plus":
         return huggingface_loader.load_ask_browsecomp_plus()
 
+    if dataset_name.startswith("query-agent-gym/"):
+        from query_agent_benchmarking.internal.adapters.dataset import query_agent_gym_loader
+        return query_agent_gym_loader.load_ask_query_agent_gym(dataset_name)
+
     raise ValueError(
         f"Unknown ask dataset: {dataset_name}. "
-        f"Supported ask datasets: irpapers, multihoprag, officeqa, longmemeval-s, longmemeval-m, browsecomp-plus"
+        f"Supported ask datasets: irpapers, multihoprag, officeqa, longmemeval-s, longmemeval-m, browsecomp-plus, "
+        f"query-agent-gym/<environment>"
     )

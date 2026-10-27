@@ -158,6 +158,7 @@ def _drop_and_create_collection(
     vector_config: Any,
     recreate: bool = True,
     multi_tenancy_config: Any = None,
+    description: Optional[str] = None,
 ) -> None:
     """Drop (if exists) and create a Weaviate collection."""
     if recreate and client.collections.exists(name):
@@ -170,6 +171,8 @@ def _drop_and_create_collection(
         }
         if multi_tenancy_config is not None:
             create_kwargs["multi_tenancy_config"] = multi_tenancy_config
+        if description is not None:
+            create_kwargs["description"] = description
         client.collections.create(**create_kwargs)
 
 
@@ -182,12 +185,14 @@ def _batch_insert(
     batch_size: int = 20,
     verbose: bool = True,
     tenant_id_field: Optional[str] = None,
+    uuid_field: Optional[str] = None,
 ) -> int:
     """
     Insert items into a Weaviate collection in batches.
 
     If tenant_id_field is set, each item's tenant is read from that field
     and passed to add_object so the object is inserted into the correct tenant.
+    If uuid_field is set, each object is inserted under the UUID in that field.
 
     Returns the total number of items inserted.
     """
@@ -206,6 +211,8 @@ def _batch_insert(
             }
             if tenant_id_field is not None:
                 add_kwargs["tenant"] = str(item[tenant_id_field])
+            if uuid_field is not None:
+                add_kwargs["uuid"] = str(item[uuid_field])
             batch.add_object(**add_kwargs)
 
             if verbose and i % batch_size == 0:

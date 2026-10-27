@@ -5,7 +5,10 @@ Provides calculators for different ask evaluation strategies:
 - ExactMatchAskCalculator: Uses exact string matching
 - OfficeQAAskCalculator: Uses fuzzy numerical matching
 - LongMemEvalAskCalculator: Uses LongMemEval's type-specific LLM judge
+- QueryExactMatchAskCalculator: Exact match of the database queries the agent issued (QueryAgentGym)
 """
+
+from typing import Optional
 
 import numpy as np
 from tqdm import tqdm
@@ -14,6 +17,12 @@ from query_agent_benchmarking.internal.core.domain.models import AskResult
 from query_agent_benchmarking.internal.adapters.metrics.lmjudge_alignment import LMJudge
 from query_agent_benchmarking.internal.adapters.metrics.longmemeval_judge import LongMemEvalJudge
 from query_agent_benchmarking.internal.adapters.metrics.exact_match import calculate_exact_match
+from query_agent_benchmarking.internal.adapters.metrics.query_exact_match import (
+    canonicalize_ground_truth,
+    canonicalize_predicted,
+    render_unit,
+    score_query_units,
+)
 from query_agent_benchmarking.internal.adapters.metrics.officeqa_metric import (
     score_answer as officeqa_score_answer,
     extract_final_answer,
@@ -300,3 +309,133 @@ class LongMemEvalAskCalculator:
             for qtype, acc in type_accuracy.items():
                 count = results_dict["type_counts"][qtype]
                 print(f"  {qtype}: {acc:.2%} ({count} questions)")
+
+
+class QueryExactMatchAskCalculator:
+    """Ask metrics calculator scoring the database queries the agent issued.
+
+    Each result's ``searches`` and ``aggregations`` are canonicalized and
+    compared with the query's ``ground_truth_queries`` (see
+    :mod:`query_exact_match`). A query scores 1 only when the issued query set
+    equals the ground-truth set exactly. Unit-level recall and precision, and
+    per-operator-class accuracy (as ``type_accuracy``), are reported alongside.
+
+    Args:
+        collection_aliases: Maps Weaviate collection names back to dataset
+            collection names (e.g. ``{"SurfBeaches_Default": "SurfBeaches"}``).
+        lm_judge: Optional LM judge calculator. When given, its alignment score
+            on the final answer is computed and reported in addition.
+    """
+
+    def __init__(
+        self,
+        collection_aliases: Optional[dict[str, str]] = None,
+        lm_judge: Optional[LMJudgeAskCalculator] = None,
+    ):
+        self.collection_aliases = collection_aliases or {}
+        self.lm_judge = lm_judge
+
+    def compute(self, results: list[AskResult]) -> dict:
+        print(f"\n\033[94mAnalyzing {len(results)} ask results with query exact match...\033[0m")
+
+        scores: list[Optional[int]] = []
+        recalls = []
+        precisions = []
+        query_times = []
+        misaligned_indices = []
+        details: list[Optional[dict]] = []
+        class_scores: dict[str, list[int]] = {}
+        phrasing_scores: dict[str, list[int]] = {}
+        unreported = 0
+
+        for i, result in enumerate(results):
+            if result.query.ground_truth_queries is None:
+                raise ValueError(
+                    f"Query {i} has no ground_truth_queries; query exact match "
+                    "requires a dataset with exact ground-truth queries (e.g. QueryAgentGym)."
+                )
+            if result.system_answer.startswith("[ERROR]"):
+                scores.append(None)
+                details.append(None)
+                continue
+            if result.searches is None and result.aggregations is None:
+                unreported += 1
+
+            ground_truth = canonicalize_ground_truth(result.query.ground_truth_queries)
+            predicted = canonicalize_predicted(
+                result.searches, result.aggregations, self.collection_aliases,
+            )
+            match = score_query_units(ground_truth, predicted)
+            score = 1 if match["exact_match"] else 0
+
+            scores.append(score)
+            recalls.append(match["recall"])
+            precisions.append(match["precision"])
+            query_times.append(result.time_taken)
+            if not score:
+                misaligned_indices.append(i)
+
+            metadata = result.query.metadata or {}
+            for operator_class in metadata.get("operator_classes", []):
+                class_scores.setdefault(operator_class, []).append(score)
+            if metadata.get("phrasing"):
+                phrasing_scores.setdefault(metadata["phrasing"], []).append(score)
+
+            details.append({
+                "query_exact_match": score,
+                "sub_query_recall": match["recall"],
+                "sub_query_precision": match["precision"],
+                "ground_truth_queries": [render_unit(u) for u in ground_truth],
+                "predicted_queries": [render_unit(u) for u in predicted],
+                "missing_queries": match["missing"],
+                "extra_queries": match["extra"],
+            })
+
+        if unreported:
+            print(f"\033[93mWarning: {unreported} results carry no searches/aggregations; "
+                  "this agent may not report the queries it issues.\033[0m")
+
+        valid_scores = [s for s in scores if s is not None]
+        results_dict = {
+            "avg_query_time": float(np.mean(query_times)) if query_times else 0,
+            "query_times": query_times,
+            "misaligned_indices": misaligned_indices,
+            "total_input_tokens": 0,
+            "total_output_tokens": 0,
+            "metric": "query_exact_match",
+            "avg_query_exact_match": float(np.mean(valid_scores)) if valid_scores else 0,
+            "query_exact_match_scores": scores,
+            "avg_sub_query_recall": float(np.mean(recalls)) if recalls else 0,
+            "avg_sub_query_precision": float(np.mean(precisions)) if precisions else 0,
+            "type_accuracy": {c: float(np.mean(v)) for c, v in sorted(class_scores.items())},
+            "type_counts": {c: len(v) for c, v in sorted(class_scores.items())},
+            "phrasing_accuracy": {p: float(np.mean(v)) for p, v in sorted(phrasing_scores.items())},
+            "query_match_details": details,
+        }
+
+        self._print_summary(results_dict, len(valid_scores))
+
+        if self.lm_judge is not None:
+            judge_metrics = self.lm_judge.compute(results)
+            for key in (
+                "avg_alignment_score", "alignment_score_scores", "judge_model",
+                "ensemble_k", "judge_reasonings", "total_input_tokens", "total_output_tokens",
+            ):
+                if key in judge_metrics:
+                    results_dict[key] = judge_metrics[key]
+
+        return results_dict
+
+    @staticmethod
+    def _print_summary(results_dict: dict, num_evaluated: int) -> None:
+        print("\n\033[92m===== Query Exact Match Results =====\033[0m")
+        print(f"Number of queries evaluated: {num_evaluated}")
+        print(f"Query Exact Match: {results_dict['avg_query_exact_match']:.2%}")
+        print(f"Sub-query Recall: {results_dict['avg_sub_query_recall']:.2%}")
+        print(f"Sub-query Precision: {results_dict['avg_sub_query_precision']:.2%}")
+        print(f"Average Query Time: {results_dict['avg_query_time']:.2f} seconds")
+        if results_dict["type_accuracy"]:
+            print("\n\033[93mPer-Operator-Class Exact Match:\033[0m")
+            for operator_class, acc in results_dict["type_accuracy"].items():
+                count = results_dict["type_counts"][operator_class]
+                print(f"  {operator_class}: {acc:.2%} ({count} queries)")

@@ -15,6 +15,8 @@ class DatasetSpec:
     item_to_props: Callable[[Mapping[str, Any]], dict[str, Any]]
     multi_tenancy_config: Any = None
     tenant_id_field: Optional[str] = None
+    description: Optional[str] = None
+    uuid_field: Optional[str] = None  # Source field holding each object's Weaviate UUID
 
     def matches(self, dataset_name: str) -> bool:
         """Check if this spec matches a dataset name."""
