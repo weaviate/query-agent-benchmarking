@@ -36,6 +36,12 @@ supported_database_datasets = (
     "wixqa",
     "browsecomp-plus",
     "obliq-bench-congress",
+    "query-agent-gym",  # all five environments as one dataset
+    "query-agent-gym/public-transit",
+    "query-agent-gym/tattoo-studios",
+    "query-agent-gym/nonprofits",
+    "query-agent-gym/surf-schools",
+    "query-agent-gym/childcare",
 )
 
 

@@ -147,6 +147,7 @@ class EngramDSPyAgent:
         query: str,
         tenant_id: Optional[str] = None,
         oracle_context_id: Optional[str] = None,
+        collections: Optional[list[str]] = None,
     ) -> EngramAskResponse:
         """
         Retrieve memories from Engram and answer the question using DSPy.
@@ -155,6 +156,7 @@ class EngramDSPyAgent:
             query: The user's question.
             tenant_id: Tenant whose memories to search.
             oracle_context_id: Unused, kept for interface compatibility.
+            collections: Unused, kept for interface compatibility.
         """
         if tenant_id is None:
             raise ValueError("tenant_id is required for EngramDSPyAgent")

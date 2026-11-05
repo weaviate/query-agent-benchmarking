@@ -35,6 +35,13 @@ supported_search_datasets = (
     "vidore_v3_hr",
     "wixqa",
     "browsecomp-plus", # TODO: Take this out of here for now.
+    # QueryAgentGym search mode: runs on the collections loaded for `query-agent-gym`
+    "query-agent-gym/search-mode",
+    "query-agent-gym/search-mode/public-transit",
+    "query-agent-gym/search-mode/tattoo-studios",
+    "query-agent-gym/search-mode/nonprofits",
+    "query-agent-gym/search-mode/surf-schools",
+    "query-agent-gym/search-mode/childcare",
 )
 
 supported_ask_datasets = (
@@ -44,6 +51,20 @@ supported_ask_datasets = (
     "multihoprag",  # Uses MultiHopRAG_Default collection
     "officeqa",  # Uses OfficeQA_Default collection (local PDFs)
     "browsecomp-plus",  # Uses BrowseCompPlus_Default collection
+    # QueryAgentGym query sets, over all five environments or one; schemas come from the dataset
+    "query-agent-gym/ask-mode",
+    "query-agent-gym/ask-mode/public-transit",
+    "query-agent-gym/ask-mode/tattoo-studios",
+    "query-agent-gym/ask-mode/nonprofits",
+    "query-agent-gym/ask-mode/surf-schools",
+    "query-agent-gym/ask-mode/childcare",
+    # Exact-value filtering cases, scored by checks; same collections
+    "query-agent-gym/edge-case-1",
+    "query-agent-gym/edge-case-1/public-transit",
+    "query-agent-gym/edge-case-1/tattoo-studios",
+    "query-agent-gym/edge-case-1/nonprofits",
+    "query-agent-gym/edge-case-1/surf-schools",
+    "query-agent-gym/edge-case-1/childcare",
 )
 
 supported_embedding_models = (

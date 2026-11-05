@@ -1,4 +1,10 @@
-dataset_name: irpapers-image-only
+dataset_name: query-agent-gym
+# QueryAgentGym is one dataset: `query-agent-gym` loads all five environments
+# (public-transit, tattoo-studios, nonprofits, surf-schools, childcare), each
+# creating one collection per collection in its own schema.json. A single
+# environment can be loaded alone as e.g. `query-agent-gym/surf-schools`.
+# Every query set (`query-agent-gym/ask-mode`, `/search-mode`, `/edge-case-1`)
+# runs against these same collections.
 
 # Multiple datasets — used by populate_db_multi
 dataset_names:
@@ -19,7 +25,8 @@ database_target: weaviate
 # `text_content_weaviate`, `text_content_cohere`.
 text_embedding_model: "weaviate/Snowflake/snowflake-arctic-embed-l-v2.0"
 
-image_embedding_model: "cohere/embed-v5.0-pro"
+# Only needed for image datasets (irpapers, officeqa, vidore); requires COHERE_API_KEY.
+# image_embedding_model: "cohere/embed-v5.0-pro"
 
 # MUVERA+HNSW parameters
 use_MUVERA_encoding: False

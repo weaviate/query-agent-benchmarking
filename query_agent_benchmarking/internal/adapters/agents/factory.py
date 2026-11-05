@@ -35,6 +35,7 @@ def create_search_agent(
     external_service_host: Optional[str] = None,
     filtering: Optional[str] = None,
     effort: Optional[str] = None,
+    collections: Optional[Sequence[str]] = None,
 ):
     """Create a SearchAgent adapter based on agent_name.
 
@@ -59,6 +60,9 @@ def create_search_agent(
             Controls how much compute search mode spends per query. When None,
             the agents server applies its own default. Only applies to
             "query-agent-search-mode".
+        collections: Explicit Weaviate collection names, for multi-collection
+            datasets (e.g. QueryAgentGym); results are then identified by UUID.
+            Only applies to "query-agent-search-mode".
 
     Returns:
         An object implementing the SearchAgent protocol.
@@ -79,6 +83,7 @@ def create_search_agent(
             agents_host=agents_host,
             filtering=filtering,
             effort=effort,
+            collections=collections,
             **_embedding_kwargs,
         )
 
@@ -129,6 +134,7 @@ def create_ask_agent(
     embedding_providers: Optional[Sequence[str]] = None,
     external_service_host: Optional[str] = None,
     system_prompt: Optional[str] = None,
+    collections: Optional[Sequence[str]] = None,
 ):
     """Create an AskAgent adapter based on agent_name.
 
@@ -143,6 +149,8 @@ def create_ask_agent(
         embedding_providers: Explicit provider list for header injection.
         external_service_host: Host URL for external service mode.
         system_prompt: System prompt for the ask agent.
+        collections: Explicit Weaviate collection names, for multi-collection
+            datasets (e.g. QueryAgentGym). Overrides dataset/docs_collection resolution.
 
     Returns:
         An object implementing the AskAgent protocol.
@@ -157,6 +165,7 @@ def create_ask_agent(
             image_embedding_model=image_embedding_model,
             embedding_providers=embedding_providers,
             system_prompt=system_prompt,
+            collections=collections,
         )
 
     if agent_name == "external_service":

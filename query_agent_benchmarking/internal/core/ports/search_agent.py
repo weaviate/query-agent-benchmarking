@@ -21,6 +21,10 @@ class SearchAgent(Protocol):
     return either a ranked ``list[ObjectID]`` (the legacy contract) or a
     ``SearchAgentResponse`` carrying both the ranked IDs and the structured
     ``searches`` the agent issued under the hood.
+
+    Agents may also accept an optional ``collections`` keyword: the collections
+    to search for this query, overriding their defaults. It is only passed for
+    queries that set it (e.g. QueryAgentGym), so agents without it keep working.
     """
 
     def run(self, query: str, tenant: Optional[str] = None) -> SearchAgentResult:

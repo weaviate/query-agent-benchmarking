@@ -10,10 +10,11 @@ class MockResultRepository:
         self.saved_metrics = []
         self.saved_aggregated = []
 
-    def save_trial_results(self, results, config, trial_number):
+    def save_trial_results(self, results, config, trial_number, per_query_details=None):
         self.saved_trials.append((results, config, trial_number))
 
-    def save_ask_trial_results(self, results, config, trial_number, alignment_scores=None, judge_reasonings=None):
+    def save_ask_trial_results(self, results, config, trial_number, alignment_scores=None, judge_reasonings=None,
+                               per_query_details=None):
         self.saved_ask_trials.append((results, config, trial_number, alignment_scores, judge_reasonings))
 
     def save_trial_metrics(self, metrics, config, trial_number):

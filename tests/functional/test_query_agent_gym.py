@@ -1,0 +1,100 @@
+"""Functional tests for QueryAgentGym against the real HuggingFace data.
+
+Downloads ``weaviate/QueryAgentGym`` (~12 MB) and, for every environment,
+verifies the schema-driven specs map every object, and that every ground
+truth canonicalizes and matches itself under query exact match.
+
+Run with:
+    uv run pytest tests/functional/test_query_agent_gym.py -v
+"""
+
+from collections import Counter
+
+import pytest
+
+from query_agent_benchmarking.internal.adapters.database.query_agent_gym import build_query_agent_gym_specs
+from query_agent_benchmarking.internal.adapters.dataset.query_agent_gym_loader import (
+    QUERY_AGENT_GYM,
+    QUERY_AGENT_GYM_ASK_MODE,
+    QUERY_AGENT_GYM_ENVIRONMENTS,
+    QUERY_AGENT_GYM_EDGE_CASE_1,
+    QUERY_AGENT_GYM_SEARCH_MODE,
+    load_edge_case_query_agent_gym,
+    load_search_query_agent_gym,
+    load_ask_query_agent_gym,
+    load_query_agent_gym_objects,
+)
+from query_agent_benchmarking.internal.adapters.metrics.query_exact_match import (
+    canonicalize_ground_truth,
+    score_query_units,
+)
+
+
+DATASETS = [f"query-agent-gym/{env}" for env in QUERY_AGENT_GYM_ENVIRONMENTS]
+
+
+@pytest.mark.parametrize("dataset_name", DATASETS)
+def test_specs_map_every_object(dataset_name):
+    environment = dataset_name.split("/", 1)[1]
+    objects = load_query_agent_gym_objects(environment)
+    specs = build_query_agent_gym_specs(dataset_name)[environment]
+
+    assert {s.name_fn(dataset_name) for s in specs} == set(objects)
+    for spec in specs:
+        rows = objects[spec.name_fn(dataset_name)]
+        assert len(rows) == 1000
+        declared = {p.name for p in spec.properties}
+        for row in rows:
+            props = spec.item_to_props(row)
+            assert set(props) == declared
+            assert row[spec.uuid_field]
+
+
+@pytest.mark.parametrize("environment", QUERY_AGENT_GYM_ENVIRONMENTS)
+def test_queries_load_and_self_match(environment):
+    queries = load_ask_query_agent_gym(f"{QUERY_AGENT_GYM_ASK_MODE}/{environment}")
+
+    assert len(queries) == 50
+    for q in queries:
+        assert q.metadata["environment"] == environment
+        assert q.question and q.ground_truth_answer and q.query_id
+        assert q.metadata["operator_classes"]
+        units = canonicalize_ground_truth(q.ground_truth_queries)
+        assert units
+        assert score_query_units(units, units)["exact_match"]
+
+
+def test_full_dataset_is_every_environment():
+    queries = load_ask_query_agent_gym(QUERY_AGENT_GYM_ASK_MODE)
+
+    assert len(queries) == 50 * len(QUERY_AGENT_GYM_ENVIRONMENTS)
+    assert len({q.query_id for q in queries}) == len(queries)
+    assert tuple(build_query_agent_gym_specs(QUERY_AGENT_GYM)) == QUERY_AGENT_GYM_ENVIRONMENTS
+
+
+def test_search_mode_queries_load_and_self_match():
+    queries = load_search_query_agent_gym(QUERY_AGENT_GYM_SEARCH_MODE)
+
+    assert len(queries) == 30 * len(QUERY_AGENT_GYM_ENVIRONMENTS)
+    shapes = Counter(q.metadata["retrieval_shape"] for q in queries)
+    assert shapes == {"search_only": 50, "search_and_filters": 50, "filter_only": 50}
+    for q in queries:
+        assert q.dataset_ids
+        [sub_query] = q.ground_truth_queries
+        assert bool(sub_query.get("search_query")) == (q.metadata["retrieval_shape"] != "filter_only")
+        units = canonicalize_ground_truth(q.ground_truth_queries)
+        assert score_query_units(units, units)["exact_match"]
+
+
+def test_edge_cases_load_without_retry_cases():
+    cases = load_edge_case_query_agent_gym(QUERY_AGENT_GYM_EDGE_CASE_1)
+    with_retry = load_edge_case_query_agent_gym(QUERY_AGENT_GYM_EDGE_CASE_1, include_retry=True)
+
+    assert len(with_retry) == 130
+    assert len(cases) == 130 - 16
+    assert {c.metadata["node"] for c in cases} == {"query", "aggregate"}
+    for c in cases:
+        expect = c.metadata["expect"]
+        assert expect["value_filter"] in ("eq", "like_prefix", "or_eq", "none", "no_eq")
+        assert isinstance(expect["other_filters"], list)
+        assert c.metadata["value"] in c.question or c.metadata["behavior"] == "B9"

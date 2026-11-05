@@ -2,7 +2,8 @@
 Ask benchmark service — evaluates question answering performance.
 
 Orchestrates ask mode benchmarks using LLM-as-judge evaluation
-for semantic alignment.
+for semantic alignment, or, for QueryAgentGym, exact match of the
+database queries the agent issued.
 """
 
 import asyncio
@@ -30,6 +31,17 @@ from query_agent_benchmarking.internal.adapters.metrics.ask_metrics_calculator i
     ExactMatchAskCalculator,
     OfficeQAAskCalculator,
     LongMemEvalAskCalculator,
+    QueryExactMatchAskCalculator,
+)
+from query_agent_benchmarking.internal.adapters.database.query_agent_gym import query_agent_gym_collection_names
+from query_agent_benchmarking.internal.adapters.metrics.query_agent_gym_edge_case import (
+    QueryAgentGymEdgeCaseAskCalculator,
+)
+from query_agent_benchmarking.internal.adapters.dataset.query_agent_gym_loader import (
+    is_query_agent_gym,
+    is_query_agent_gym_edge_case,
+    query_agent_gym_array_properties,
+    query_agent_gym_date_ranges,
 )
 from query_agent_benchmarking.internal.adapters.results.json_file_repository import JsonFileResultRepository
 from query_agent_benchmarking.internal.config.loader import load_config, merge_configs
@@ -129,6 +141,19 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
         use_officeqa_metric = True
     if isinstance(queries_input, str) and queries_input.startswith("longmemeval"):
         use_longmemeval = True
+    is_gym = isinstance(queries_input, str) and is_query_agent_gym(queries_input)
+    # Edge cases are scored by checks; every other QueryAgentGym set by query recall.
+    use_edge_case = is_gym and is_query_agent_gym_edge_case(queries_input)
+    use_query_exact_match = is_gym and not use_edge_case
+    # QueryAgentGym: each command may query only its own environment's collections.
+    # Collection names are unique across environments: {Weaviate name: dataset name}.
+    collection_aliases: dict[str, str] = {}
+    if is_gym:
+        names_by_environment = query_agent_gym_collection_names(queries_input)
+        for query in queries:
+            query.collections = list(names_by_environment[query.metadata["environment"]])
+        for names in names_by_environment.values():
+            collection_aliases.update(names)
 
     system_prompt = config.get("system_prompt")
     if not system_prompt and isinstance(queries_input, str):
@@ -152,6 +177,17 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
             engram_group=agent_cfg.get("engram_group", "default"),
             user_id_prefix=agent_cfg.get("user_id_prefix", "longmemeval-"),
         )
+    elif is_gym:
+        agent_cfg = _load_agent_config(agent_name)
+        ask_agent = create_ask_agent(
+            agent_name,
+            agents_host=agent_cfg.get("agents_host", agents_host),
+            embedding_model=embedding_model,
+            external_service_host=agent_cfg.get("external_service_host", external_service_host),
+            system_prompt=system_prompt,
+            # Overridden per question by each query's own collections.
+            collections=list(collection_aliases),
+        )
     elif docs_collection or dataset_name:
         agent_cfg = _load_agent_config(agent_name)
         ask_agent = create_ask_agent(
@@ -173,7 +209,24 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
     num_trials = config.get("num_trials", 1)
     metrics_across_trials = []
 
-    if use_longmemeval:
+    if use_edge_case:
+        metrics_calculator = QueryAgentGymEdgeCaseAskCalculator(
+            collection_aliases=collection_aliases,
+            array_properties=query_agent_gym_array_properties(queries_input),
+            date_ranges=query_agent_gym_date_ranges(queries_input),
+        )
+    elif use_query_exact_match:
+        # Exact match of the issued queries; the LM judge on the final answer is opt-in.
+        lm_judge = None
+        if config.get("use_lm_judge", False):
+            lm_judge = LMJudgeAskCalculator(model=judge_model, ensemble_k=ensemble_k, use_reasoning=use_reasoning)
+        metrics_calculator = QueryExactMatchAskCalculator(
+            collection_aliases=collection_aliases,
+            lm_judge=lm_judge,
+            array_properties=query_agent_gym_array_properties(queries_input),
+            date_ranges=query_agent_gym_date_ranges(queries_input),
+        )
+    elif use_longmemeval:
         metrics_calculator = LongMemEvalAskCalculator(model=judge_model)
     elif use_officeqa_metric:
         metrics_calculator = OfficeQAAskCalculator(tolerance=officeqa_tolerance)
@@ -184,7 +237,13 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
 
     result_repo = JsonFileResultRepository()
 
-    if use_longmemeval:
+    if use_edge_case:
+        score_key = "avg_edge_case_pass"
+        scores_key = "edge_case_pass_scores"
+    elif use_query_exact_match:
+        score_key = "avg_query_recall"
+        scores_key = "query_recall_scores"
+    elif use_longmemeval:
         score_key = "avg_alignment_score"
         scores_key = "alignment_score_scores"
     elif use_officeqa_metric:
@@ -225,10 +284,21 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
 
         print(f"\n\033[92mTrial {trial+1} Results:\033[0m")
         print(f"  {score_key}: {metrics[score_key]:.2%}")
+        if use_query_exact_match:
+            print(f"  avg_query_exact_match: {metrics['avg_query_exact_match']:.2%}")
+        if use_query_exact_match and "avg_alignment_score" in metrics:
+            print(f"  avg_alignment_score: {metrics['avg_alignment_score']:.2%}")
         print(f"  Avg Query Time: {metrics['avg_query_time']:.2f}s")
 
         alignment_scores = metrics.get(scores_key, [])
         judge_reasonings = metrics.get("judge_reasonings")
+        # Per-query details live in the trial results file, not the metrics file.
+        per_query_details = metrics.pop("query_match_details", None)
+        if per_query_details is not None and "alignment_score_scores" in metrics:
+            per_query_details = [
+                {**(d or {}), "alignment_score": a}
+                for d, a in zip(per_query_details, metrics["alignment_score_scores"])
+            ]
 
         result_repo.save_ask_trial_results(
             results=results,
@@ -236,6 +306,7 @@ async def _run_ask_eval(config: dict[str, Any]) -> dict[str, Any]:
             trial_number=trial+1,
             alignment_scores=alignment_scores,
             judge_reasonings=judge_reasonings,
+            per_query_details=per_query_details,
         )
 
         result_repo.save_trial_metrics(

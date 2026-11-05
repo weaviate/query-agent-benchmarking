@@ -30,6 +30,15 @@ from query_agent_benchmarking.internal.core.domain.query_execution import (
 )
 from query_agent_benchmarking.internal.core.domain.analysis import aggregate_metrics
 from query_agent_benchmarking.internal.adapters.metrics.ir_metrics_calculator import IRMetricsCalculator
+from query_agent_benchmarking.internal.adapters.metrics.query_agent_gym_search_calculator import (
+    QueryAgentGymSearchCalculator,
+)
+from query_agent_benchmarking.internal.adapters.database.query_agent_gym import query_agent_gym_collection_names
+from query_agent_benchmarking.internal.adapters.dataset.query_agent_gym_loader import (
+    is_query_agent_gym_search_mode,
+    query_agent_gym_array_properties,
+    query_agent_gym_date_ranges,
+)
 from query_agent_benchmarking.internal.adapters.results.json_file_repository import JsonFileResultRepository
 from query_agent_benchmarking.internal.core.domain.display import (
     pretty_print_in_memory_query,
@@ -296,6 +305,17 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
     if max_query_tokens:
         queries = truncate_long_queries(queries, max_query_tokens)
 
+    # QueryAgentGym: each query may search only its own environment's collections.
+    # Collection names are unique across environments: {Weaviate name: dataset name}.
+    is_gym = is_query_agent_gym_search_mode(dataset_identifier)
+    collection_aliases: dict[str, str] = {}
+    if is_gym:
+        names_by_environment = query_agent_gym_collection_names(dataset_identifier)
+        for query in queries:
+            query.collections = list(names_by_environment[query.metadata["environment"]])
+        for names in names_by_environment.values():
+            collection_aliases.update(names)
+
     # Use a user-provided search agent if available; otherwise build one from config.
     user_provided_agent: Optional[SearchAgent] = config.pop("search_agent", None)
 
@@ -338,6 +358,12 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
         if embedding_providers:
             config["embedding_providers"] = embedding_providers
 
+        if is_gym and parse_agent_name(agent_name)[0] != DEFAULT_SEARCH_AGENT:
+            raise ValueError(
+                f"{dataset_identifier} scores the searches an agent issues, so it needs "
+                f"'{DEFAULT_SEARCH_AGENT}' (or a user-provided search_agent); got '{agent_name}'."
+            )
+
         agent_cfg = _load_agent_config(agent_name)
         resolved_agents_host = agent_cfg.get("agents_host", agents_host)
         resolved_external_service_host = agent_cfg.get("external_service_host", config.get("external_service_host"))
@@ -363,6 +389,8 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
             external_service_host=resolved_external_service_host,
             filtering=resolved_filtering,
             effort=resolved_effort,
+            # Overridden per query by each query's own collections.
+            collections=list(collection_aliases) or None,
         )
 
     num_trials = config.get("num_trials", 1)
@@ -373,10 +401,19 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
         config["num_trials"] = 1
     metrics_across_trials = []
 
-    metrics_calculator = IRMetricsCalculator(
-        dataset_name=dataset_identifier,
-        extra_metrics=config.get("extra_metrics"),
-    )
+    if is_gym:
+        metrics_calculator = QueryAgentGymSearchCalculator(
+            dataset_name=dataset_identifier,
+            collection_aliases=collection_aliases,
+            array_properties=query_agent_gym_array_properties(dataset_identifier),
+            date_ranges=query_agent_gym_date_ranges(dataset_identifier),
+            extra_metrics=config.get("extra_metrics"),
+        )
+    else:
+        metrics_calculator = IRMetricsCalculator(
+            dataset_name=dataset_identifier,
+            extra_metrics=config.get("extra_metrics"),
+        )
     result_repo = JsonFileResultRepository()
 
     for trial in range(num_trials):
@@ -404,14 +441,17 @@ async def _run_search_eval(config: dict[str, Any]) -> dict[str, Any]:
                 sleep_between_requests=config.get("sleep_between_requests", 0),
             )
 
+        metrics = metrics_calculator.compute(results, queries)
+        # Per-query details live in the trial results file, not the metrics file.
+        per_query_details = metrics.pop("query_match_details", None)
         result_repo.save_trial_results(
             results=results,
             config=config,
             trial_number=trial+1,
+            per_query_details=per_query_details,
         )
-
-        metrics = metrics_calculator.compute(results, queries)
-        print(metrics)
+        if not is_gym:
+            print(metrics)
         result_repo.save_trial_metrics(
             metrics=metrics,
             config=config,

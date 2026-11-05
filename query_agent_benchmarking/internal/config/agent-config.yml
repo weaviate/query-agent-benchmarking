@@ -11,6 +11,7 @@
 # Weaviate Query Agent (default)
 # =============================================================================
 query-agent-ask-mode:
+  # Prod; for a local Query Agent use http://localhost:8000
   agents_host: https://api.agents.weaviate.io
 
 query-agent-search-mode:

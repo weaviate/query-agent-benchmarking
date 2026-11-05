@@ -65,6 +65,18 @@ def _unpack_search_response(
         return response.retrieved_ids, response.searches
     return response, None  # type: ignore[return-value]
 
+
+def _search_kwargs(query: InMemoryQuery) -> dict[str, Any]:
+    """Per-query arguments for ``SearchAgent.run``.
+
+    ``collections`` is only passed when the query sets it, so search agents
+    that predate the argument (e.g. user-provided ones) keep working.
+    """
+    kwargs: dict[str, Any] = {"tenant": query.tenant_id}
+    if query.collections:
+        kwargs["collections"] = query.collections
+    return kwargs
+
 def run_search_queries(
     queries: list[InMemoryQuery],
     query_agent: Any,
@@ -78,7 +90,7 @@ def run_search_queries(
             time.sleep(sleep_between_requests)
         query_start_time = time.time()
         stringified_ids = [str(dataset_id) for dataset_id in query.dataset_ids]
-        response = query_agent.run(query.question, tenant=query.tenant_id)
+        response = query_agent.run(query.question, **_search_kwargs(query))
         retrieved_ids, searches = _unpack_search_response(response)
         query_time_taken = time.time() - query_start_time
 
@@ -131,7 +143,7 @@ async def run_search_queries_async(
                     await asyncio.sleep(max(sleep_between_requests, 0.1))
 
                 print(f"Running search query {index}: {query.question}")
-                response = await query_agent.run_async(query.question, tenant=query.tenant_id)
+                response = await query_agent.run_async(query.question, **_search_kwargs(query))
                 retrieved_ids, searches = _unpack_search_response(response)
                 query_time_taken = time.time() - query_start_time
 
@@ -150,6 +162,7 @@ async def run_search_queries_async(
                     query_ground_truth_id=stringified_ids,
                     retrieved_ids=[],
                     time_taken=query_time_taken,
+                    error=str(e),
                 )
 
     total_batches = (len(queries) + batch_size - 1) // batch_size
@@ -215,6 +228,7 @@ def run_ask_queries(
                 query=query.question,
                 oracle_context_id=query.oracle_context_id,
                 tenant_id=query.tenant_id,
+                collections=query.collections,
             )
             query_time_taken = time.time() - query_start_time
             results.append(AskResult(
@@ -222,6 +236,8 @@ def run_ask_queries(
                 system_answer=response.final_answer,
                 time_taken=query_time_taken,
                 retrieved_context=response.raw_response,
+                searches=getattr(response, "searches", None),
+                aggregations=getattr(response, "aggregations", None),
             ))
         except Exception as e:
             query_time_taken = time.time() - query_start_time
@@ -267,6 +283,7 @@ async def run_ask_queries_async(
                     query=query.question,
                     oracle_context_id=query.oracle_context_id,
                     tenant_id=query.tenant_id,
+                    collections=query.collections,
                 )
                 query_time_taken = time.time() - query_start_time
                 return AskResult(
@@ -274,6 +291,8 @@ async def run_ask_queries_async(
                     system_answer=response.final_answer,
                     time_taken=query_time_taken,
                     retrieved_context=response.raw_response,
+                    searches=getattr(response, "searches", None),
+                    aggregations=getattr(response, "aggregations", None),
                 )
             except Exception as e:
                 query_time_taken = time.time() - query_start_time
