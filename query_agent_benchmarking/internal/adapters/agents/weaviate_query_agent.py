@@ -123,10 +123,17 @@ class WeaviateQueryAgentSearch:
         embedding_providers: Optional[Sequence[str]] = None,
         filtering: Optional[str] = None,
         effort: Optional[str] = None,
+        collections: Optional[Sequence[str]] = None,
     ):
-        info = resolve_collection_info(dataset_name, docs_collection)
-        self.collection = info["collection"]
-        self.id_property = info["id_property"]
+        if collections:
+            # Multi-collection datasets (e.g. QueryAgentGym) name their collections
+            # directly, and identify results by Weaviate UUID.
+            self.collections = list(collections)
+            self.id_property: Optional[str] = None
+        else:
+            info = resolve_collection_info(dataset_name, docs_collection)
+            self.collections = [info["collection"]]
+            self.id_property = info["id_property"]
         self.agents_host = agents_host or "https://api.agents.weaviate.io"
         self.filtering: Filtering = _validate_filtering(filtering)
         self.effort: Optional[Effort] = _validate_effort(effort)
@@ -160,7 +167,7 @@ class WeaviateQueryAgentSearch:
         self._client = self._connect_sync()
         self._agent = QueryAgent(
             client=self._client,
-            collections=[self.collection],
+            collections=self.collections,
             agents_host=self.agents_host,
         )
 
@@ -169,7 +176,7 @@ class WeaviateQueryAgentSearch:
         await self._client.connect()
         self._agent = AsyncQueryAgent(
             client=self._client,
-            collections=[self.collection],
+            collections=self.collections,
             agents_host=self.agents_host,
         )
 
@@ -181,7 +188,7 @@ class WeaviateQueryAgentSearch:
         agent's search plan can be persisted and visualized per query.
         """
         retrieved_ids = [
-            ObjectID(object_id=obj.properties[self.id_property])
+            ObjectID(object_id=str(obj.uuid) if self.id_property is None else obj.properties[self.id_property])
             for obj in response.search_results.objects
         ]
         return SearchAgentResponse(
@@ -189,23 +196,36 @@ class WeaviateQueryAgentSearch:
             searches=_extract_searches(response),
         )
 
-    def _search_kwargs(self) -> dict:
+    def _search_kwargs(self, collections: Optional[list[str]] = None) -> dict:
         # `effort` is only forwarded when set: omitting it lets the agents
         # server apply its own default, and keeps clients that don't accept
         # the argument yet working.
         kwargs = {"limit": 20, "filtering": self.filtering}
         if self.effort is not None:
             kwargs["effort"] = self.effort
+        if collections:
+            # Per-query collections override the ones given at construction.
+            kwargs["collections"] = collections
         return kwargs
 
-    def run(self, query: str, tenant: Optional[str] = None) -> SearchAgentResponse:
+    def run(
+        self,
+        query: str,
+        tenant: Optional[str] = None,
+        collections: Optional[list[str]] = None,
+    ) -> SearchAgentResponse:
         if self._agent is None:
             self.initialize_sync()
-        response = self._agent.search(query, **self._search_kwargs())
+        response = self._agent.search(query, **self._search_kwargs(collections))
         return self._build_response(response)
 
-    async def run_async(self, query: str, tenant: Optional[str] = None) -> SearchAgentResponse:
-        response = await self._agent.search(query, **self._search_kwargs())
+    async def run_async(
+        self,
+        query: str,
+        tenant: Optional[str] = None,
+        collections: Optional[list[str]] = None,
+    ) -> SearchAgentResponse:
+        response = await self._agent.search(query, **self._search_kwargs(collections))
         return self._build_response(response)
 
     async def close_async(self):
@@ -290,10 +310,12 @@ class WeaviateQueryAgentAsk:
         query: str,
         oracle_context_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        collections: Optional[list[str]] = None,
     ) -> AskResponse:
         if self._agent is None:
             self.initialize_sync()
-        response = self._agent.ask(query)
+        # Per-question collections override the ones given at construction.
+        response = self._agent.ask(query, collections=collections)
         return self._build_response(response)
 
     async def run_async(
@@ -301,8 +323,9 @@ class WeaviateQueryAgentAsk:
         query: str,
         oracle_context_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        collections: Optional[list[str]] = None,
     ) -> AskResponse:
-        response = await self._agent.ask(query)
+        response = await self._agent.ask(query, collections=collections)
         return self._build_response(response)
 
     @staticmethod

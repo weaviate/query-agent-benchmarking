@@ -31,6 +31,7 @@ class AskAgent(Protocol):
         query: str,
         oracle_context_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        collections: Optional[list[str]] = None,
     ) -> AskResponse:
         """Execute a synchronous ask query.
 
@@ -38,6 +39,9 @@ class AskAgent(Protocol):
             query: The question to answer.
             oracle_context_id: Optional document ID for oracle context.
             tenant_id: Optional tenant ID for multi-tenant datasets.
+            collections: Optional collections to query for this question,
+                overriding the agent's defaults. Agents without a notion of
+                collections may ignore it.
 
         Returns:
             AskResponse containing the answer.
@@ -49,6 +53,7 @@ class AskAgent(Protocol):
         query: str,
         oracle_context_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        collections: Optional[list[str]] = None,
     ) -> AskResponse:
         """Execute an asynchronous ask query.
 
@@ -56,6 +61,9 @@ class AskAgent(Protocol):
             query: The question to answer.
             oracle_context_id: Optional document ID for oracle context.
             tenant_id: Optional tenant ID for multi-tenant datasets.
+            collections: Optional collections to query for this question,
+                overriding the agent's defaults. Agents without a notion of
+                collections may ignore it.
 
         Returns:
             AskResponse containing the answer.

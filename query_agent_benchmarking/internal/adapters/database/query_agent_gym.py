@@ -2,8 +2,8 @@
 
 Every other benchmark declares its collection schema in ``database_registry``.
 QueryAgentGym ships one ``schema.json`` per environment instead, so the specs
-here are derived from that file at load time: one ``DatasetSpec`` per
-collection, with collection and property descriptions carried over so the
+here are derived from those files at load time: one ``DatasetSpec`` per
+collection, across every environment the dataset name covers, with collection and property descriptions carried over so the
 Query Agent sees them.
 """
 
@@ -16,7 +16,7 @@ from .spec import DatasetSpec
 from .naming import add_tag_to_name
 from query_agent_benchmarking.internal.adapters.dataset.query_agent_gym_loader import (
     load_query_agent_gym_schema,
-    parse_environment,
+    parse_environments,
 )
 
 
@@ -104,16 +104,27 @@ def _build_collection_spec(dataset_name: str, collection: dict[str, Any]) -> Dat
     return builder.build()
 
 
-def build_query_agent_gym_specs(dataset_name: str) -> list[DatasetSpec]:
-    """Build one ``DatasetSpec`` per collection of a QueryAgentGym environment."""
-    schema = load_query_agent_gym_schema(parse_environment(dataset_name))
-    return [_build_collection_spec(dataset_name, c) for c in schema["collections"]]
+def build_query_agent_gym_specs(dataset_name: str) -> dict[str, list[DatasetSpec]]:
+    """Build one ``DatasetSpec`` per collection, grouped by environment."""
+    return {
+        environment: [
+            _build_collection_spec(dataset_name, c)
+            for c in load_query_agent_gym_schema(environment)["collections"]
+        ]
+        for environment in parse_environments(dataset_name)
+    }
 
 
-def query_agent_gym_collection_names(dataset_name: str, tag: str = "Default") -> dict[str, str]:
-    """Map each tagged Weaviate collection name to its dataset collection name.
+def query_agent_gym_collection_names(dataset_name: str, tag: str = "Default") -> dict[str, dict[str, str]]:
+    """Map each environment to its tagged Weaviate collection names and their dataset names.
 
-    E.g. ``{"SurfBeaches_Default": "SurfBeaches", ...}``.
+    E.g. ``{"surf-schools": {"SurfBeaches_Default": "SurfBeaches", ...}, ...}``.
+    Collection names are unique across environments.
     """
-    schema = load_query_agent_gym_schema(parse_environment(dataset_name))
-    return {add_tag_to_name(c["name"], tag): c["name"] for c in schema["collections"]}
+    return {
+        environment: {
+            add_tag_to_name(c["name"], tag): c["name"]
+            for c in load_query_agent_gym_schema(environment)["collections"]
+        }
+        for environment in parse_environments(dataset_name)
+    }

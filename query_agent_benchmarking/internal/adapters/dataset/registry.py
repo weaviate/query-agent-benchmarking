@@ -47,6 +47,10 @@ def _dispatch_search_loader(dataset_name: str):
         local_file_loader,
     )
 
+    from query_agent_benchmarking.internal.adapters.dataset import query_agent_gym_loader
+    if query_agent_gym_loader.is_query_agent_gym_search_mode(dataset_name):
+        # The corpus is the environments' collections, loaded by populate_db.
+        return [], query_agent_gym_loader.load_search_query_agent_gym(dataset_name)
     if dataset_name.startswith("beir/"):
         return ir_datasets_loader.load_beir(dataset_name)
     if dataset_name.startswith("lotte/"):
@@ -127,12 +131,14 @@ def load_ask_dataset(
     if dataset_name == "browsecomp-plus":
         return huggingface_loader.load_ask_browsecomp_plus()
 
-    if dataset_name.startswith("query-agent-gym/"):
-        from query_agent_benchmarking.internal.adapters.dataset import query_agent_gym_loader
+    from query_agent_benchmarking.internal.adapters.dataset import query_agent_gym_loader
+    if query_agent_gym_loader.is_query_agent_gym_edge_case(dataset_name):
+        return query_agent_gym_loader.load_edge_case_query_agent_gym(dataset_name)
+    if query_agent_gym_loader.is_query_agent_gym(dataset_name):
         return query_agent_gym_loader.load_ask_query_agent_gym(dataset_name)
 
     raise ValueError(
         f"Unknown ask dataset: {dataset_name}. "
         f"Supported ask datasets: irpapers, multihoprag, officeqa, longmemeval-s, longmemeval-m, browsecomp-plus, "
-        f"query-agent-gym/<environment>"
+        f"query-agent-gym, query-agent-gym/<environment>"
     )

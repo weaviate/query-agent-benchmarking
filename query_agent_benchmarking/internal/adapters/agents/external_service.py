@@ -88,10 +88,13 @@ class ExternalAskService:
         query: str,
         oracle_context_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        collections: Optional[list[str]] = None,
     ) -> AskResponse:
         payload = {"question": query}
         if oracle_context_id is not None:
             payload["oracle_context_id"] = oracle_context_id
+        if collections is not None:
+            payload["collections"] = collections
 
         with httpx.Client(timeout=300.0) as client:
             response = client.post(self.host, json=payload)
@@ -105,10 +108,13 @@ class ExternalAskService:
         query: str,
         oracle_context_id: Optional[str] = None,
         tenant_id: Optional[str] = None,
+        collections: Optional[list[str]] = None,
     ) -> AskResponse:
         payload = {"question": query}
         if oracle_context_id is not None:
             payload["oracle_context_id"] = oracle_context_id
+        if collections is not None:
+            payload["collections"] = collections
 
         async with httpx.AsyncClient(timeout=300.0) as client:
             response = await client.post(self.host, json=payload)

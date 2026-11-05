@@ -1,10 +1,15 @@
 # =============================================================================
 # Search Mode Settings
 # =============================================================================
-search_agent_name: "vector-search"
+# QueryAgentGym search mode needs the Query Agent: it scores the searches issued.
+search_agent_name: "query-agent-search-mode"
 
 # Single dataset — used by run-search-benchmark.py.
-search_dataset: irpapers-image-only
+# QueryAgentGym search mode: 150 retrieval-only queries over the `query-agent-gym`
+# collections, scored on results (nDCG) and plan (query recall). Use e.g.
+# "query-agent-gym-search-mode/surf-schools" for one environment.
+# Previously: search_agent_name "vector-search", search_dataset irpapers-image-only.
+search_dataset: query-agent-gym-search-mode
 
 # Multiple datasets — used by run_search_evals (scripts/run-search-benchmark-multi.py).
 # Same "list in config" idea as `dataset_names` in database_loader_config.yml.
@@ -48,12 +53,18 @@ search_target: "image_content_cohere"
 # =============================================================================
 # Ask Mode Settings
 # =============================================================================
-ask_agent_name: "engram"
-queries: "longmemeval-s"
+# QueryAgentGym, each command given only its own environment's collections:
+#   "query-agent-gym": the 250 ask mode commands, scored by query recall
+#   "query-agent-gym-edge-case-1": 129 exact-value filtering cases (filter on the
+#     value, or search for it?), scored by checks; the 16 retry cases are skipped
+# Append "/<environment>" for one environment, e.g. "query-agent-gym/surf-schools".
+ask_agent_name: "query-agent-ask-mode"
+queries: "query-agent-gym-edge-case-1"
 
-# QueryAgentGym (scored by exact match of the agent's issued queries), e.g.:
-#   ask_agent_name: "query-agent-ask-mode"
-#   queries: "query-agent-gym/surf-schools"
+# LongMemEval, e.g.:
+#   ask_agent_name: "engram"
+#   queries: "longmemeval-s"
+
 # Also report the LLM-as-judge alignment score on QueryAgentGym's final answers.
 use_lm_judge: False
 
@@ -89,7 +100,7 @@ max_query_tokens: 0
 use_subset: False
 num_samples: 100
 
-num_trials: 3
+num_trials: 1
 batch_size: 5
 
 # =============================================================================

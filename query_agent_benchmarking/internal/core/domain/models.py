@@ -34,6 +34,11 @@ class InMemoryQuery(BaseModel):
     nugget_data: Optional[list[NuggetInfo]] = None
     ids_per_nugget: Optional[dict[str, list[str]]] = None
     num_nuggets: Optional[int] = None
+    # Optional: exact ground-truth database queries (e.g., QueryAgentGym ``query_database`` arguments)
+    ground_truth_queries: Optional[list[dict[str, Any]]] = None
+    metadata: Optional[dict[str, Any]] = None  # Optional: dataset-specific labels (e.g., retrieval shape)
+    # Optional: collections the agent may search for this query, overriding the agent's defaults
+    collections: Optional[list[str]] = None
 
 
 InMemorySearchQuery = InMemoryQuery
@@ -50,6 +55,9 @@ class InMemoryAskQuery(BaseModel):
     # Optional: exact ground-truth database queries (e.g., QueryAgentGym ``query_database`` arguments)
     ground_truth_queries: Optional[list[dict[str, Any]]] = None
     metadata: Optional[dict[str, Any]] = None  # Optional: dataset-specific labels (e.g., operator classes)
+    # Optional: collections the agent may query for this question, overriding the agent's
+    # defaults (e.g., a QueryAgentGym command sees only its own environment's collections)
+    collections: Optional[list[str]] = None
 
 
 # ============================================================================
@@ -107,6 +115,7 @@ class QueryResult(BaseModel):
     retrieved_ids: list[ObjectID]
     time_taken: float
     searches: Optional[list[AgentSearch]] = None
+    error: Optional[str] = None  # Set when the agent call failed
 
 
 SearchResult = QueryResult

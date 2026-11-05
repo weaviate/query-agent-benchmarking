@@ -14,8 +14,13 @@ class ResultRepository(Protocol):
         results: list[QueryResult],
         config: dict[str, Any],
         trial_number: int,
+        per_query_details: list[dict | None] | None = None,
     ) -> None:
-        """Save raw search query results for a single trial."""
+        """Save raw search query results for a single trial.
+
+        ``per_query_details`` (e.g. QueryAgentGym plan scoring) is merged into
+        each query's entry when given.
+        """
         ...
 
     def save_ask_trial_results(

@@ -25,7 +25,6 @@ from query_agent_benchmarking.internal.adapters.dataset import load_longmemeval_
 from query_agent_benchmarking.internal.adapters.dataset.query_agent_gym_loader import (
     is_query_agent_gym,
     load_query_agent_gym_objects,
-    parse_environment,
 )
 from query_agent_benchmarking.internal.adapters.clients.weaviate_client import get_weaviate_client
 from query_agent_benchmarking.internal.config.loader import load_config
@@ -118,14 +117,16 @@ def _load_dataset_into_weaviate(
 ) -> None:
     """Load one dataset into its Weaviate collection(s).
 
-    QueryAgentGym environments span several collections whose schemas come
-    from the dataset itself; every other dataset maps to a single registry spec.
+    QueryAgentGym spans several environments of several collections each, whose
+    schemas come from the dataset itself; every other dataset maps to a single
+    registry spec.
     """
     if is_query_agent_gym(dataset_name):
-        objects_by_collection = load_query_agent_gym_objects(parse_environment(dataset_name))
-        for spec in build_query_agent_gym_specs(dataset_name):
-            objects = objects_by_collection[spec.name_fn(dataset_name)]
-            _populate_collection(client, spec, dataset_name, objects, recreate=recreate, tag=tag)
+        for environment, specs in build_query_agent_gym_specs(dataset_name).items():
+            objects_by_collection = load_query_agent_gym_objects(environment)
+            for spec in specs:
+                objects = objects_by_collection[spec.name_fn(dataset_name)]
+                _populate_collection(client, spec, dataset_name, objects, recreate=recreate, tag=tag)
         return
 
     objects = _load_documents(dataset_name)

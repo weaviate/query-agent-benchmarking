@@ -5,12 +5,15 @@ Predicted queries are built from the real ``weaviate_agents`` response models
 so the tests track the SDK's actual serialized shapes.
 """
 
+from types import SimpleNamespace
+
 import pytest
 import weaviate.collections.classes.config as wvcc
 from weaviate_agents.query.classes import response as R
 
 from query_agent_benchmarking.internal.adapters.agents.weaviate_query_agent import WeaviateQueryAgentAsk
 from query_agent_benchmarking.internal.adapters.database import query_agent_gym as qag_db
+from query_agent_benchmarking.internal.adapters.dataset.query_agent_gym_loader import QUERY_AGENT_GYM_ENVIRONMENTS
 from query_agent_benchmarking.internal.adapters.metrics.ask_metrics_calculator import (
     QueryExactMatchAskCalculator,
 )
@@ -28,6 +31,8 @@ from query_agent_benchmarking.internal.core.domain.models import (
 
 
 ALIASES = {"Staff_Default": "Staff", "Centers_Default": "Centers"}
+ARRAY_PROPERTIES = {"Staff": frozenset({"hours", "skills", "checks"})}
+DATE_RANGES = {"Staff": {"startDate": ("2020-01-01", "2025-06-30")}}
 
 
 def _search(query=None, filters=None, collection="Staff_Default", **kwargs) -> AgentSearch:
@@ -53,9 +58,13 @@ def _aggregation(aggregation, filters=None, groupby=None, collection="Staff_Defa
 
 
 def _match(ground_truth, searches=(), aggregations=()):
-    gt = canonicalize_ground_truth(ground_truth)
-    pred = canonicalize_predicted(list(searches), list(aggregations), ALIASES)
+    gt = canonicalize_ground_truth(ground_truth, ARRAY_PROPERTIES, DATE_RANGES)
+    pred = canonicalize_predicted(list(searches), list(aggregations), ALIASES, ARRAY_PROPERTIES, DATE_RANGES)
     return score_query_units(gt, pred)
+
+
+def _date_range(prop="startDate", **value) -> R.DatePropertyFilter:
+    return R.DatePropertyFilter(property_name=prop, value=R.DateRangeBetween(**value))
 
 
 # ============================================================================
@@ -122,6 +131,62 @@ class TestQueryExactMatch:
         search = _search(filters=R.DatePropertyFilter(property_name="d", value=between))
         assert _match(gt, [search])["exact_match"]
 
+    @pytest.mark.parametrize("gt_type,prop,gt_value,sdk_filter", [
+        ("numeric_array_property_filters", "hours", 40,
+         R.IntegerPropertyFilter(property_name="hours", operator="=", value=40)),
+        ("array_property_filters", "skills", "CPR",
+         R.TextPropertyFilter(property_name="skills", operator="=", value="CPR")),
+        ("boolean_array_property_filters", "checks", False,
+         R.BooleanPropertyFilter(property_name="checks", operator="=", value=False)),
+    ])
+    def test_scalar_equals_on_array_property_is_contains_any(self, gt_type, prop, gt_value, sdk_filter):
+        gt = [{"collection_name": "Staff", gt_type: [
+            {"property_name": prop, "operator": "CONTAINS_ANY", "values": [gt_value]}]}]
+        assert _match(gt, [_search(filters=sdk_filter)])["exact_match"]
+
+    def test_scalar_equals_on_scalar_property_is_not_contains_any(self):
+        gt = [{"collection_name": "Staff", "array_property_filters": [
+            {"property_name": "name", "operator": "CONTAINS_ANY", "values": ["Ana"]}]}]
+        search = _search(filters=R.TextPropertyFilter(property_name="name", operator="=", value="Ana"))
+        assert not _match(gt, [search])["exact_match"]
+
+    @pytest.mark.parametrize("gt_op,gt_day,sdk_value", [
+        # Exclusive bound vs. inclusive end of the previous day, with a vacuous lower bound.
+        ("<", "2024-01-10", dict(date_from="0001-01-01T00:00:00Z", date_to="2024-01-09T23:59:59.999999Z",
+                                 inclusive_from=True, inclusive_to=True)),
+        # Inclusive midnight vs. inclusive end of the same day.
+        ("<=", "2024-01-10", dict(date_from="2019-01-01T00:00:00Z", date_to="2024-01-10T23:59:59Z",
+                                  inclusive_from=True, inclusive_to=True)),
+        # Upper bound past every record (e.g. "today", or 9999-12-31).
+        (">=", "2024-01-10", dict(date_from="2024-01-10T00:00:00Z", date_to="9999-12-31T23:59:59.999999Z",
+                                  inclusive_from=True, inclusive_to=True)),
+        (">", "2024-01-10", dict(date_from="2024-01-11T00:00:00Z", date_to="2026-10-27T23:59:59Z",
+                                 inclusive_from=True, inclusive_to=True)),
+    ])
+    def test_equivalent_day_bounds(self, gt_op, gt_day, sdk_value):
+        gt = [{"collection_name": "Staff", "date_property_filters": [
+            {"property_name": "startDate", "operator": gt_op, "value": gt_day}]}]
+        assert _match(gt, [_search(filters=_date_range(**sdk_value))])["exact_match"]
+
+    def test_off_by_one_day_bound_still_fails(self):
+        # "after Jan 10" excludes Jan 10; ">= Jan 10" includes it.
+        gt = [{"collection_name": "Staff", "date_property_filters": [
+            {"property_name": "startDate", "operator": ">", "value": "2024-01-10"}]}]
+        search = _search(filters=_date_range(
+            date_from="2024-01-10T00:00:00Z", date_to="2025-06-30T00:00:00Z",
+            inclusive_from=True, inclusive_to=True,
+        ))
+        assert not _match(gt, [search])["exact_match"]
+
+    def test_upper_bound_inside_the_data_is_kept(self):
+        gt = [{"collection_name": "Staff", "date_property_filters": [
+            {"property_name": "startDate", "operator": ">=", "value": "2024-01-10"}]}]
+        search = _search(filters=_date_range(
+            date_from="2024-01-10T00:00:00Z", date_to="2025-01-01T00:00:00Z",
+            inclusive_from=True, inclusive_to=True,
+        ))
+        assert not _match(gt, [search])["exact_match"]
+
     def test_boolean_not_equals_folds(self):
         gt = [{"collection_name": "Staff", "boolean_property_filters": [
             {"property_name": "meals", "operator": "!=", "value": True}]}]
@@ -171,6 +236,27 @@ class TestQueryExactMatch:
         assert not partial["exact_match"]
         assert partial["recall"] == 0.5 and partial["precision"] == 0.5
 
+    @pytest.mark.parametrize("metric,value", [("TOTAL_TRUE", True), ("TOTAL_FALSE", False)])
+    def test_total_true_matches_filtered_count(self, metric, value):
+        gt = [{"collection_name": "Staff", "groupby_property": "meals",
+               "boolean_aggregations": [{"property_name": "open", "metric": metric}]}]
+        agg = _aggregation(
+            R.TextPropertyAggregation(property_name="name", metrics="COUNT"),
+            filters=R.BooleanPropertyFilter(property_name="open", operator="=", value=value),
+            groupby="meals",
+        )
+        assert _match(gt, aggregations=[agg])["exact_match"]
+
+    def test_total_true_on_boolean_array_is_not_folded(self):
+        # On an array, TOTAL_TRUE counts true values, not records.
+        gt = [{"collection_name": "Staff",
+               "boolean_aggregations": [{"property_name": "checks", "metric": "TOTAL_TRUE"}]}]
+        agg = _aggregation(
+            R.TextPropertyAggregation(property_name="name", metrics="COUNT"),
+            filters=R.BooleanArrayPropertyFilter(property_name="checks", operator="contains_any", value=[True]),
+        )
+        assert not _match(gt, aggregations=[agg])["exact_match"]
+
     def test_count_distinct_matches_groupby_count(self):
         gt = [{
             "collection_name": "Staff",
@@ -210,9 +296,21 @@ class TestQueryExactMatch:
         extra = _search(query="anything", collection="Centers_Default")
         result = _match(gt, [found, extra])
         assert not result["exact_match"]
+        assert not result["recall_match"]
         assert result["recall"] == 0.5
         assert result["missing"] == ["SELECT * FROM Centers"]
         assert result["extra"] == ["SELECT * FROM Centers SEARCH <query>"]
+
+    def test_extra_sub_queries_keep_recall_match(self):
+        gt = [{"collection_name": "Staff", "text_property_filters": [
+            {"property_name": "name", "operator": "=", "value": "A"}]}]
+        found = _search(filters=R.TextPropertyFilter(property_name="name", operator="=", value="A"))
+        extra = _search(query="anything")
+        result = _match(gt, [found, extra])
+        assert result["recall_match"]
+        assert not result["exact_match"]
+        assert result["precision"] == 0.5
+        assert result["extra"] == ["SELECT * FROM Staff SEARCH <query>"]
 
     def test_wrong_collection_fails(self):
         gt = [{"collection_name": "Staff"}]
@@ -244,19 +342,24 @@ class TestQueryExactMatchAskCalculator:
     def test_scores_and_breakdowns(self):
         right = _search(filters=R.TextPropertyFilter(property_name="name", operator="=", value="A"))
         wrong = _search(filters=R.TextPropertyFilter(property_name="name", operator="=", value="B"))
+        extra = _search(query="anything")
         results = [
             _result(self.GT, searches=[right], aggregations=[]),
             _result(self.GT, searches=[wrong], aggregations=[], classes=("text filter", "search query")),
+            _result(self.GT, searches=[right, extra], aggregations=[]),
             _result(self.GT, answer="[ERROR] boom"),
         ]
         metrics = QueryExactMatchAskCalculator(collection_aliases=ALIASES).compute(results)
 
-        assert metrics["metric"] == "query_exact_match"
-        assert metrics["query_exact_match_scores"] == [1, 0, None]
-        assert metrics["avg_query_exact_match"] == 0.5
-        assert metrics["type_accuracy"] == {"search query": 0.0, "text filter": 0.5}
+        assert metrics["metric"] == "query_recall"
+        assert metrics["query_recall_scores"] == [1, 0, 1, None]
+        assert metrics["avg_query_recall"] == pytest.approx(2 / 3)
+        assert metrics["query_exact_match_scores"] == [1, 0, 0, None]
+        assert metrics["avg_query_exact_match"] == pytest.approx(1 / 3)
+        assert metrics["type_accuracy"] == {"search query": 0.0, "text filter": pytest.approx(2 / 3)}
         assert metrics["misaligned_indices"] == [1]
-        assert metrics["query_match_details"][2] is None
+        assert metrics["query_match_details"][2]["extra_queries"] == ["SELECT * FROM Staff SEARCH <query>"]
+        assert metrics["query_match_details"][3] is None
         assert metrics["query_match_details"][1]["missing_queries"] == ["SELECT * FROM Staff WHERE name = 'A'"]
         assert "avg_alignment_score" not in metrics
 
@@ -269,8 +372,8 @@ class TestQueryExactMatchAskCalculator:
         metrics = QueryExactMatchAskCalculator(ALIASES, lm_judge=StubJudge()).compute(
             [_result(self.GT, searches=[right], aggregations=[])]
         )
-        assert metrics["metric"] == "query_exact_match"
-        assert metrics["avg_query_exact_match"] == 1.0
+        assert metrics["metric"] == "query_recall"
+        assert metrics["avg_query_recall"] == 1.0
         assert metrics["avg_alignment_score"] == 1.0
 
     def test_requires_ground_truth_queries(self):
@@ -314,6 +417,20 @@ class TestWeaviateQueryAgentAskPlan:
         agent = WeaviateQueryAgentAsk(collections=["A_Default", "B_Default"])
         assert agent.collections == ["A_Default", "B_Default"]
 
+    def test_per_question_collections_are_passed_to_ask(self):
+        calls = []
+
+        class FakeQueryAgent:
+            def ask(self, query, collections=None):
+                calls.append(collections)
+                return SimpleNamespace(final_answer="a", searches=[], aggregations=[])
+
+        agent = WeaviateQueryAgentAsk(collections=["A_Default", "B_Default"])
+        agent._agent = FakeQueryAgent()
+        agent.run("q", collections=["A_Default"])
+        agent.run("q")
+        assert calls == [["A_Default"], None]
+
 
 # ============================================================================
 # Schema-driven collection specs
@@ -354,7 +471,9 @@ class TestQueryAgentGymSpecs:
         monkeypatch.setattr(qag_db, "load_query_agent_gym_schema", lambda env: SCHEMA)
 
     def test_specs_follow_schema(self):
-        routes, reports = qag_db.build_query_agent_gym_specs("query-agent-gym/public-transit")
+        specs = qag_db.build_query_agent_gym_specs("query-agent-gym/public-transit")
+        assert list(specs) == ["public-transit"]
+        routes, reports = specs["public-transit"]
 
         assert routes.name_fn("query-agent-gym/public-transit") == "Routes"
         assert routes.description == "Transit routes."
@@ -375,7 +494,7 @@ class TestQueryAgentGymSpecs:
         assert reports.vector_config.vectorizer.vectorizer == wvcc.Vectorizers.NONE
 
     def test_mapper_converts_dates_and_drops_uuid(self):
-        routes, reports = qag_db.build_query_agent_gym_specs("query-agent-gym/public-transit")
+        routes, reports = qag_db.build_query_agent_gym_specs("query-agent-gym/public-transit")["public-transit"]
         props = reports.item_to_props(
             {"uuid": "u1", "code": "RID-1", "serviceDate": "2025-11-16", "ok": True}
         )
@@ -388,8 +507,13 @@ class TestQueryAgentGymSpecs:
 
     def test_collection_names(self):
         assert qag_db.query_agent_gym_collection_names("query-agent-gym/public-transit", tag="Default") == {
-            "Routes_Default": "Routes", "Reports_Default": "Reports",
+            "public-transit": {"Routes_Default": "Routes", "Reports_Default": "Reports"},
         }
+
+    def test_full_dataset_covers_every_environment(self):
+        specs = qag_db.build_query_agent_gym_specs("query-agent-gym")
+        assert tuple(specs) == QUERY_AGENT_GYM_ENVIRONMENTS
+        assert tuple(qag_db.query_agent_gym_collection_names("query-agent-gym")) == QUERY_AGENT_GYM_ENVIRONMENTS
 
     def test_unknown_environment_raises(self):
         with pytest.raises(ValueError, match="Unknown QueryAgentGym environment"):

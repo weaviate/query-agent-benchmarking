@@ -2,8 +2,18 @@
 
 Unlike the other benchmarks, QueryAgentGym ships its schemas as data: each
 environment folder holds a ``schema.json`` alongside one parquet file per
-collection and a ``queries.parquet``. Dataset names take the form
-``query-agent-gym/<environment>``, e.g. ``query-agent-gym/surf-schools``.
+collection and one parquet file per query set. A dataset name picks a query
+set and the environments it covers:
+
+- ``query-agent-gym``: the ask mode set (``queries.parquet``), 250 queries
+- ``query-agent-gym-search-mode``: the search mode set
+  (``search_mode_queries.parquet``), 150 retrieval-only queries
+- ``query-agent-gym-edge-case-1``: the exact-value filtering set
+  (``edge_case_1.parquet``), 145 cases scored by checks, not an exact plan
+
+over all five environments, or one environment with a suffix, e.g.
+``query-agent-gym/surf-schools`` or ``query-agent-gym-search-mode/surf-schools``.
+Every query set runs against the same collections.
 """
 
 import json
@@ -13,11 +23,19 @@ from typing import Any
 import pandas as pd
 from huggingface_hub import hf_hub_download
 
-from query_agent_benchmarking.internal.core.domain.models import InMemoryAskQuery
+from query_agent_benchmarking.internal.core.domain.models import InMemoryAskQuery, InMemoryQuery
 
 
 QUERY_AGENT_GYM_REPO = "weaviate/QueryAgentGym"
-QUERY_AGENT_GYM_PREFIX = "query-agent-gym/"
+QUERY_AGENT_GYM = "query-agent-gym"
+QUERY_AGENT_GYM_SEARCH_MODE = "query-agent-gym-search-mode"
+QUERY_AGENT_GYM_EDGE_CASE_1 = "query-agent-gym-edge-case-1"
+# Query set name -> the file holding each environment's queries.
+QUERY_AGENT_GYM_QUERY_FILES = {
+    QUERY_AGENT_GYM: "queries.parquet",
+    QUERY_AGENT_GYM_SEARCH_MODE: "search_mode_queries.parquet",
+    QUERY_AGENT_GYM_EDGE_CASE_1: "edge_case_1.parquet",
+}
 QUERY_AGENT_GYM_ENVIRONMENTS = (
     "public-transit",
     "tattoo-studios",
@@ -31,21 +49,39 @@ QUERY_AGENT_GYM_ENVIRONMENTS = (
 _MAX_LISTED_RECORDS = 50
 
 
+def _query_set(dataset_name: str) -> str:
+    return dataset_name.split("/", 1)[0]
+
+
 def is_query_agent_gym(dataset_name: str | None) -> bool:
-    return bool(dataset_name) and dataset_name.startswith(QUERY_AGENT_GYM_PREFIX)
+    return bool(dataset_name) and _query_set(dataset_name) in QUERY_AGENT_GYM_QUERY_FILES
 
 
-def parse_environment(dataset_name: str) -> str:
-    """Extract and validate the environment from ``query-agent-gym/<environment>``."""
+def is_query_agent_gym_search_mode(dataset_name: str | None) -> bool:
+    return bool(dataset_name) and _query_set(dataset_name) == QUERY_AGENT_GYM_SEARCH_MODE
+
+
+def is_query_agent_gym_edge_case(dataset_name: str | None) -> bool:
+    return bool(dataset_name) and _query_set(dataset_name) == QUERY_AGENT_GYM_EDGE_CASE_1
+
+
+def parse_environments(dataset_name: str) -> tuple[str, ...]:
+    """Resolve a QueryAgentGym dataset name to the environments it covers.
+
+    A query set name alone (e.g. ``query-agent-gym``) covers every environment;
+    ``<query set>/<environment>`` covers just that one.
+    """
     if not is_query_agent_gym(dataset_name):
         raise ValueError(f"Not a QueryAgentGym dataset name: {dataset_name!r}")
-    environment = dataset_name[len(QUERY_AGENT_GYM_PREFIX):]
+    if "/" not in dataset_name:
+        return QUERY_AGENT_GYM_ENVIRONMENTS
+    environment = dataset_name.split("/", 1)[1]
     if environment not in QUERY_AGENT_GYM_ENVIRONMENTS:
         raise ValueError(
             f"Unknown QueryAgentGym environment: {environment!r}. "
             f"Supported: {QUERY_AGENT_GYM_ENVIRONMENTS}"
         )
-    return environment
+    return (environment,)
 
 
 def _download(path: str) -> str:
@@ -83,6 +119,32 @@ def load_query_agent_gym_objects(environment: str) -> dict[str, list[dict[str, A
     return objects
 
 
+def query_agent_gym_array_properties(dataset_name: str) -> dict[str, frozenset[str]]:
+    """Map each collection name to the names of its array properties."""
+    return {
+        collection["name"]: frozenset(
+            p["name"] for p in collection["properties"] if p["data_type"].endswith("_array")
+        )
+        for environment in parse_environments(dataset_name)
+        for collection in load_query_agent_gym_schema(environment)["collections"]
+    }
+
+
+def query_agent_gym_date_ranges(dataset_name: str) -> dict[str, dict[str, tuple[str, str]]]:
+    """Map each collection name to the ``(min, max)`` day of each scalar date property."""
+    ranges: dict[str, dict[str, tuple[str, str]]] = {}
+    for environment in parse_environments(dataset_name):
+        objects = load_query_agent_gym_objects(environment)
+        for collection in load_query_agent_gym_schema(environment)["collections"]:
+            name = collection["name"]
+            ranges[name] = {}
+            for prop in collection["properties"]:
+                if prop["data_type"] == "date":
+                    days = [str(obj[prop["name"]])[:10] for obj in objects[name]]
+                    ranges[name][prop["name"]] = (min(days), max(days))
+    return ranges
+
+
 def identifier_property(collection: dict[str, Any]) -> str:
     """Return the name of a schema collection's single identifier property."""
     for prop in collection["properties"]:
@@ -106,14 +168,112 @@ def _render_result(
     return f"{sql}\n-> {json.dumps(result)}"
 
 
+def _query_metadata(row: dict[str, Any]) -> dict[str, Any]:
+    metadata = {
+        "environment": row["environment"],
+        "phrasing": row["phrasing"],
+        "plan": row["plan"],
+        "num_sub_queries": int(row["num_sub_queries"]),
+        "operator_classes": list(row["operator_classes"]),
+        "ground_truth_sql": list(row["ground_truth_sql"]),
+    }
+    if "retrieval_shape" in row:
+        metadata["retrieval_shape"] = row["retrieval_shape"]
+    return metadata
+
+
+def load_search_query_agent_gym(dataset_name: str) -> list[InMemoryQuery]:
+    """Load search mode queries as ``InMemoryQuery`` objects.
+
+    Each query has a single retrieval sub-query. ``dataset_ids`` holds the UUIDs
+    of the records it should return: the sub-query's reference results, which
+    for a search are its relevance-labeled records and for a filter every
+    matching record. ``ground_truth_queries`` holds the exact ``query_database``
+    arguments, for scoring the agent's plan.
+    """
+    if not is_query_agent_gym_search_mode(dataset_name):
+        raise ValueError(f"Not a QueryAgentGym search mode dataset name: {dataset_name!r}")
+    queries = []
+    for environment in parse_environments(dataset_name):
+        df = pd.read_parquet(_download(f"{environment}/{QUERY_AGENT_GYM_QUERY_FILES[QUERY_AGENT_GYM_SEARCH_MODE]}"))
+        for row in df.to_dict(orient="records"):
+            [relevant_ids] = json.loads(row["reference_results"])
+            queries.append(InMemoryQuery(
+                question=row["command"],
+                dataset_ids=[str(u) for u in relevant_ids],
+                query_id=row["query_id"],
+                ground_truth_queries=json.loads(row["ground_truth"]),
+                metadata=_query_metadata(row),
+            ))
+    return queries
+
+
+def _plain(value: Any) -> Any:
+    """Convert a parquet struct value (numpy arrays inside) to plain Python."""
+    if isinstance(value, dict):
+        return {k: _plain(v) for k, v in value.items()}
+    if hasattr(value, "tolist"):
+        return value.tolist()
+    return value
+
+
+def load_edge_case_query_agent_gym(dataset_name: str, include_retry: bool = False) -> list[InMemoryAskQuery]:
+    """Load exact-value filtering cases as ``InMemoryAskQuery`` objects.
+
+    Each case is scored by checks rather than an exact ground truth: its
+    behavior, target collection, value under test and ``expect`` checks are in
+    ``metadata`` (``expect.other_filters`` parsed from JSON). ``ground_truth_answer``
+    is a readable summary of the checks.
+
+    Retry cases (``node == "retry"``, B6 and B7) inject a seeded first attempt
+    before the agent's zero-results retry, which an agent's ``ask`` call cannot
+    take, so they are left out unless ``include_retry`` is set.
+    """
+    if not is_query_agent_gym_edge_case(dataset_name):
+        raise ValueError(f"Not a QueryAgentGym edge case dataset name: {dataset_name!r}")
+    queries = []
+    for environment in parse_environments(dataset_name):
+        df = pd.read_parquet(_download(f"{environment}/{QUERY_AGENT_GYM_QUERY_FILES[QUERY_AGENT_GYM_EDGE_CASE_1]}"))
+        for row in df.to_dict(orient="records"):
+            if row["node"] == "retry" and not include_retry:
+                continue
+            expect = _plain(row["expect"])
+            expect["other_filters"] = json.loads(expect.get("other_filters") or "[]")
+            queries.append(InMemoryAskQuery(
+                question=row["command"],
+                ground_truth_answer=f"{row['behavior']}: {json.dumps(expect)}",
+                query_id=row["query_id"],
+                metadata={
+                    "environment": row["environment"],
+                    "behavior": row["behavior"],
+                    "node": row["node"],
+                    "collection": row["collection"],
+                    "phrasing": row["phrasing"],
+                    "value": row["value"],
+                    "expect": expect,
+                    "num_relevant": len(row["relevant_ids"]),
+                    "source": row["source"],
+                },
+            ))
+    return queries
+
+
 def load_ask_query_agent_gym(dataset_name: str) -> list[InMemoryAskQuery]:
-    """Load an environment's queries as ``InMemoryAskQuery`` objects.
+    """Load the queries of every environment in ``dataset_name`` as ``InMemoryAskQuery`` objects.
 
     ``ground_truth_queries`` holds the exact ``query_database`` arguments used by
     the query exact-match metric. ``ground_truth_answer`` is a text rendering of
     the reference results, used only when the optional LM judge is enabled.
+    Each query's environment is in ``metadata["environment"]``.
     """
-    environment = parse_environment(dataset_name)
+    query_file = QUERY_AGENT_GYM_QUERY_FILES[_query_set(dataset_name)]
+    queries = []
+    for environment in parse_environments(dataset_name):
+        queries.extend(_load_environment_queries(environment, query_file))
+    return queries
+
+
+def _load_environment_queries(environment: str, query_file: str) -> list[InMemoryAskQuery]:
     schema = load_query_agent_gym_schema(environment)
     objects = load_query_agent_gym_objects(environment)
 
@@ -123,7 +283,7 @@ def load_ask_query_agent_gym(dataset_name: str) -> list[InMemoryAskQuery]:
         for obj in objects[collection["name"]]:
             identifiers_by_uuid[obj["uuid"]] = str(obj[id_prop])
 
-    df = pd.read_parquet(_download(f"{environment}/queries.parquet"))
+    df = pd.read_parquet(_download(f"{environment}/{query_file}"))
     queries = []
     for row in df.to_dict(orient="records"):
         sqls = list(row["ground_truth_sql"])
@@ -138,14 +298,7 @@ def load_ask_query_agent_gym(dataset_name: str) -> list[InMemoryAskQuery]:
                 ground_truth_answer=answer,
                 query_id=row["query_id"],
                 ground_truth_queries=json.loads(row["ground_truth"]),
-                metadata={
-                    "environment": row["environment"],
-                    "phrasing": row["phrasing"],
-                    "plan": row["plan"],
-                    "num_sub_queries": int(row["num_sub_queries"]),
-                    "operator_classes": list(row["operator_classes"]),
-                    "ground_truth_sql": sqls,
-                },
+                metadata=_query_metadata(row),
             )
         )
     return queries

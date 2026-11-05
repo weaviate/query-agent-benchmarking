@@ -114,6 +114,12 @@ DATASET_METRICS_REGISTRY: tuple[MetricsProfile, ...] = (
         MetricSpec("recall", {"k": 20}),
         MetricSpec("nDCG", {"k": 10}),
     ), primary_metric="nDCG_at_10"),
+    # Relevant sets run to hundreds of records while the agent returns 20, so
+    # recall@k is capped far below 1; nDCG@k normalizes by what k results can reach.
+    MetricsProfile("query-agent-gym-search-mode", (
+        MetricSpec("nDCG", {"k": 10}),
+        MetricSpec("nDCG", {"k": 20}),
+    ), primary_metric="nDCG_at_10"),
     MetricsProfile("reasonir-biology-subset", (
         MetricSpec("recall", {"k": 1}),
         MetricSpec("recall", {"k": 5}),

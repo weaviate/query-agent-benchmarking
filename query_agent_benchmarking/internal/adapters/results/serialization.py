@@ -51,6 +51,7 @@ def save_trial_results(
     results: list[QueryResult],
     config: dict[str, Any],
     trial_number: int,
+    per_query_details: list[dict | None] | None = None,
 ) -> None:
     """
     Save raw query results for a single search trial.
@@ -59,6 +60,7 @@ def save_trial_results(
         results: List of query results from the trial
         config: Configuration dictionary (must contain dataset_identifier, agent_name, etc.)
         trial_number: Current trial number (1-indexed)
+        per_query_details: Optional list of per-query metric details merged into each entry
     """
     _ensure_results_dir()
     base_path = _build_base_path(config)
@@ -69,6 +71,7 @@ def save_trial_results(
         "agent_name": config["agent_name"],
         "trial_number": trial_number,
         "total_queries": len(results),
+        "total_errors": sum(r.error is not None for r in results),
         "timestamp": datetime.now().isoformat(),
         "mode": "search",
     }
@@ -79,7 +82,10 @@ def save_trial_results(
     trial_data = {
         "metadata": metadata,
         "queries": [
-            _search_query_to_dict(idx, result)
+            _search_query_to_dict(
+                idx, result,
+                per_query_details[idx] if per_query_details and idx < len(per_query_details) else None,
+            )
             for idx, result in enumerate(results)
         ]
     }
@@ -88,7 +94,11 @@ def save_trial_results(
         json.dump(trial_data, f, indent=2)
 
 
-def _search_query_to_dict(idx: int, result: QueryResult) -> dict[str, Any]:
+def _search_query_to_dict(
+    idx: int,
+    result: QueryResult,
+    details: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Serialize a single search QueryResult to a JSON-ready dict.
 
     The agent's search plan (``searches``/``num_searches``) is only included
@@ -110,6 +120,14 @@ def _search_query_to_dict(idx: int, result: QueryResult) -> dict[str, Any]:
         # sub-searches (query text, filters, sort, uuid).
         query_dict["num_searches"] = len(result.searches)
         query_dict["searches"] = [s.model_dump(mode="json") for s in result.searches]
+    if result.error is not None:
+        query_dict["error"] = result.error
+    if result.query.query_id:
+        query_dict["dataset_query_id"] = result.query.query_id
+    if result.query.metadata:
+        query_dict["metadata"] = result.query.metadata
+    if details:
+        query_dict.update(details)
     return query_dict
 
 

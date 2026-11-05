@@ -1,6 +1,8 @@
-dataset_name: browsecomp-plus
-# QueryAgentGym environments, e.g. query-agent-gym/surf-schools, create one
-# collection per collection in the dataset's own schema.json.
+dataset_name: query-agent-gym
+# QueryAgentGym is one dataset: `query-agent-gym` loads all five environments
+# (public-transit, tattoo-studios, nonprofits, surf-schools, childcare), each
+# creating one collection per collection in its own schema.json. A single
+# environment can be loaded alone as e.g. `query-agent-gym/surf-schools`.
 
 # Multiple datasets — used by populate_db_multi
 dataset_names:
