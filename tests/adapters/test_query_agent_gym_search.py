@@ -19,7 +19,7 @@ from query_agent_benchmarking.internal.core.domain.models import (
 from query_agent_benchmarking.internal.core.domain.query_execution import run_search_queries
 
 
-DATASET = "query-agent-gym-search-mode"
+DATASET = "query-agent-gym/search-mode"
 ALIASES = {"Centers_Default": "Centers"}
 MEALS_FILTER = {"filter_type": "boolean", "property_name": "meals", "operator": "=", "value": True}
 

@@ -5,20 +5,21 @@ environment folder holds a ``schema.json`` alongside one parquet file per
 collection and one parquet file per query set. A dataset name picks a query
 set and the environments it covers:
 
-- ``query-agent-gym``: the ask mode set (``queries.parquet``), 250 queries
-- ``query-agent-gym-search-mode``: the search mode set
+- ``query-agent-gym/ask-mode``: the ask mode set (``queries.parquet``), 250 queries
+- ``query-agent-gym/search-mode``: the search mode set
   (``search_mode_queries.parquet``), 150 retrieval-only queries
-- ``query-agent-gym-edge-case-1``: the exact-value filtering set
-  (``edge_case_1.parquet``), 145 cases scored by checks, not an exact plan
+- ``query-agent-gym/edge-case-1``: the exact-value filtering set
+  (``edge_case_1.parquet``), 130 cases scored by checks, not an exact plan
 
-over all five environments, or one environment with a suffix, e.g.
-``query-agent-gym/surf-schools`` or ``query-agent-gym-search-mode/surf-schools``.
-Every query set runs against the same collections.
+over all five environments, or one environment as a third part, e.g.
+``query-agent-gym/ask-mode/surf-schools``. Every query set runs against the
+same collections, which ``populate_db`` loads as ``query-agent-gym`` (or one
+environment, e.g. ``query-agent-gym/surf-schools``).
 """
 
 import json
 from functools import lru_cache
-from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
 from huggingface_hub import hf_hub_download
@@ -28,11 +29,12 @@ from query_agent_benchmarking.internal.core.domain.models import InMemoryAskQuer
 
 QUERY_AGENT_GYM_REPO = "weaviate/QueryAgentGym"
 QUERY_AGENT_GYM = "query-agent-gym"
-QUERY_AGENT_GYM_SEARCH_MODE = "query-agent-gym-search-mode"
-QUERY_AGENT_GYM_EDGE_CASE_1 = "query-agent-gym-edge-case-1"
+QUERY_AGENT_GYM_ASK_MODE = f"{QUERY_AGENT_GYM}/ask-mode"
+QUERY_AGENT_GYM_SEARCH_MODE = f"{QUERY_AGENT_GYM}/search-mode"
+QUERY_AGENT_GYM_EDGE_CASE_1 = f"{QUERY_AGENT_GYM}/edge-case-1"
 # Query set name -> the file holding each environment's queries.
 QUERY_AGENT_GYM_QUERY_FILES = {
-    QUERY_AGENT_GYM: "queries.parquet",
+    QUERY_AGENT_GYM_ASK_MODE: "queries.parquet",
     QUERY_AGENT_GYM_SEARCH_MODE: "search_mode_queries.parquet",
     QUERY_AGENT_GYM_EDGE_CASE_1: "edge_case_1.parquet",
 }
@@ -49,39 +51,67 @@ QUERY_AGENT_GYM_ENVIRONMENTS = (
 _MAX_LISTED_RECORDS = 50
 
 
-def _query_set(dataset_name: str) -> str:
-    return dataset_name.split("/", 1)[0]
+def _split(dataset_name: str) -> tuple[Optional[str], Optional[str]]:
+    """Split a QueryAgentGym name into ``(query set, environment)``; either may be None.
+
+    ``query-agent-gym/ask-mode/surf-schools`` -> ``("query-agent-gym/ask-mode", "surf-schools")``;
+    ``query-agent-gym/surf-schools`` (a ``populate_db`` name) -> ``(None, "surf-schools")``.
+    """
+    if not is_query_agent_gym(dataset_name):
+        raise ValueError(f"Not a QueryAgentGym dataset name: {dataset_name!r}")
+    rest = dataset_name.split("/")[1:]
+    set_name = None
+    if rest and f"{QUERY_AGENT_GYM}/{rest[0]}" in QUERY_AGENT_GYM_QUERY_FILES:
+        set_name = f"{QUERY_AGENT_GYM}/{rest.pop(0)}"
+    if len(rest) > 1:
+        raise ValueError(f"Malformed QueryAgentGym dataset name: {dataset_name!r}")
+    environment = rest[0] if rest else None
+    if environment is not None and environment not in QUERY_AGENT_GYM_ENVIRONMENTS:
+        raise ValueError(
+            f"Unknown QueryAgentGym query set or environment: {environment!r} in {dataset_name!r}. "
+            f"Query sets: {sorted(QUERY_AGENT_GYM_QUERY_FILES)}; environments: {QUERY_AGENT_GYM_ENVIRONMENTS}"
+        )
+    return set_name, environment
+
+
+def query_set(dataset_name: str) -> str:
+    """The query set a QueryAgentGym dataset name runs, e.g. ``query-agent-gym/ask-mode``."""
+    name, _ = _split(dataset_name)
+    if name is None:
+        raise ValueError(
+            f"{dataset_name!r} names no QueryAgentGym query set. "
+            f"Use one of {sorted(QUERY_AGENT_GYM_QUERY_FILES)}, optionally with '/<environment>'."
+        )
+    return name
 
 
 def is_query_agent_gym(dataset_name: str | None) -> bool:
-    return bool(dataset_name) and _query_set(dataset_name) in QUERY_AGENT_GYM_QUERY_FILES
+    return bool(dataset_name) and (
+        dataset_name == QUERY_AGENT_GYM or dataset_name.startswith(f"{QUERY_AGENT_GYM}/")
+    )
+
+
+def _is_query_set(dataset_name: str | None, name: str) -> bool:
+    return bool(dataset_name) and (dataset_name == name or dataset_name.startswith(f"{name}/"))
 
 
 def is_query_agent_gym_search_mode(dataset_name: str | None) -> bool:
-    return bool(dataset_name) and _query_set(dataset_name) == QUERY_AGENT_GYM_SEARCH_MODE
+    return _is_query_set(dataset_name, QUERY_AGENT_GYM_SEARCH_MODE)
 
 
 def is_query_agent_gym_edge_case(dataset_name: str | None) -> bool:
-    return bool(dataset_name) and _query_set(dataset_name) == QUERY_AGENT_GYM_EDGE_CASE_1
+    return _is_query_set(dataset_name, QUERY_AGENT_GYM_EDGE_CASE_1)
 
 
 def parse_environments(dataset_name: str) -> tuple[str, ...]:
     """Resolve a QueryAgentGym dataset name to the environments it covers.
 
-    A query set name alone (e.g. ``query-agent-gym``) covers every environment;
-    ``<query set>/<environment>`` covers just that one.
+    A name without an environment (e.g. ``query-agent-gym/ask-mode`` or
+    ``query-agent-gym``) covers every environment; one ending in an environment
+    (``query-agent-gym/ask-mode/surf-schools``) covers just that one.
     """
-    if not is_query_agent_gym(dataset_name):
-        raise ValueError(f"Not a QueryAgentGym dataset name: {dataset_name!r}")
-    if "/" not in dataset_name:
-        return QUERY_AGENT_GYM_ENVIRONMENTS
-    environment = dataset_name.split("/", 1)[1]
-    if environment not in QUERY_AGENT_GYM_ENVIRONMENTS:
-        raise ValueError(
-            f"Unknown QueryAgentGym environment: {environment!r}. "
-            f"Supported: {QUERY_AGENT_GYM_ENVIRONMENTS}"
-        )
-    return (environment,)
+    _, environment = _split(dataset_name)
+    return QUERY_AGENT_GYM_ENVIRONMENTS if environment is None else (environment,)
 
 
 def _download(path: str) -> str:
@@ -266,7 +296,7 @@ def load_ask_query_agent_gym(dataset_name: str) -> list[InMemoryAskQuery]:
     the reference results, used only when the optional LM judge is enabled.
     Each query's environment is in ``metadata["environment"]``.
     """
-    query_file = QUERY_AGENT_GYM_QUERY_FILES[_query_set(dataset_name)]
+    query_file = QUERY_AGENT_GYM_QUERY_FILES[query_set(dataset_name)]
     queries = []
     for environment in parse_environments(dataset_name):
         queries.extend(_load_environment_queries(environment, query_file))

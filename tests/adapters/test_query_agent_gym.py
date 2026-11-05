@@ -13,7 +13,13 @@ from weaviate_agents.query.classes import response as R
 
 from query_agent_benchmarking.internal.adapters.agents.weaviate_query_agent import WeaviateQueryAgentAsk
 from query_agent_benchmarking.internal.adapters.database import query_agent_gym as qag_db
-from query_agent_benchmarking.internal.adapters.dataset.query_agent_gym_loader import QUERY_AGENT_GYM_ENVIRONMENTS
+from query_agent_benchmarking.internal.adapters.dataset.query_agent_gym_loader import (
+    QUERY_AGENT_GYM_ENVIRONMENTS,
+    is_query_agent_gym_edge_case,
+    is_query_agent_gym_search_mode,
+    parse_environments,
+    query_set,
+)
 from query_agent_benchmarking.internal.adapters.metrics.ask_metrics_calculator import (
     QueryExactMatchAskCalculator,
 )
@@ -516,5 +522,34 @@ class TestQueryAgentGymSpecs:
         assert tuple(qag_db.query_agent_gym_collection_names("query-agent-gym")) == QUERY_AGENT_GYM_ENVIRONMENTS
 
     def test_unknown_environment_raises(self):
-        with pytest.raises(ValueError, match="Unknown QueryAgentGym environment"):
+        with pytest.raises(ValueError, match="Unknown QueryAgentGym query set or environment"):
             qag_db.build_query_agent_gym_specs("query-agent-gym/nope")
+
+    @pytest.mark.parametrize("name,environments", [
+        ("query-agent-gym/ask-mode", QUERY_AGENT_GYM_ENVIRONMENTS),
+        ("query-agent-gym/ask-mode/childcare", ("childcare",)),
+        ("query-agent-gym/search-mode/surf-schools", ("surf-schools",)),
+        ("query-agent-gym/edge-case-1", QUERY_AGENT_GYM_ENVIRONMENTS),
+        # populate_db names: collections only, no query set.
+        ("query-agent-gym", QUERY_AGENT_GYM_ENVIRONMENTS),
+        ("query-agent-gym/childcare", ("childcare",)),
+    ])
+    def test_dataset_names(self, name, environments):
+        assert parse_environments(name) == environments
+
+    @pytest.mark.parametrize("name", [
+        "query-agent-gym/askmode",
+        "query-agent-gym/ask-mode/nope",
+        "query-agent-gym/ask-mode/childcare/extra",
+    ])
+    def test_malformed_names_raise(self, name):
+        with pytest.raises(ValueError):
+            parse_environments(name)
+
+    def test_query_set(self):
+        assert query_set("query-agent-gym/search-mode/childcare") == "query-agent-gym/search-mode"
+        assert is_query_agent_gym_search_mode("query-agent-gym/search-mode/childcare")
+        assert is_query_agent_gym_edge_case("query-agent-gym/edge-case-1")
+        assert not is_query_agent_gym_search_mode("query-agent-gym/ask-mode")
+        with pytest.raises(ValueError, match="names no QueryAgentGym query set"):
+            query_set("query-agent-gym/childcare")

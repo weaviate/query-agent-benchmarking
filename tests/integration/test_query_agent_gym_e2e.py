@@ -14,7 +14,7 @@ from query_agent_benchmarking.internal.core.services import ask_benchmark
 from query_agent_benchmarking.internal.mocks import MockResultRepository
 
 
-DATASET = "query-agent-gym"
+DATASET = "query-agent-gym/ask-mode"
 COLLECTIONS = {
     "childcare": {"DaycareCenters_Default": "DaycareCenters", "ChildcareStaff_Default": "ChildcareStaff"},
     "surf-schools": {"SurfBeaches_Default": "SurfBeaches"},
@@ -196,7 +196,7 @@ def test_query_agent_gym_edge_case_eval(monkeypatch, tmp_path):
     monkeypatch.setattr(ask_benchmark, "JsonFileResultRepository", lambda: repo)
 
     aggregated = ask_benchmark.run_ask_eval(
-        queries="query-agent-gym-edge-case-1",
+        queries="query-agent-gym/edge-case-1",
         config_path=str(tmp_path / "missing.yml"),
         agent_name="query-agent-ask-mode",
         num_trials=1,

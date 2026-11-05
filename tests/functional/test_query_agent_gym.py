@@ -15,6 +15,7 @@ import pytest
 from query_agent_benchmarking.internal.adapters.database.query_agent_gym import build_query_agent_gym_specs
 from query_agent_benchmarking.internal.adapters.dataset.query_agent_gym_loader import (
     QUERY_AGENT_GYM,
+    QUERY_AGENT_GYM_ASK_MODE,
     QUERY_AGENT_GYM_ENVIRONMENTS,
     QUERY_AGENT_GYM_EDGE_CASE_1,
     QUERY_AGENT_GYM_SEARCH_MODE,
@@ -49,13 +50,13 @@ def test_specs_map_every_object(dataset_name):
             assert row[spec.uuid_field]
 
 
-@pytest.mark.parametrize("dataset_name", DATASETS)
-def test_queries_load_and_self_match(dataset_name):
-    queries = load_ask_query_agent_gym(dataset_name)
+@pytest.mark.parametrize("environment", QUERY_AGENT_GYM_ENVIRONMENTS)
+def test_queries_load_and_self_match(environment):
+    queries = load_ask_query_agent_gym(f"{QUERY_AGENT_GYM_ASK_MODE}/{environment}")
 
     assert len(queries) == 50
     for q in queries:
-        assert q.metadata["environment"] == dataset_name.split("/", 1)[1]
+        assert q.metadata["environment"] == environment
         assert q.question and q.ground_truth_answer and q.query_id
         assert q.metadata["operator_classes"]
         units = canonicalize_ground_truth(q.ground_truth_queries)
@@ -64,7 +65,7 @@ def test_queries_load_and_self_match(dataset_name):
 
 
 def test_full_dataset_is_every_environment():
-    queries = load_ask_query_agent_gym(QUERY_AGENT_GYM)
+    queries = load_ask_query_agent_gym(QUERY_AGENT_GYM_ASK_MODE)
 
     assert len(queries) == 50 * len(QUERY_AGENT_GYM_ENVIRONMENTS)
     assert len({q.query_id for q in queries}) == len(queries)
@@ -89,8 +90,8 @@ def test_edge_cases_load_without_retry_cases():
     cases = load_edge_case_query_agent_gym(QUERY_AGENT_GYM_EDGE_CASE_1)
     with_retry = load_edge_case_query_agent_gym(QUERY_AGENT_GYM_EDGE_CASE_1, include_retry=True)
 
-    assert len(with_retry) == 145
-    assert len(cases) == 145 - 16
+    assert len(with_retry) == 130
+    assert len(cases) == 130 - 16
     assert {c.metadata["node"] for c in cases} == {"query", "aggregate"}
     for c in cases:
         expect = c.metadata["expect"]

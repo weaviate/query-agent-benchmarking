@@ -140,5 +140,5 @@ def load_ask_dataset(
     raise ValueError(
         f"Unknown ask dataset: {dataset_name}. "
         f"Supported ask datasets: irpapers, multihoprag, officeqa, longmemeval-s, longmemeval-m, browsecomp-plus, "
-        f"query-agent-gym, query-agent-gym/<environment>"
+        f"query-agent-gym/ask-mode, query-agent-gym/edge-case-1 (optionally /<environment>)"
     )

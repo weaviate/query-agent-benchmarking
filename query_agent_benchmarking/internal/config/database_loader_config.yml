@@ -3,6 +3,8 @@ dataset_name: query-agent-gym
 # (public-transit, tattoo-studios, nonprofits, surf-schools, childcare), each
 # creating one collection per collection in its own schema.json. A single
 # environment can be loaded alone as e.g. `query-agent-gym/surf-schools`.
+# Every query set (`query-agent-gym/ask-mode`, `/search-mode`, `/edge-case-1`)
+# runs against these same collections.
 
 # Multiple datasets — used by populate_db_multi
 dataset_names:

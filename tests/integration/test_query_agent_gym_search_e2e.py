@@ -18,7 +18,7 @@ from query_agent_benchmarking.internal.core.services import search_benchmark
 from query_agent_benchmarking.internal.mocks import MockResultRepository
 
 
-DATASET = "query-agent-gym-search-mode"
+DATASET = "query-agent-gym/search-mode"
 COLLECTIONS = {
     "childcare": {"DaycareCenters_Default": "DaycareCenters"},
     "surf-schools": {"SurfBeaches_Default": "SurfBeaches"},
